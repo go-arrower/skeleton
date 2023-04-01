@@ -1,0 +1,111 @@
+{{define "jobs.home"}}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <title>Hello, Arrower!</title>
+
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="description" content="" />
+
+        <link rel="stylesheet" href="/css/main.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </head>
+
+    <body>
+
+    <div style="display:flex;">
+        <h1>3 Queues</h1>
+
+        <div id="queues" style="width: 600px;height:400px;"></div>
+        <div id="processed" style="width: 600px;height:400px;"></div>
+    </div>
+
+
+    <table>
+        <tr>
+            <th scope="col">Queue</th>
+            <th scope="col">State</th>
+            <th scope="col">Size</th>
+            <th scope="col">Processed</th>
+            <th scope="col">Failed</th>
+            <th scope="col">Error Rate</th>
+        </tr>
+        <tr>
+            <td><a href="/admin/jobs/queue">Default</a></td>
+            <td>running</td>
+            <td>1337</td>
+            <td>10307</td>
+            <td>0</td>
+            <td>0,00%</td>
+        </tr>
+        <tr>
+            <td><a href="/admin/jobs/queue">Arrower</a></td>
+            <td>running</td>
+            <td>6498</td>
+            <td>8795412</td>
+            <td>0</td>
+            <td>0,00%</td>
+        </tr>
+        <tr>
+            <td><a href="/admin/jobs/queue">YourApp</a></td>
+            <td>running</td>
+            <td>964</td>
+            <td>1578</td>
+            <td>0</td>
+            <td>0,00%</td>
+        </tr>
+    </table>
+
+
+    <script type="text/javascript">
+        // Create the echarts instance
+        var myChart = echarts.init(document.getElementById('queues'));
+        // Draw the chart
+        myChart.setOption({
+            series: [
+                {
+                    type: 'pie',
+                    data: [
+                        {
+                            value: 1337, // values are the Size (of waiting jobs) from the table above
+                            name: 'Default'
+                        },
+                        {
+                            value: 6498,
+                            name: 'Arrower'
+                        },
+                        {
+                            value: 964,
+                            name: 'YourApp'
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Create the echarts instance
+        var myChart = echarts.init(document.getElementById('processed'));
+        // Draw the chart
+        myChart.setOption({
+            xAxis: {
+                type: 'category',
+                data: ['01.04.23', '02.04.23', '03.04.23', '04.04.23', '05.04.23', '06.04.23', '07.04.23']
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    data: [120, 200, 250, 750, 1000, 1500, 1800],
+                    type: 'line',
+                    smooth: true
+                }
+            ]
+        });
+    </script>
+
+    </body>
+    </html>
+{{end}}

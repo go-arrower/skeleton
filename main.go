@@ -14,6 +14,8 @@ import (
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/go-arrower/skeleton/contexts/admin/startup"
 )
 
 func main() {
@@ -52,6 +54,8 @@ func main() {
 
 	t := &Template{}
 	router.Renderer = t
+
+	_ = startup.Init(router)
 
 	router.Logger.Fatal(router.Start(":8080"))
 }
