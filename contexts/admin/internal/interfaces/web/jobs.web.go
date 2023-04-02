@@ -1,3 +1,7 @@
 package web
 
-type JobsController struct{}
+import "github.com/go-arrower/arrower/jobs"
+
+type JobsController struct {
+	Repo jobs.Repository
+}

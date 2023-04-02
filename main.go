@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
@@ -47,7 +48,7 @@ func main() {
 	_ = queue.StartWorkers()
 
 	router.GET("/", func(c echo.Context) error {
-		_ = queue.Enqueue(ctx, someJob{"Hallo job!"})
+		_ = queue.Enqueue(ctx, someJob{"Hallo job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
 
 		return c.Render(http.StatusOK, "hello", "World") //nolint:wrapcheck
 	})
@@ -55,7 +56,7 @@ func main() {
 	t := &Template{}
 	router.Renderer = t
 
-	_ = startup.Init(router)
+	_ = startup.Init(router, pg)
 
 	router.Logger.Fatal(router.Start(":8080"))
 }
