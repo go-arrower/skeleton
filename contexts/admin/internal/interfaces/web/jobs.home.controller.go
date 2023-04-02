@@ -23,8 +23,9 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 		}
 
 		jobs, _ := cont.Repo.PendingJobs(c.Request().Context(), queue)
+		kpis, _ := cont.Repo.QueueKPIs(c.Request().Context(), queue)
 
-		page := buildQueuePage(queue, jobs)
+		page := buildQueuePage(queue, jobs, kpis)
 
 		return c.Render(http.StatusOK, "jobs.queue", page) //nolint:wrapcheck
 	}
@@ -37,7 +38,7 @@ type (
 		PendingJobsPerType map[string]int
 		FailedJobs         int
 		AvailableWorkers   int
-		ErrorRate          float32 // can be calculated: FailedJobs * 100 / PendingJobs
+		ErrorRate          float64 // can be calculated: FailedJobs * 100 / PendingJobs
 		AverageTimePerJob  time.Duration
 		EstimateUntilEmpty time.Duration // can be calculated
 	}
@@ -49,55 +50,26 @@ type (
 	}
 )
 
-func buildQueuePage(queue string, jobs []jobs.PendingJob) QueuePage {
+func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) QueuePage {
+	var errorRate float64
+
+	if kpis.FailedJobs != 0 {
+		errorRate = float64(kpis.FailedJobs * 100 / kpis.PendingJobs)
+	}
+
 	return QueuePage{
-		QueueName: queue,
+		QueueName: queue, // if "" => Default
 		Stats: QueueStats{
-			QueueName:   queue,
-			PendingJobs: len(jobs),
-			PendingJobsPerType: map[string]int{
-				"some_type":       1,
-				"register":        2,
-				"clean_something": 3,
-				"domain_job":      4,
-			},
-			FailedJobs:         3,
-			AvailableWorkers:   10,
-			ErrorRate:          0.16,
-			AverageTimePerJob:  1500 * time.Millisecond,
-			EstimateUntilEmpty: 2754000 * time.Millisecond,
+			QueueName:          queue,
+			PendingJobs:        kpis.PendingJobs,
+			PendingJobsPerType: kpis.PendingJobsPerType,
+			FailedJobs:         kpis.FailedJobs,
+			AvailableWorkers:   kpis.AvailableWorkers,
+			ErrorRate:          errorRate,
+			AverageTimePerJob:  kpis.AverageTimePerJob,
+			EstimateUntilEmpty: time.Duration(kpis.PendingJobs) * kpis.AverageTimePerJob,
 		},
 
 		Jobs: jobs,
 	}
-}
-
-var exampleJobs = []map[string]string{
-	{
-		"ID":         "gaht6e",
-		"Type":       "register_email",
-		"Priority":   "0",
-		"Payload":    "{data:[1,2,3]}",
-		"RunAt":      "13:37",
-		"LastError":  "no error message",
-		"ErrorCount": "0",
-	},
-	{
-		"ID":         "lz8abg",
-		"Type":       "register_email",
-		"Priority":   "0",
-		"Payload":    "{data:[1,2,3]}",
-		"RunAt":      "13:37",
-		"LastError":  "no error message",
-		"ErrorCount": "0",
-	},
-	{
-		"ID":         "0jgzabg",
-		"Type":       "welcome_job",
-		"Priority":   "0",
-		"Payload":    "{data:[1,2,3]}",
-		"RunAt":      "13:37",
-		"LastError":  "no error message",
-		"ErrorCount": "0",
-	},
 }

@@ -39,16 +39,20 @@ func main() {
 
 	queue, _ := jobs.NewGueJobs(pg.PGx)
 	_ = queue.RegisterWorker(func(ctx context.Context, j someJob) error {
-		if rand.Intn(100) > 10 { //nolint:gosec,gomnd
+		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+
+		if rand.Intn(100) > 80 { //nolint:gosec,gomnd
 			return errors.New("some error") //nolint:goerr113
 		}
 
 		return nil
 	})
+	_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
 	_ = queue.StartWorkers()
 
 	router.GET("/", func(c echo.Context) error {
 		_ = queue.Enqueue(ctx, someJob{"Hallo job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
+		_ = queue.Enqueue(ctx, otherJob{})
 
 		return c.Render(http.StatusOK, "hello", "World") //nolint:wrapcheck
 	})
@@ -64,6 +68,8 @@ func main() {
 type someJob struct {
 	Val string
 }
+
+type otherJob struct{}
 
 func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
