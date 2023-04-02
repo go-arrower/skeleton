@@ -15,7 +15,7 @@ func Init(e *echo.Echo) error {
 		jobs := admin.Group("/jobs")
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
-		jobs.GET("/queue", cont.JobsQueue())
+		jobs.GET("/:queue", cont.JobsQueue())
 	}
 
 	return nil
