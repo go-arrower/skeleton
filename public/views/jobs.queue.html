@@ -25,7 +25,7 @@
                 <th scope="col">Jobs Pending</th>
                 <th scope="col">Number of workers</th>
                 <th scope="col">Failed</th>
-                <th scope="col">Error Rate</th>
+                <th scope="col">Pending Jobs Error Rate</th>
                 <th scope="col">Average time per Job</th>
                 <th scope="col">Estimate until empty</th>
             </tr>
@@ -33,7 +33,7 @@
                 <td>{{ .Stats.PendingJobs }}</td>
                 <td>{{ .Stats.AvailableWorkers }}</td>
                 <td>{{ .Stats.FailedJobs }}</td>
-                <td>{{ .Stats.ErrorRate }}%</td>
+                <td>{{ .Stats.PendingJobsErrorRate }}%</td>
                 <td>{{ .Stats.AverageTimePerJob }}</td>
                 <td>{{ .Stats.EstimateUntilEmpty }}</td>
             </tr>
