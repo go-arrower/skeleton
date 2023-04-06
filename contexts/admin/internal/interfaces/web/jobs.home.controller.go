@@ -64,6 +64,10 @@ type (
 )
 
 func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) QueuePage {
+	if queue == "" {
+		queue = "Default"
+	}
+
 	return QueuePage{
 		QueueName: queue,
 		Stats:     queueKpiToStats(queue, kpis),
