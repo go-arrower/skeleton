@@ -21,6 +21,7 @@ func Init(e *echo.Echo, pg *postgres.Handler) error {
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
+		jobs.GET("/workers", cont.JobsWorkers())
 	}
 
 	return nil

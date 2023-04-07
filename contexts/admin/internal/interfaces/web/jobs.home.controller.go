@@ -39,6 +39,14 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 	}
 }
 
+func (cont JobsController) JobsWorkers() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		wp, _ := cont.Repo.WorkerPools(c.Request().Context())
+
+		return c.Render(http.StatusOK, "jobs.workers", wp) //nolint:wrapcheck
+	}
+}
+
 type (
 	QueueStats struct {
 		QueueName            string

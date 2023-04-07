@@ -65,6 +65,8 @@ func main() {
 	_ = startup.Init(router, pg)
 
 	router.Logger.Fatal(router.Start(":8080"))
+
+	_ = queue.Shutdown(ctx)
 }
 
 type someJob struct {

@@ -1,0 +1,44 @@
+{{define "jobs.workers"}}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <title>Hello, Arrower!</title>
+
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="description" content="" />
+
+        <link rel="stylesheet" href="/css/main.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </head>
+
+    <body>
+
+    <a href="/admin/jobs">Queues</a>
+    <a href="/admin/jobs/workers">Workers</a>
+
+    <div style="display:flex;">
+        <h1>Active Workers</h1>
+    </div>
+
+    <table>
+        <tr>
+            <th scope="col">Instance name or IP</th>
+            <th scope="col">Queue</th>
+            <th scope="col">Workers</th>
+            <th scope="col">Active</th>
+        </tr>
+        {{ range . }}
+            <tr title="Last seen x minutes ago:  {{ .LastSeen }}">
+                <td>{{ .ID }}</td>
+                <td>{{ .Queue }}</td>
+                <td>{{ .Workers }}</td>
+                <td>{{ .LastSeen }}</td>
+            </tr>
+        {{ end }}
+    </table>
+
+    </body>
+    </html>
+{{end}}
