@@ -27,7 +27,7 @@ func main() {
 		Database:   "arrower",
 		Host:       "localhost",
 		Port:       5432, //nolint:gomnd
-		MaxConns:   10,   //nolint:gomnd
+		MaxConns:   100,  //nolint:gomnd
 		Migrations: postgres.ArrowerDefaultMigrations,
 	})
 
@@ -51,8 +51,10 @@ func main() {
 	_ = queue.StartWorkers()
 
 	router.GET("/", func(c echo.Context) error {
-		_ = queue.Enqueue(ctx, someJob{"Hallo job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
-		_ = queue.Enqueue(ctx, otherJob{})
+		for i := 0; i < 100; i++ {
+			_ = queue.Enqueue(ctx, someJob{"Hallo job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
+			//_ = queue.Enqueue(ctx, otherJob{})
+		}
 
 		return c.Render(http.StatusOK, "hello", "World") //nolint:wrapcheck
 	})

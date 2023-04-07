@@ -87,6 +87,11 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		errorRate = float64(kpis.FailedJobs * 100 / kpis.PendingJobs)
 	}
 
+	var duration time.Duration = 0
+	if kpis.AvailableWorkers != 0 {
+		duration = time.Duration(kpis.PendingJobs/kpis.AvailableWorkers) * kpis.AverageTimePerJob
+	}
+
 	return QueueStats{
 		QueueName:            queue,
 		PendingJobs:          kpis.PendingJobs,
@@ -96,6 +101,6 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		AvailableWorkers:     kpis.AvailableWorkers,
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob,
-		EstimateUntilEmpty:   time.Duration(kpis.PendingJobs) * kpis.AverageTimePerJob,
+		EstimateUntilEmpty:   duration,
 	}
 }
