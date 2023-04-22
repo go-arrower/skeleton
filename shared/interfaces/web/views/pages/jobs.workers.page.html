@@ -1,0 +1,20 @@
+<div style="display:flex;">
+    <h1>Active Workers</h1>
+</div>
+
+<table>
+    <tr>
+        <th scope="col">Instance name or IP</th>
+        <th scope="col">Queue</th>
+        <th scope="col">Workers</th>
+        <th scope="col">Active</th>
+    </tr>
+    {{ range . }}
+        <tr title="Last seen x minutes ago:  {{ .LastSeen }}">
+            <td>{{ .ID }}</td>
+            <td>{{ .Queue }}</td>
+            <td>{{ .Workers }}</td>
+            <td>{{ .LastSeen }}</td>
+        </tr>
+    {{ end }}
+</table>

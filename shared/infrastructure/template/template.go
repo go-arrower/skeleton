@@ -22,6 +22,7 @@ var (
 const separator = "=>"
 
 type Renderer struct {
+	viewFS     fs.FS
 	rawLayouts map[string]string
 	rawPages   map[string]string
 	templates  map[string]*template.Template
@@ -39,9 +40,26 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 		return nil, ErrInvalidFS
 	}
 
+	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(viewFS)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Renderer{
+		viewFS:            viewFS,
+		rawLayouts:        rawLayouts,
+		rawPages:          rawPages,
+		isContextRenderer: false,
+		components:        componentTemplates,
+		templates:         pageTemplates,
+		hotReload:         hotReload,
+	}, nil
+}
+
+func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
+		return nil, nil, nil, nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
 	}
 
 	componentTemplates := template.New("")
@@ -49,14 +67,14 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 	for _, c := range components {
 		file, err := readFile(viewFS, c)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not read component file: %s: %v", ErrInvalidFS, file, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not read component file: %s: %v", ErrInvalidFS, file, err)
 		}
 
 		name := componentName(c)
 
 		_, err = componentTemplates.New(name).Parse(file)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err)
 		}
 	}
 
@@ -66,7 +84,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 
 	pages, err := fs.Glob(viewFS, "pages/*.html")
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not get pages from fs: %v", ErrInvalidFS, err)
+		return nil, nil, nil, nil, fmt.Errorf("%w: could not get pages from fs: %v", ErrInvalidFS, err)
 	}
 
 	rawPages := make(map[string]string)
@@ -74,12 +92,12 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 	for _, page := range pages {
 		file, err := readFile(viewFS, page)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not read page file: %s: %v", ErrInvalidFS, file, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not read page file: %s: %v", ErrInvalidFS, file, err)
 		}
 
 		tmp, err := componentTemplates.Clone()
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not clone component templates: %v", ErrLoadFailed, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not clone component templates: %v", ErrLoadFailed, err)
 		}
 
 		pn := pageName(page)
@@ -87,7 +105,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 
 		pageTemplates[pn], err = tmp.New(pn).Parse(file)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not parse page file: %s: %v", ErrInvalidFS, file, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not parse page file: %s: %v", ErrInvalidFS, file, err)
 		}
 	}
 
@@ -99,7 +117,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 
 	layouts, err := fs.Glob(viewFS, "*.html")
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not get layouts from fs: %v", ErrInvalidFS, err)
+		return nil, nil, nil, nil, fmt.Errorf("%w: could not get layouts from fs: %v", ErrInvalidFS, err)
 	}
 
 	rawLayouts := make(map[string]string)
@@ -107,7 +125,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 	for _, l := range layouts {
 		file, err := readFile(viewFS, l)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not read layout file: %s: %v", ErrInvalidFS, file, err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: could not read layout file: %s: %v", ErrInvalidFS, file, err)
 		}
 
 		ln := layoutName(l)
@@ -116,14 +134,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 
 	log.Println("layouts", layouts)
 
-	return &Renderer{
-		rawLayouts:        rawLayouts,
-		rawPages:          rawPages,
-		isContextRenderer: false,
-		components:        componentTemplates,
-		templates:         pageTemplates,
-		hotReload:         hotReload,
-	}, nil
+	return componentTemplates, pageTemplates, rawPages, rawLayouts, nil
 }
 
 func componentName(componentName string) string {
@@ -162,8 +173,6 @@ func readFile(sfs fs.FS, name string) (string, error) {
 	return buf.String(), nil
 }
 
-func NewEMails(fs fs.FS) {}
-
 func (t *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	layout, page := parseLayoutAndPage(name)
 
@@ -174,8 +183,20 @@ func (t *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	log.Println("Render for template", name, "cleanedName", cleanedName)
 
+	if t.hotReload {
+		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(t.viewFS)
+		if err != nil {
+			return err
+		}
+
+		t.rawLayouts = rawLayouts
+		t.rawPages = rawPages
+		t.components = componentTemplates
+		t.templates = pageTemplates
+	}
+
 	templ, found := t.templates[name]
-	if !found {
+	if !found || t.hotReload {
 		log.Println("template does not exist", name)
 
 		log.Println("layout:", layout, "page:", page)

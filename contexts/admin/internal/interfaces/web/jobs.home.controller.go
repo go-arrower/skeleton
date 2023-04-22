@@ -19,7 +19,7 @@ func (cont JobsController) JobsHome() func(c echo.Context) error {
 			qWithStats[q] = queueKpiToStats(q, s)
 		}
 
-		return c.Render(http.StatusOK, "jobs.home", ListQueuesPage{Queues: qWithStats}) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "global=>jobs.home", ListQueuesPage{Queues: qWithStats}) //nolint:wrapcheck
 	}
 }
 
@@ -35,7 +35,7 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, jobs, kpis)
 
-		return c.Render(http.StatusOK, "jobs.queue", page) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "global=>jobs.queue", page) //nolint:wrapcheck
 	}
 }
 
@@ -43,7 +43,7 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		wp, _ := cont.Repo.WorkerPools(c.Request().Context())
 
-		return c.Render(http.StatusOK, "jobs.workers", wp) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "global=>jobs.workers", wp) //nolint:wrapcheck
 	}
 }
 

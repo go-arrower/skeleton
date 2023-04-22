@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hello, Arrower!</title>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="" />
+
+    <link rel="stylesheet" href="/css/main.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!--<meta http-equiv="refresh" content="5">-->
+</head>
+<body>
+
+    <nav>
+        <a href="/">Home</a> |
+        <a href="/admin/jobs">Queues</a>
+        <a href="/admin/jobs/workers">Workers</a>
+    </nav>
+
+    {{ block "layout" . }}
+        {{block "content" .}}
+            Fallback, if "content" is not defined elsewhere
+        {{end}}
+    {{end}}
+
+</body>
+</html>

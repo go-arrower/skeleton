@@ -1,0 +1,81 @@
+<div style="display:flex;">
+    <h1>{{ len .Queues }} Queues</h1>
+
+    <div id="queues" style="width: 600px;height:400px;"></div>
+    <div id="processed" style="width: 600px;height:400px;"></div>
+</div>
+
+
+<table>
+    <tr>
+        <th scope="col">Queue</th>
+        <th scope="col">State</th>
+        <th scope="col">Size</th>
+        <th scope="col">Processed</th>
+        <th scope="col">Failed</th>
+        <th scope="col">Pending Error Rate</th>
+    </tr>
+    {{ range $queue, $stats := .Queues }}
+        <tr>
+            <td><a href="/admin/jobs/{{ $stats.QueueName }}">{{ $stats.QueueName }}</a></td>
+            <td>running</td>
+            <td>{{ $stats.PendingJobs }}</td>
+            <td>{{ $stats.ProcessedJobs }}</td>
+            <td>{{ $stats.FailedJobs }}</td>
+            <td>{{ $stats.PendingJobsErrorRate }}</td>
+        </tr>
+    {{ end }}
+</table>
+
+
+<script type="text/javascript">
+    // Create the echarts instance
+    var myChart = echarts.init(document.getElementById('queues'));
+    // Draw the chart
+    myChart.setOption({
+        tooltip: {
+            trigger: 'item',
+            formatter: '<b>{b}</b>: {c} ({d}%)'
+        },
+        series: [
+            {
+                type: 'pie',
+                data: [
+                    {{ range $queue, $stats := .Queues }}
+                    {
+                        name: {{ $stats.QueueName }},
+                        value: {{ $stats.PendingJobs }}
+                    },
+                    {{ end }}
+                ],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ]
+    });
+
+    // Create the echarts instance
+    var myChart = echarts.init(document.getElementById('processed'));
+    // Draw the chart
+    myChart.setOption({
+        xAxis: {
+            type: 'category',
+            data: ['01.04.23', '02.04.23', '03.04.23', '04.04.23', '05.04.23', '06.04.23', '07.04.23']
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: [
+            {
+                data: [120, 200, 250, 750, 1000, 1500, 1800],
+                type: 'line',
+                smooth: true
+            }
+        ]
+    });
+</script>

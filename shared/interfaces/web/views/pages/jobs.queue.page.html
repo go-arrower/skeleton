@@ -1,0 +1,85 @@
+<div style="display:flex;">
+    <h3>Queue: {{ .QueueName }}</h3>
+
+    <div id="job_types" style="width: 600px;height: 200px;"></div>
+
+    <table>
+        <tr>
+            <th scope="col">Jobs Pending</th>
+            <th scope="col">Number of workers</th>
+            <th scope="col">Failed</th>
+            <th scope="col">Pending Jobs Error Rate</th>
+            <th scope="col">Average time per Job</th>
+            <th scope="col">Estimate until empty</th>
+        </tr>
+        <tr>
+            <td>{{ .Stats.PendingJobs }}</td>
+            <td>{{ .Stats.AvailableWorkers }}</td>
+            <td>{{ .Stats.FailedJobs }}</td>
+            <td>{{ .Stats.PendingJobsErrorRate }}%</td>
+            <td>{{ .Stats.AverageTimePerJob }}</td>
+            <td>{{ .Stats.EstimateUntilEmpty }}</td>
+        </tr>
+    </table>
+</div>
+
+
+<table>
+    <tr>
+        <th scope="col">ID</th>
+        <th scope="col">Type</th>
+        <th scope="col">Priority</th>
+        <th scope="col">Payload</th>
+        <th scope="col">Run At</th>
+        <th scope="col">Error Count</th>
+        <th scope="col">Actions</th>
+    </tr>
+    {{ range .Jobs }}
+        {{ template "job.component" . }}
+    {{ end }}
+</table>
+
+
+<script type="text/javascript">
+    // Create the echarts instance
+    var myChart = echarts.init(document.getElementById('job_types'));
+    // Draw the chart
+    myChart.setOption({
+        tooltip: {
+            trigger: 'item',
+            formatter: '<b>{b}</b>: {c} ({d}%)'
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+            selectedMode: false,
+            data: [
+                {{ range $key, $value := .Stats.PendingJobsPerType }}
+                '{{ $key }}',
+                {{ end }}
+            ]
+        },
+        series: [
+            {
+                type: 'pie',
+                radius: '30%',
+                center: ['60%', '50%'],
+                data: [
+                    {{ range $key, $value := .Stats.PendingJobsPerType }}
+                    {
+                        name: {{ $key }},
+                        value: {{ $value }}
+                    },
+                    {{ end }}
+                ],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ]
+    });
+</script>

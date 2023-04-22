@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"html/template"
-	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
+	template2 "github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
 func main() {
@@ -56,11 +56,11 @@ func main() {
 			//_ = queue.Enqueue(ctx, otherJob{})
 		}
 
-		return c.Render(http.StatusOK, "hello", "World") //nolint:wrapcheck
+		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
-	t := &Template{}
-	router.Renderer = t
+	r, _ := template2.NewRenderer(os.DirFS("shared/interfaces/web/views"), true)
+	router.Renderer = r
 
 	_ = startup.Init(router, pg)
 
@@ -87,14 +87,6 @@ func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return nil
 	}
-}
-
-type Template struct{}
-
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	templates := template.Must(template.ParseGlob("public/views/*.html"))
-
-	return templates.ExecuteTemplate(w, name, data) //nolint:wrapcheck
 }
 
 //nolint:lll
