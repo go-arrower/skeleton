@@ -11,6 +11,8 @@ const (
 	LContent  = "layout"
 )
 
+var EmptyFiles = fstest.MapFS{}
+
 var SimpleFiles = fstest.MapFS{
 	"components/c0.component.html": {Data: []byte(C0Content)},
 	"components/c1.component.html": {Data: []byte(C1Content)},

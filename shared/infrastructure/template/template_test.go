@@ -25,7 +25,7 @@ func TestNewRenderer(t *testing.T) {
 		assert.NotNil(t, r)
 	})
 
-	t.Run(" fail on missing files", func(t *testing.T) {
+	t.Run("fail on missing files", func(t *testing.T) {
 		t.Parallel()
 
 		r, err := NewRenderer(nil, false)
@@ -64,12 +64,19 @@ func TestNewRenderer(t *testing.T) {
 		assert.Empty(t, renderer.rawLayouts["non-existent"])
 	})
 
-	/*
-		additional test cases:
-		- folder structure without components
-		- folder structure without pages
-		- folder structure without layouts
-	*/
+	// white box test, if it fails feel free to delete it
+	t.Run("fs with no files", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.EmptyFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		assert.Len(t, renderer.components.Templates(), 1)
+		assert.Len(t, renderer.templates, 0)
+		assert.Len(t, renderer.rawPages, 0)
+		assert.Len(t, renderer.rawLayouts, 0)
+	})
 }
 
 func TestRenderer_Render(t *testing.T) {
@@ -188,6 +195,7 @@ func TestRenderer_Render(t *testing.T) {
 		- Test parallel rendering, to prevent race conditions
 		- use layout name that does not exist
 		- hotreload from local fs
+		- call page & layouts that do not exist
 	*/
 }
 
