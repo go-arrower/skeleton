@@ -1,20 +1,30 @@
-<div style="display:flex;">
-    <h1>Active Workers</h1>
+<div>
+    <h1 class="text-4xl font-bold">Active Workers</h1>
 </div>
 
-<table>
-    <tr>
-        <th scope="col">Instance name or IP</th>
-        <th scope="col">Queue</th>
-        <th scope="col">Workers</th>
-        <th scope="col">Active</th>
-    </tr>
-    {{ range . }}
-        <tr title="Last seen x minutes ago:  {{ .LastSeen }}">
-            <td>{{ .ID }}</td>
-            <td>{{ .Queue }}</td>
-            <td>{{ .Workers }}</td>
-            <td>{{ .LastSeen }}</td>
+<table class="w-3/4 border border-collapse mt-6 text-left">
+    <thead class="bg-gray-100">
+        <tr>
+            <th scope="col" class="p-1 border border-slate-300">Instance name or IP</th>
+            <th scope="col" class="p-1 border border-slate-300">Queue</th>
+            <th scope="col" class="p-1 border border-slate-300">Workers</th>
+            <th scope="col" class="p-1 border border-slate-300">Active</th>
         </tr>
-    {{ end }}
+    </thead>
+    <tbody>
+        {{ range . }}
+        <tr title="Last seen x minutes ago:  {{ .LastSeen }}">
+            <td class="p-1">{{ .ID }}</td>
+            <td class="p-1">{{ .Queue }}</td>
+            <td class="p-1">{{ .Workers }}</td>
+            <td class="p-1 text-green-600">{{ .LastSeen }}</td>
+        </tr>
+        {{ end }}
+        <tr title="Last seen x minutes ago:  some time ago">
+            <td class="p-1">xyz123</td>
+            <td class="p-1">Default</td>
+            <td class="p-1">10</td>
+            <td class="p-1 text-orange-600">some time ago</td>
+        </tr>
+    </tbody>
 </table>

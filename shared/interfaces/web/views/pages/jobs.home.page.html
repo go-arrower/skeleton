@@ -1,30 +1,54 @@
-<div style="display:flex;">
-    <h1>{{ len .Queues }} Queues</h1>
+<div class="flex w-full justify-between">
+    <h1 class="text-4xl font-bold">{{ len .Queues }} Queue(s)</h1>
 
-    <div id="queues" style="width: 200px;height:400px;"></div>
-    <div id="processed" style="width: 200px;height:400px;"></div>
+    <div id="queues" class="h-36 grow p-0 m-0"></div>
+    <div id="processed" class="h-36 grow p-0 m-0"></div>
 </div>
 
 
-<table>
-    <tr>
-        <th scope="col">Queue</th>
-        <th scope="col">State</th>
-        <th scope="col">Size</th>
-        <th scope="col">Processed</th>
-        <th scope="col">Failed</th>
-        <th scope="col">Pending Error Rate</th>
-    </tr>
-    {{ range $queue, $stats := .Queues }}
+<table class="w-3/4 border border-collapse mt-16 text-left">
+    <thead class="bg-gray-100">
         <tr>
-            <td><a href="/admin/jobs/{{ $stats.QueueName }}">{{ $stats.QueueName }}</a></td>
-            <td>running</td>
-            <td>{{ $stats.PendingJobs }}</td>
-            <td>{{ $stats.ProcessedJobs }}</td>
-            <td>{{ $stats.FailedJobs }}</td>
-            <td>{{ $stats.PendingJobsErrorRate }}</td>
+            <th scope="col" class="p-1 border border-slate-300">Queue</th>
+            <th scope="col" class="p-1 border border-slate-300">State</th>
+            <th scope="col" class="p-1 border border-slate-300">Size</th>
+            <th scope="col" class="p-1 border border-slate-300">Processed</th>
+            <th scope="col" class="p-1 border border-slate-300">Failed</th>
+            <th scope="col" class="p-1 border border-slate-300">Pending Error Rate</th>
         </tr>
-    {{ end }}
+    </thead>
+    <tbody>
+        {{ range $queue, $stats := .Queues }}
+        <tr>
+            <td class="p-1">
+                <a href="/admin/jobs/{{ $stats.QueueName }}" class="font-medium">{{ $stats.QueueName }}</a>
+            </td>
+            <td class="p-1 text-green-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                </svg>
+            </td>
+            <td class="p-1">{{ $stats.PendingJobs }}</td>
+            <td class="p-1">{{ $stats.ProcessedJobs }}</td>
+            <td class="p-1">{{ $stats.FailedJobs }}</td>
+            <td class="p-1">{{ $stats.PendingJobsErrorRate }}</td>
+        </tr>
+        {{ end }}
+        <tr>
+            <td class="p-1">
+                <a href="#" class="font-medium">Paused Queue</a>
+            </td>
+            <td class="p-1 text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM9 8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75H9zm5.25 0a.75.75 0 00-.75.75v6c0 .414.336.75.75.75H15a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75h-.75z" clip-rule="evenodd" />
+                </svg>
+            </td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+        </tr>
+    </tbody>
 </table>
 
 
