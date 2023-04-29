@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -76,12 +77,26 @@ func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) Q
 		queue = "Default"
 	}
 
+	jobs = prettyFormatPayload(jobs)
+
 	return QueuePage{
 		QueueName: queue,
 		Stats:     queueKpiToStats(queue, kpis),
 
 		Jobs: jobs,
 	}
+}
+
+func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
+	for i := 0; i < len(jobs); i++ {
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
+
+		data, _ := json.MarshalIndent(m, "", "  ")
+		jobs[i].Payload = string(data)
+	}
+
+	return jobs
 }
 
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {

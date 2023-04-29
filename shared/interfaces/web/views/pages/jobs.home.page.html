@@ -19,7 +19,7 @@
     </thead>
     <tbody>
         {{ range $queue, $stats := .Queues }}
-        <tr>
+        <tr class="odd:bg-white even:bg-slate-50">
             <td class="p-1">
                 <a href="/admin/jobs/{{ $stats.QueueName }}" class="font-medium">{{ $stats.QueueName }}</a>
             </td>
@@ -34,13 +34,27 @@
             <td class="p-1">{{ $stats.PendingJobsErrorRate }}</td>
         </tr>
         {{ end }}
-        <tr>
+        <tr class="odd:bg-white even:bg-slate-50">
             <td class="p-1">
                 <a href="#" class="font-medium">Paused Queue</a>
             </td>
             <td class="p-1 text-orange-600">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
                     <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM9 8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75H9zm5.25 0a.75.75 0 00-.75.75v6c0 .414.336.75.75.75H15a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75h-.75z" clip-rule="evenodd" />
+                </svg>
+            </td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+            <td class="p-1">0</td>
+        </tr>
+        <tr class="odd:bg-white even:bg-slate-50">
+            <td class="p-1">
+                <a href="#" class="font-medium">Empty Queue</a>
+            </td>
+            <td class="p-1 text-green-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </td>
             <td class="p-1">0</td>
