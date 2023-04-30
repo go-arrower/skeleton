@@ -222,6 +222,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		}
 
 		r.rawLayouts = rawLayouts
+		r.defaultLayout = getDefaultLayout(rawLayouts)
 		r.rawPages = rawPages
 		r.components = componentTemplates
 		r.templates = pageTemplates
