@@ -96,6 +96,19 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Contains(t, buf.String(), testdata.P0Content)
 	})
 
+	t.Run("render non existing page", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		buf := &bytes.Buffer{}
+		err = renderer.Render(buf, "non-existing", nil, nil)
+		assert.Error(t, err)
+
+		assert.Empty(t, buf.String())
+	})
 	t.Run("render shared pages with components", func(t *testing.T) {
 		t.Parallel()
 
@@ -233,7 +246,6 @@ func TestRenderer_Render(t *testing.T) {
 	/*
 		test cases
 		- Test parallel rendering, to prevent race conditions
-		- call page & layouts that do not exist
 	*/
 }
 

@@ -72,6 +72,7 @@ func getDefaultLayout(rawLayouts map[string]string) string {
 		for k := range rawLayouts {
 			if k == "default" {
 				defaultLayout = k
+
 				break
 			}
 		}
@@ -247,6 +248,10 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		}
 
 		log.Println("newTemplate details:", newTemplate.Name(), newTemplate.DefinedTemplates())
+
+		if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
+			return fmt.Errorf("%w: page does not exist", ErrRenderFailed)
+		}
 
 		_, err = newTemplate.New("content").Parse(r.rawPages[page])
 		if err != nil {
