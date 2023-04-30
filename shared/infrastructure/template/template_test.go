@@ -190,11 +190,23 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Contains(t, buf.String(), testdata.C0Content)
 	})
 
+	t.Run("access layout that does not exist", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		buf := &bytes.Buffer{}
+		err = renderer.Render(buf, "nonExisting=>p0", nil, nil)
+		assert.Error(t, err)
+
+		assert.Empty(t, buf.String())
+	})
+
 	/*
 		test cases
 		- Test parallel rendering, to prevent race conditions
-		- use layout name that does not exist
-		- hotreload from local fs
 		- call page & layouts that do not exist
 	*/
 }

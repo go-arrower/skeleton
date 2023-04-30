@@ -132,7 +132,7 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 		rawLayouts[ln] = file
 	}
 
-	log.Println("layouts", layouts)
+	log.Println("layouts", rawLayouts)
 
 	return componentTemplates, pageTemplates, rawPages, rawLayouts, nil
 }
@@ -175,6 +175,10 @@ func readFile(sfs fs.FS, name string) (string, error) {
 
 func (t *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	layout, page := parseLayoutAndPage(name)
+
+	if _, ok := t.rawLayouts[layout]; layout != "" && !ok {
+		return fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
+	}
 
 	cleanedName := layout + "=>" + page
 	if layout == "" {
