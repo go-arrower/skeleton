@@ -204,11 +204,99 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Empty(t, buf.String())
 	})
 
+	t.Run("rely on default layout when rendering page", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		buf := &bytes.Buffer{}
+		err = renderer.Render(buf, "=>p0", nil, nil)
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), testdata.LDefaultContent)
+		assert.Contains(t, buf.String(), testdata.P0Content)
+
+		// change default layout and render same page again
+		err = renderer.SetDefaultLayout("other")
+		assert.NoError(t, err)
+
+		buf.Reset()
+		err = renderer.Render(buf, "=>p0", nil, nil)
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), testdata.LOtherContent)
+		assert.Contains(t, buf.String(), testdata.P0Content)
+	})
+
 	/*
 		test cases
 		- Test parallel rendering, to prevent race conditions
 		- call page & layouts that do not exist
 	*/
+}
+
+func TestRenderer_Layout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no default layout present", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.EmptyFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		assert.Equal(t, "", renderer.Layout())
+	})
+
+	t.Run("only one layout file, so it becomes the default", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.LayoutOneLayout, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		assert.Equal(t, "global", renderer.Layout())
+	})
+
+	t.Run("multiple layouts but with default", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		assert.Equal(t, "default", renderer.Layout())
+	})
+}
+
+func TestRenderer_SetDefaultLayout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("set existing default layout", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		err = renderer.SetDefaultLayout("other")
+		assert.NoError(t, err)
+		assert.Equal(t, "other", renderer.Layout())
+	})
+
+	t.Run("set non existing layout", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		err = renderer.SetDefaultLayout("non-existing")
+		assert.Error(t, err)
+		assert.Equal(t, "default", renderer.Layout())
+	})
 }
 
 // white box test, if it fails feel free to delete it.

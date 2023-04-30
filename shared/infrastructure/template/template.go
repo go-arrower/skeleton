@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	ErrLoadFailed   = errors.New("load renderer failed")
-	ErrInvalidFS    = fmt.Errorf("%w: invalid fs", ErrLoadFailed)
-	ErrRenderFailed = errors.New("rendering failed")
+	ErrLoadFailed        = errors.New("load renderer failed")
+	ErrInvalidFS         = fmt.Errorf("%w: invalid fs", ErrLoadFailed)
+	ErrRenderFailed      = errors.New("rendering failed")
+	ErrTemplateNotExists = errors.New("template does not exist")
 )
 
 const separator = "=>"
@@ -27,7 +28,8 @@ type Renderer struct {
 	rawPages   map[string]string
 	templates  map[string]*template.Template
 
-	components *template.Template
+	components    *template.Template
+	defaultLayout string
 
 	isContextRenderer bool // true, if the renderer became a Context renderer and is not shared anymore.
 	hotReload         bool
@@ -45,15 +47,37 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 		return nil, err
 	}
 
+	defaultLayout := getDefaultLayout(rawLayouts)
+
 	return &Renderer{
 		viewFS:            viewFS,
 		rawLayouts:        rawLayouts,
 		rawPages:          rawPages,
 		isContextRenderer: false,
 		components:        componentTemplates,
+		defaultLayout:     defaultLayout,
 		templates:         pageTemplates,
 		hotReload:         hotReload,
 	}, nil
+}
+
+func getDefaultLayout(rawLayouts map[string]string) string {
+	var defaultLayout string
+
+	if len(rawLayouts) == 1 {
+		for k := range rawLayouts {
+			defaultLayout = k
+		}
+	} else {
+		for k := range rawLayouts {
+			if k == "default" {
+				defaultLayout = k
+				break
+			}
+		}
+	}
+
+	return defaultLayout
 }
 
 func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
@@ -173,10 +197,14 @@ func readFile(sfs fs.FS, name string) (string, error) {
 	return buf.String(), nil
 }
 
-func (t *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	layout, page := parseLayoutAndPage(name)
 
-	if _, ok := t.rawLayouts[layout]; layout != "" && !ok {
+	if strings.HasPrefix(name, separator) {
+		layout = r.defaultLayout
+	}
+
+	if _, ok := r.rawLayouts[layout]; layout != "" && !ok {
 		return fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
 	}
 
@@ -187,44 +215,44 @@ func (t *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	log.Println("Render for template", name, "cleanedName", cleanedName)
 
-	if t.hotReload {
-		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(t.viewFS)
+	if r.hotReload {
+		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.viewFS)
 		if err != nil {
 			return err
 		}
 
-		t.rawLayouts = rawLayouts
-		t.rawPages = rawPages
-		t.components = componentTemplates
-		t.templates = pageTemplates
+		r.rawLayouts = rawLayouts
+		r.rawPages = rawPages
+		r.components = componentTemplates
+		r.templates = pageTemplates
 	}
 
-	templ, found := t.templates[name]
-	if !found || t.hotReload {
+	templ, found := r.templates[name]
+	if !found || r.hotReload {
 		log.Println("template does not exist", name)
 
 		log.Println("layout:", layout, "page:", page)
 
-		newTemplate, err := t.components.Clone()
+		newTemplate, err := r.components.Clone()
 		if err != nil {
 			return fmt.Errorf("%w: could not clone: %v", ErrRenderFailed, err)
 		}
 
 		log.Println("newTemplate details:", newTemplate.Name(), newTemplate.DefinedTemplates())
 
-		_, err = newTemplate.New(cleanedName).Parse(t.rawLayouts[layout])
+		_, err = newTemplate.New(cleanedName).Parse(r.rawLayouts[layout])
 		if err != nil {
 			return fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err)
 		}
 
 		log.Println("newTemplate details:", newTemplate.Name(), newTemplate.DefinedTemplates())
 
-		_, err = newTemplate.New("content").Parse(t.rawPages[page])
+		_, err = newTemplate.New("content").Parse(r.rawPages[page])
 		if err != nil {
 			return fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err)
 		}
 
-		t.templates[cleanedName] = newTemplate
+		r.templates[cleanedName] = newTemplate
 		templ = newTemplate // "found" the template
 
 		log.Println("newTemplate added:", newTemplate.Name(), newTemplate.DefinedTemplates())
@@ -266,4 +294,20 @@ func parseLayoutAndPage(name string) (string, string) {
 	}
 
 	return l, strings.TrimSpace(elem[length-1])
+}
+
+// Layout returns the default layout of this renderer.
+func (r *Renderer) Layout() string {
+	return r.defaultLayout
+}
+
+// SetDefaultLayout sets the default layout.
+func (r *Renderer) SetDefaultLayout(l string) error {
+	if _, ok := r.rawLayouts[l]; !ok {
+		return ErrTemplateNotExists
+	}
+
+	r.defaultLayout = l
+
+	return nil
 }
