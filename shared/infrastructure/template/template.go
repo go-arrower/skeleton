@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/labstack/echo/v4"
 )
@@ -33,6 +34,8 @@ type Renderer struct {
 
 	isContextRenderer bool // true, if the renderer became a Context renderer and is not shared anymore.
 	hotReload         bool
+
+	mu sync.Mutex
 }
 
 // NewRenderer take multiple FS or can Context views be added later?
@@ -58,6 +61,7 @@ func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
 		defaultLayout:     defaultLayout,
 		templates:         pageTemplates,
 		hotReload:         hotReload,
+		mu:                sync.Mutex{},
 	}, nil
 }
 
@@ -90,7 +94,7 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 	componentTemplates := template.New("")
 
 	for _, c := range components {
-		file, err := readFile(viewFS, c)
+		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%w: could not read component file: %s: %v", ErrInvalidFS, file, err)
 		}
@@ -115,7 +119,7 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 	rawPages := make(map[string]string)
 
 	for _, page := range pages {
-		file, err := readFile(viewFS, page)
+		file, err := readFile(viewFS, page) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%w: could not read page file: %s: %v", ErrInvalidFS, file, err)
 		}
@@ -215,6 +219,9 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	}
 
 	log.Println("Render for template", name, "cleanedName", cleanedName)
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	if r.hotReload {
 		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.viewFS)

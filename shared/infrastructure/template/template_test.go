@@ -6,7 +6,11 @@ package template
 
 import (
 	"bytes"
+	"math/rand"
+	"sync"
 	"testing"
+	"testing/fstest"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -243,10 +247,50 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Contains(t, buf.String(), testdata.P0Content)
 	})
 
-	/*
-		test cases
-		- Test parallel rendering, to prevent race conditions
-	*/
+	t.Run("render in parallel", func(t *testing.T) {
+		t.Parallel()
+
+		// setup multiple random pages
+		fs := fstest.MapFS{
+			"default.layout.html": {Data: []byte(testdata.LContent + ` {{template "content" .}}`)},
+		}
+
+		const numPages = 10
+		var pages []string
+
+		for i := 0; i < numPages; i++ {
+			p := randomString(5)
+			fs["pages/"+p+".page.html"] = &fstest.MapFile{Data: []byte(p)} //nolint:exhaustruct
+
+			pages = append(pages, p)
+		}
+
+		// test
+		renderer, err := NewRenderer(fs, true)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		wg := &sync.WaitGroup{}
+
+		const numPageLoads = 100
+		wg.Add(numPageLoads)
+		for i := 0; i < numPageLoads; i++ {
+			go func() {
+				n := rand.Intn(numPages) //nolint:gosec // used for simulating page visit not for security
+
+				page := pages[n]
+
+				buf := &bytes.Buffer{}
+				err := renderer.Render(buf, "=>"+page, nil, nil)
+				assert.NoError(t, err, page)
+				assert.Contains(t, buf.String(), page)
+
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+	})
 }
 
 func TestRenderer_Layout(t *testing.T) {
@@ -374,3 +418,16 @@ Additional API
 	- call with global layout, sub-layout, and page
 - E-Mail renderer instead of web renderer
 */
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randomString(n int) string {
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // used for ids, not security
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rnd.Intn(len(letters))]
+	}
+
+	return string(b)
+}
