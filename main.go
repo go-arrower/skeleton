@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"html/template"
-	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
+	template2 "github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
 func main() {
@@ -38,29 +38,52 @@ func main() {
 	router.Use(injectMW)
 
 	queue, _ := jobs.NewGueJobs(pg.PGx)
-	_ = queue.RegisterWorker(func(ctx context.Context, j someJob) error {
-		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 
-		if rand.Intn(100) > 80 { //nolint:gosec,gomnd
-			return errors.New("some error") //nolint:goerr113
-		}
+	{ // example queue workers
+		_ = queue.RegisterWorker(func(ctx context.Context, j someJob) error {
+			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 
-		return nil
-	})
-	_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
-	_ = queue.StartWorkers()
+			if rand.Intn(100) > 60 { //nolint:gosec,gomnd
+				return errors.New("some error") //nolint:goerr113
+			}
+
+			return nil
+		})
+
+		_ = queue.RegisterWorker(func(ctx context.Context, j longRunningJob) error {
+			time.Sleep(time.Duration(rand.Intn(5)) * time.Minute)
+
+			if rand.Intn(100) > 95 { //nolint:gosec,gomnd
+				return errors.New("some error") //nolint:goerr113
+			}
+
+			return nil
+		})
+
+		_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
+		_ = queue.StartWorkers()
+	}
 
 	router.GET("/", func(c echo.Context) error {
-		for i := 0; i < 100; i++ {
-			_ = queue.Enqueue(ctx, someJob{"Hallo job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
-			//_ = queue.Enqueue(ctx, otherJob{})
+		for i := 0; i < 256; i++ {
+			_ = queue.Enqueue(ctx, someJob{
+				Val: randomString(rand.Intn(1000)),
+				Field: Field{
+					F0: randomString(8),
+					F1: rand.Intn(32),
+				},
+			}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
+			_ = queue.Enqueue(ctx, otherJob{}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
+		}
+		for i := 0; i < 8; i++ {
+			_ = queue.Enqueue(ctx, longRunningJob{"Hallo long running job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
 		}
 
-		return c.Render(http.StatusOK, "hello", "World") //nolint:wrapcheck
+		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
-	t := &Template{}
-	router.Renderer = t
+	r, _ := template2.NewRenderer(os.DirFS("shared/interfaces/web/views"), true)
+	router.Renderer = r
 
 	_ = startup.Init(router, pg)
 
@@ -70,10 +93,29 @@ func main() {
 }
 
 type someJob struct {
+	Val   string
+	Field Field
+}
+type longRunningJob struct {
 	Val string
 }
 
 type otherJob struct{}
+
+type Field struct {
+	F0 string
+	F1 int
+}
+
+func randomString(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789 ")
+
+	s := make([]rune, n)
+	for i := range s {
+		s[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(s)
+}
 
 func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -87,14 +129,6 @@ func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return nil
 	}
-}
-
-type Template struct{}
-
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	templates := template.Must(template.ParseGlob("public/views/*.html"))
-
-	return templates.ExecuteTemplate(w, name, data) //nolint:wrapcheck
 }
 
 //nolint:lll

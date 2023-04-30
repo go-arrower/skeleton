@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -19,7 +20,7 @@ func (cont JobsController) JobsHome() func(c echo.Context) error {
 			qWithStats[q] = queueKpiToStats(q, s)
 		}
 
-		return c.Render(http.StatusOK, "jobs.home", ListQueuesPage{Queues: qWithStats}) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: qWithStats}) //nolint:wrapcheck
 	}
 }
 
@@ -35,7 +36,7 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, jobs, kpis)
 
-		return c.Render(http.StatusOK, "jobs.queue", page) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.queue", page) //nolint:wrapcheck
 	}
 }
 
@@ -43,7 +44,7 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		wp, _ := cont.Repo.WorkerPools(c.Request().Context())
 
-		return c.Render(http.StatusOK, "jobs.workers", wp) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.workers", wp) //nolint:wrapcheck
 	}
 }
 
@@ -76,12 +77,26 @@ func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) Q
 		queue = "Default"
 	}
 
+	jobs = prettyFormatPayload(jobs)
+
 	return QueuePage{
 		QueueName: queue,
 		Stats:     queueKpiToStats(queue, kpis),
 
 		Jobs: jobs,
 	}
+}
+
+func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
+	for i := 0; i < len(jobs); i++ {
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
+
+		data, _ := json.MarshalIndent(m, "", "  ")
+		jobs[i].Payload = string(data)
+	}
+
+	return jobs
 }
 
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
