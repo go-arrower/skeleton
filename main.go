@@ -23,9 +23,10 @@ import (
 
 func main() {
 	ctx := context.Background()
-	logger := arrower.NewDevelopment(os.Stderr)
-	//arrower.SetLogLevel(arrower.LevelDebug)
-	arrower.SetLogLevel(arrower.LevelTrace)
+	h := arrower.NewFilteredLogger(os.Stderr)
+	// h.SetLogLevel(arrower.LevelTrace)
+	h.SetLogLevel(arrower.LevelDebug)
+	logger := h.Logger
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
