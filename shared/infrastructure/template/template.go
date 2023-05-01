@@ -264,7 +264,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	r.logger.LogAttrs(nil, arrower.LevelDebug,
 		"render template",
 		slog.String("called_template", name),
-		slog.String("executing_template", cleanedName),
+		slog.String("actual_template", cleanedName),
 	)
 
 	r.mu.Lock()
@@ -319,6 +319,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.logger.LogAttrs(nil, arrower.LevelDebug,
 			"template cached",
 			slog.String("called_template", name),
+			slog.String("actual_template", cleanedName),
 			slog.String("layout", layout),
 			slog.String("page", page),
 			slog.Any("templates", templateNames(templ)),
