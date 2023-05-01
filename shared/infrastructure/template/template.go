@@ -7,11 +7,13 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"log"
 	"strings"
 	"sync"
 
+	"github.com/go-arrower/arrower"
+
 	"github.com/labstack/echo/v4"
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -24,11 +26,12 @@ var (
 const separator = "=>"
 
 type Renderer struct {
+	logger     *slog.Logger
 	viewFS     fs.FS
 	rawLayouts map[string]string
 	rawPages   map[string]string
-	templates  map[string]*template.Template
 
+	templates     map[string]*template.Template
 	components    *template.Template
 	defaultLayout string
 
@@ -40,19 +43,28 @@ type Renderer struct {
 
 // NewRenderer take multiple FS or can Context views be added later?
 // It prepares a renderer for HTML web views.
-func NewRenderer(viewFS fs.FS, hotReload bool) (*Renderer, error) {
+func NewRenderer(logger *slog.Logger, viewFS fs.FS, hotReload bool) (*Renderer, error) {
 	if viewFS == nil {
 		return nil, ErrInvalidFS
 	}
 
-	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(viewFS)
+	logger = logger.WithGroup("arrower.renderer")
+
+	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(logger, viewFS)
 	if err != nil {
 		return nil, err
 	}
 
 	defaultLayout := getDefaultLayout(rawLayouts)
 
+	logger.LogAttrs(nil, arrower.LevelDebug,
+		"renderer created",
+		slog.Bool("hot_reload", hotReload),
+		slog.String("default_layout", defaultLayout),
+	)
+
 	return &Renderer{
+		logger:            logger,
 		viewFS:            viewFS,
 		rawLayouts:        rawLayouts,
 		rawPages:          rawPages,
@@ -85,13 +97,13 @@ func getDefaultLayout(rawLayouts map[string]string) string {
 	return defaultLayout
 }
 
-func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
+func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
 	}
 
-	componentTemplates := template.New("")
+	componentTemplates := template.New("<empty>")
 
 	for _, c := range components {
 		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
@@ -101,13 +113,17 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 
 		name := componentName(c)
 
-		_, err = componentTemplates.New(name).Parse(file)
+		componentTemplates, err = componentTemplates.New(name).Parse(file)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err)
 		}
 	}
 
-	log.Println("loaded components", len(componentTemplates.Templates()), componentTemplates.DefinedTemplates())
+	logger.LogAttrs(nil, arrower.LevelTrace,
+		"loaded components",
+		slog.Int("component_count", len(componentTemplates.Templates())),
+		slog.Any("component_templates", templateNames(componentTemplates)),
+	)
 
 	pageTemplates := make(map[string]*template.Template)
 
@@ -138,11 +154,11 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 		}
 	}
 
-	log.Println("loaded pages", len(pageTemplates))
-
-	for _, p := range pageTemplates {
-		log.Println("page:", p.Name(), p.DefinedTemplates())
-	}
+	logger.LogAttrs(nil, arrower.LevelTrace,
+		"loaded pages",
+		slog.Int("page_count", len(pageTemplates)),
+		slog.Any("page_templates", rawTemplateNames(rawPages)),
+	)
 
 	layouts, err := fs.Glob(viewFS, "*.html")
 	if err != nil {
@@ -161,9 +177,36 @@ func prepareRenderer(viewFS fs.FS) (*template.Template, map[string]*template.Tem
 		rawLayouts[ln] = file
 	}
 
-	log.Println("layouts", rawLayouts)
+	// log.Println("layouts", rawLayouts)
+	logger.LogAttrs(nil, arrower.LevelTrace,
+		"loaded layouts",
+		slog.Int("layout_count", len(rawLayouts)),
+		slog.Any("layout_templates", rawTemplateNames(rawLayouts)),
+	)
 
 	return componentTemplates, pageTemplates, rawPages, rawLayouts, nil
+}
+
+// rawTemplateNames takes the names of the templates from the keys of the map.
+func rawTemplateNames(pages map[string]string) []string {
+	var names []string
+
+	for k, _ := range pages {
+		names = append(names, k)
+	}
+
+	return names
+}
+
+func templateNames(templates *template.Template) []string {
+	n := len(templates.Templates())
+	var names = make([]string, n)
+
+	for i := 0; i < n; i++ {
+		names[i] = templates.Templates()[i].Name()
+	}
+
+	return names
 }
 
 func componentName(componentName string) string {
@@ -218,13 +261,19 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		cleanedName = page
 	}
 
-	log.Println("Render for template", name, "cleanedName", cleanedName)
+	r.logger.LogAttrs(nil, arrower.LevelDebug,
+		"render template",
+		slog.String("called_template", name),
+		slog.String("executing_template", cleanedName),
+	)
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.hotReload {
-		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.viewFS)
+		r.logger.LogAttrs(nil, arrower.LevelTrace, "hot reload all templates")
+
+		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.logger, r.viewFS)
 		if err != nil {
 			return err
 		}
@@ -236,25 +285,24 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.templates = pageTemplates
 	}
 
-	templ, found := r.templates[name]
+	templ, found := r.templates[cleanedName]
 	if !found || r.hotReload {
-		log.Println("template does not exist", name)
-
-		log.Println("layout:", layout, "page:", page)
+		r.logger.LogAttrs(nil, arrower.LevelTrace,
+			"template not cached",
+			slog.String("called_template", name),
+			slog.String("layout", layout),
+			slog.String("page", page),
+		)
 
 		newTemplate, err := r.components.Clone()
 		if err != nil {
 			return fmt.Errorf("%w: could not clone: %v", ErrRenderFailed, err)
 		}
 
-		log.Println("newTemplate details:", newTemplate.Name(), newTemplate.DefinedTemplates())
-
 		_, err = newTemplate.New(cleanedName).Parse(r.rawLayouts[layout])
 		if err != nil {
 			return fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err)
 		}
-
-		log.Println("newTemplate details:", newTemplate.Name(), newTemplate.DefinedTemplates())
 
 		if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
 			return fmt.Errorf("%w: page does not exist", ErrRenderFailed)
@@ -268,10 +316,14 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.templates[cleanedName] = newTemplate
 		templ = newTemplate // "found" the template
 
-		log.Println("newTemplate added:", newTemplate.Name(), newTemplate.DefinedTemplates())
+		r.logger.LogAttrs(nil, arrower.LevelDebug,
+			"template cached",
+			slog.String("called_template", name),
+			slog.String("layout", layout),
+			slog.String("page", page),
+			slog.Any("templates", templateNames(templ)),
+		)
 	}
-
-	log.Println("found template", templ.Name(), templ.DefinedTemplates())
 
 	err := templ.ExecuteTemplate(w, cleanedName, data)
 	if err != nil {
