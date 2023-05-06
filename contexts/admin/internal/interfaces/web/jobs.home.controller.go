@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+
 	"github.com/go-arrower/arrower/jobs"
 
 	"github.com/labstack/echo/v4"
@@ -12,15 +14,9 @@ import (
 
 func (cont JobsController) JobsHome() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		queues, _ := cont.Repo.Queues(c.Request().Context())
+		res, _ := cont.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
 
-		qWithStats := make(map[string]QueueStats)
-		for _, q := range queues {
-			s, _ := cont.Repo.QueueKPIs(c.Request().Context(), q)
-			qWithStats[q] = queueKpiToStats(q, s)
-		}
-
-		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: qWithStats}) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: res.QueueStats}) //nolint:wrapcheck
 	}
 }
 
@@ -62,7 +58,7 @@ type (
 	}
 
 	ListQueuesPage struct {
-		Queues map[string]QueueStats
+		Queues map[string]application.QueueStats
 	}
 
 	QueuePage struct {
