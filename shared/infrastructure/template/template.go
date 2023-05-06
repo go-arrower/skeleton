@@ -177,7 +177,6 @@ func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map
 		rawLayouts[ln] = file
 	}
 
-	// log.Println("layouts", rawLayouts)
 	logger.LogAttrs(nil, arrower.LevelTrace,
 		"loaded layouts",
 		slog.Int("layout_count", len(rawLayouts)),
