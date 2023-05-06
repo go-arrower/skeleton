@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-arrower/arrower"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
@@ -16,11 +18,16 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
-	template2 "github.com/go-arrower/skeleton/shared/infrastructure/template"
+	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
 func main() {
 	ctx := context.Background()
+	h := arrower.NewFilteredLogger(os.Stderr)
+	// h.SetLogLevel(arrower.LevelTrace)
+	h.SetLogLevel(arrower.LevelDebug)
+	logger := h.Logger
+
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
 		Password:   "secret",
@@ -30,10 +37,12 @@ func main() {
 		MaxConns:   100,  //nolint:gomnd
 		Migrations: postgres.ArrowerDefaultMigrations,
 	})
-
-	log.Println(err)
+	if err != nil {
+		panic(err)
+	}
 
 	router := echo.New()
+	router.Logger.SetOutput(io.Discard)
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
@@ -82,7 +91,7 @@ func main() {
 		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
-	r, _ := template2.NewRenderer(os.DirFS("shared/interfaces/web/views"), true)
+	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
 	_ = startup.Init(router, pg)

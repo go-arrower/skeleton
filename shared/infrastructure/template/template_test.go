@@ -7,6 +7,7 @@ package template
 import (
 	"bytes"
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 	"testing/fstest"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/go-arrower/arrower"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template/testdata"
 	"github.com/go-arrower/skeleton/shared/interfaces/web/views"
 )
@@ -24,7 +26,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("construct renderer", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(views.SharedViews, false)
+		r, err := NewRenderer(arrower.NewDevelopment(os.Stderr), views.SharedViews, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, r)
 	})
@@ -32,7 +34,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("fail on missing files", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(nil, false)
+		r, err := NewRenderer(arrower.NewDevelopment(os.Stderr), nil, false)
 		assert.Error(t, err)
 		assert.Nil(t, r)
 	})
@@ -41,7 +43,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("initialise raw renderer", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -58,7 +60,7 @@ func TestNewRenderer(t *testing.T) {
 
 		// assert each page has itself and all components loaded as a template
 		for _, page := range renderer.templates {
-			assert.Len(t, page.Templates(), 4)
+			assert.Len(t, page.Templates(), 3) // 3 is number of components as above
 		}
 
 		// assert template is cached
@@ -72,7 +74,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("fs with no files", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.EmptyFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.EmptyFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -89,7 +91,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared pages without layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -103,7 +105,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render non existing page", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -116,7 +118,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared pages with components", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -132,7 +134,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared page with different layouts", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -160,7 +162,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render multiple pages and increase template cache", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -196,7 +198,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render component", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -210,7 +212,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("access layout that does not exist", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -224,7 +226,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("rely on default layout when rendering page", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -266,7 +268,7 @@ func TestRenderer_Render(t *testing.T) {
 		}
 
 		// test
-		renderer, err := NewRenderer(fs, true)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), fs, true)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -299,7 +301,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("no default layout present", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.EmptyFiles, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.EmptyFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -309,7 +311,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("only one layout file, so it becomes the default", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutOneLayout, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutOneLayout, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -319,7 +321,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("multiple layouts but with default", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -333,7 +335,7 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 	t.Run("set existing default layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -345,7 +347,7 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 	t.Run("set non existing layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(arrower.NewDevelopment(os.Stderr), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
