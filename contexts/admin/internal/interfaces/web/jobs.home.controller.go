@@ -2,19 +2,22 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
-
 	"github.com/go-arrower/arrower/jobs"
-
 	"github.com/labstack/echo/v4"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )
 
 func (cont JobsController) JobsHome() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, _ := cont.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := cont.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
 
 		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: res.QueueStats}) //nolint:wrapcheck
 	}

@@ -2,8 +2,9 @@ package web
 
 import (
 	"github.com/go-arrower/arrower/jobs"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"golang.org/x/exp/slog"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )
 
 type JobsController struct {

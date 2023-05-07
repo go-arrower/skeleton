@@ -45,6 +45,7 @@ func main() {
 	}
 
 	router := echo.New()
+	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
