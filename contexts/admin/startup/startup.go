@@ -18,6 +18,8 @@ func Init(e *echo.Echo, pg *postgres.Handler, logger *slog.Logger) error {
 
 	container := application.JobsCommandContainer{
 		ListAllQueues: application.Logged(logger, application.ListAllQueues(repo)),
+		GetQueue:      application.Logged(logger, application.GetQueue(repo)),
+		GetWorkers:    application.Logged(logger, application.GetWorkers(repo)),
 	}
 
 	cont := web.JobsController{

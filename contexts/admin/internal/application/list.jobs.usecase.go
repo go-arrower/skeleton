@@ -8,7 +8,9 @@ import (
 )
 
 type JobsCommandContainer struct {
-	ListAllQueues func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
+	ListAllQueues func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error)
+	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
+	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
 }
 
 type (
@@ -18,6 +20,7 @@ type (
 	}
 )
 
+// ListAllQueues returns all Queues.
 func ListAllQueues(repo jobs.Repository) func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 	return func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 		queues, _ := repo.Queues(ctx)
@@ -31,6 +34,49 @@ func ListAllQueues(repo jobs.Repository) func(ctx context.Context, in ListAllQue
 		// return ListAllQueuesResponse{}, errors.New("some-error")
 
 		return ListAllQueuesResponse{QueueStats: qWithStats}, nil
+	}
+}
+
+type (
+	GetQueueRequest struct {
+		QueueName string
+	}
+	GetQueueResponse struct {
+		Jobs []jobs.PendingJob
+		Kpis jobs.QueueKPIs
+	}
+)
+
+// GetQueue returns a Queue.
+func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
+	return func(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
+		queue := in.QueueName
+		if queue == "Default" {
+			queue = ""
+		}
+
+		jobs, _ := repo.PendingJobs(ctx, queue)
+		kpis, _ := repo.QueueKPIs(ctx, queue)
+
+		return GetQueueResponse{
+			Jobs: jobs,
+			Kpis: kpis,
+		}, nil
+	}
+}
+
+type (
+	GetWorkersRequest  struct{}
+	GetWorkersResponse struct {
+		Pool []jobs.WorkerPool
+	}
+)
+
+func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
+	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
+		wp, _ := repo.WorkerPools(ctx)
+
+		return GetWorkersResponse{Pool: wp}, nil
 	}
 }
 

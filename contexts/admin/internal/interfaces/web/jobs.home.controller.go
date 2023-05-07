@@ -26,14 +26,15 @@ func (cont JobsController) JobsHome() func(c echo.Context) error {
 func (cont JobsController) JobsQueue() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.Param("queue")
-		if queue == "Default" {
-			queue = ""
+
+		res, err := cont.Cmds.GetQueue(c.Request().Context(), application.GetQueueRequest{
+			QueueName: queue,
+		})
+		if err != nil {
+			return fmt.Errorf("%w", err)
 		}
 
-		jobs, _ := cont.Repo.PendingJobs(c.Request().Context(), queue)
-		kpis, _ := cont.Repo.QueueKPIs(c.Request().Context(), queue)
-
-		page := buildQueuePage(queue, jobs, kpis)
+		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
 		return c.Render(http.StatusOK, "=>jobs.queue", page) //nolint:wrapcheck
 	}
@@ -41,9 +42,12 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		wp, _ := cont.Repo.WorkerPools(c.Request().Context())
+		res, err := cont.Cmds.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", wp) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.workers", res.Pool) //nolint:wrapcheck
 	}
 }
 
