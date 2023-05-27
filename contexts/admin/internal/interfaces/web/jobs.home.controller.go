@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
+
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/labstack/echo/v4"
 
@@ -65,7 +67,7 @@ type (
 	}
 
 	ListQueuesPage struct {
-		Queues map[string]application.QueueStats
+		Queues map[domain.QueueName]domain.QueueStats
 	}
 
 	QueuePage struct {
