@@ -3,33 +3,35 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slog"
 )
 
-type DDecoratorFunc[in, out any] interface {
+type DecoratorFunc[in, out any] interface {
 	func(context.Context, in) (out, error)
 }
 
-type DDecoratorFuncUnary[in, out any] interface {
+type DecoratorFuncUnary[in any] interface {
 	func(context.Context, in) error
 }
 
-func Logged[in, out any, F DDecoratorFunc[in, out]](logger *slog.Logger, next F) F {
+// Logged wraps an application function / command with debug logs.
+func Logged[in, out any, F DecoratorFunc[in, out]](logger *slog.Logger, next F) F {
 	return func(ctx context.Context, in in) (out, error) {
 		cmdName := commandName(in)
 
-		logger.LogAttrs(ctx, slog.LevelDebug, "executing command",
+		logger.DebugCtx(ctx, "executing command",
 			slog.String("command", cmdName),
 		)
 
 		r, err := next(ctx, in)
 
 		if err == nil {
-			logger.LogAttrs(ctx, slog.LevelDebug, "command executed successfully",
+			logger.DebugCtx(ctx, "command executed successfully",
 				slog.String("command", cmdName))
 		} else {
-			logger.LogAttrs(ctx, slog.LevelDebug, "failed to execute command",
+			logger.DebugCtx(ctx, "failed to execute command",
 				slog.String("command", cmdName),
 				slog.String("error", err.Error()),
 			)
@@ -39,14 +41,37 @@ func Logged[in, out any, F DDecoratorFunc[in, out]](logger *slog.Logger, next F)
 	}
 }
 
-func LoggedCommandUnary[in, out any, F DDecoratorFuncUnary[in, out]](logger *slog.Logger, next F) F {
+// LoggedU is like Logged but for functions only returning errors, e.g. jobs.
+func LoggedU[in any, F DecoratorFuncUnary[in]](logger *slog.Logger, next F) F {
 	return func(ctx context.Context, in in) error {
-		return next(ctx, in)
+		cmdName := commandName(in)
+
+		logger.DebugCtx(ctx, "executing command",
+			slog.String("command", cmdName),
+		)
+
+		err := next(ctx, in)
+
+		if err == nil {
+			logger.DebugCtx(ctx, "command executed successfully",
+				slog.String("command", cmdName))
+		} else {
+			logger.DebugCtx(ctx, "failed to execute command",
+				slog.String("command", cmdName),
+				slog.String("error", err.Error()),
+			)
+		}
+
+		return err
 	}
 }
 
+// commandName extracts a printable name from cmd in the format of: functionName.
+//
+// functionName 								=> strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
+// functionname 								=> strings.ToLower(strings.Split(fmt.Sprintf("%T", cmd), ".")[1])
+// packageName.functionName 					=> fmt.Sprintf("%T", cmd)
+// github.com/go-arrower/skeleton/.../package	=> fmt.Sprintln(reflect.TypeOf(cmd).PkgPath())
 func commandName(cmd any) string {
-	// fmt.Println(reflect.TypeOf(cmd).PkgPath())
-	// return strings.ToLower(strings.Split(fmt.Sprintf("%T", cmd), ".")[1])
-	return fmt.Sprintf("%T", cmd)
+	return strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
 }

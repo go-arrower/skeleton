@@ -13,7 +13,7 @@ import (
 
 type exampleCommand struct{}
 
-func TestLoggedCommand(t *testing.T) {
+func TestLogged(t *testing.T) {
 	t.Parallel()
 
 	t.Run("successful command", func(t *testing.T) {
@@ -29,7 +29,7 @@ func TestLoggedCommand(t *testing.T) {
 		_, _ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=application_test.exampleCommand`)
+		assert.Contains(t, buf.String(), `command=exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="command executed successfully"`)
 	})
 
@@ -46,7 +46,44 @@ func TestLoggedCommand(t *testing.T) {
 		_, _ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=application_test.exampleCommand`)
+		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `msg="failed to execute command"`)
+		assert.Contains(t, buf.String(), `error=some-error`)
+	})
+}
+
+func TestLoggedU(t *testing.T) {
+	t.Run("successful command", func(t *testing.T) {
+		t.Parallel()
+
+		buf := &bytes.Buffer{}
+		h := arrower.NewFilteredLogger(buf)
+
+		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
+			return nil
+		})
+
+		_ = cmd(context.Background(), exampleCommand{})
+
+		assert.Contains(t, buf.String(), `msg="executing command"`)
+		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `msg="command executed successfully"`)
+	})
+
+	t.Run("failed command", func(t *testing.T) {
+		t.Parallel()
+
+		buf := &bytes.Buffer{}
+		h := arrower.NewFilteredLogger(buf)
+
+		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
+			return errors.New("some-error")
+		})
+
+		_ = cmd(context.Background(), exampleCommand{})
+
+		assert.Contains(t, buf.String(), `msg="executing command"`)
+		assert.Contains(t, buf.String(), `command=exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="failed to execute command"`)
 		assert.Contains(t, buf.String(), `error=some-error`)
 	})
