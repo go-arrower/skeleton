@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/skeleton/shared/interfaces/web/views/pages"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 
 	"github.com/go-arrower/arrower/jobs"
@@ -49,8 +51,38 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", res.Pool) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.workers", presentWorkers(res.Pool)) //nolint:wrapcheck
 	}
+}
+
+func presentWorkers(pool []jobs.WorkerPool) []pages.JobWorker {
+	p := make([]pages.JobWorker, len(pool))
+
+	for i, _ := range pool {
+		p[i].ID = pool[i].ID
+		p[i].Queue = pool[i].Queue
+		p[i].Workers = pool[i].Workers
+		p[i].LastSeenAt = pool[i].LastSeen.Format(time.TimeOnly)
+
+		p[i].LastSeenAtColour = "text-green-600"
+		if time.Now().Sub(pool[i].LastSeen)/time.Second > 30 {
+			p[i].LastSeenAtColour = "text-orange-600"
+		}
+
+		p[i].NotSeenSince = notSeenSinceTimeString(pool[i].LastSeen)
+	}
+
+	return p
+}
+
+func notSeenSinceTimeString(t time.Time) string {
+	seconds := time.Now().Sub(t).Seconds()
+
+	if seconds > 60 {
+		return fmt.Sprintf("%d m %d sec", int(seconds/60), int(seconds)%60)
+	}
+
+	return fmt.Sprintf("%d sec", int(seconds))
 }
 
 type (

@@ -9,6 +9,8 @@ import (
 	"github.com/go-arrower/arrower/jobs"
 )
 
+const defaultQueueName = "Default"
+
 type JobsCommandContainer struct {
 	ListAllQueues func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
@@ -53,7 +55,7 @@ type (
 func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
 	return func(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
 		queue := in.QueueName
-		if queue == "Default" {
+		if queue == defaultQueueName {
 			queue = ""
 		}
 
@@ -78,13 +80,19 @@ func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (
 	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
 		wp, _ := repo.WorkerPools(ctx)
 
+		for i, _ := range wp {
+			if wp[i].Queue == "" {
+				wp[i].Queue = defaultQueueName
+			}
+		}
+
 		return GetWorkersResponse{Pool: wp}, nil
 	}
 }
 
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 	if queue == "" {
-		queue = "Default"
+		queue = defaultQueueName
 	}
 
 	var errorRate float64
