@@ -3,34 +3,53 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"golang.org/x/exp/slog"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/go-arrower/arrower"
-
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/exporters/prometheus"
+	api "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"golang.org/x/exp/slog"
 )
 
 func main() {
 	ctx := context.Background()
+
+	// observability
 	h := arrower.NewFilteredLogger(os.Stderr)
 	// h.SetLogLevel(arrower.LevelTrace)
 	//h.SetLogLevel(arrower.LevelDebug)
 	h.SetLogLevel(slog.LevelDebug)
 	logger := h.Logger
 
+	exporter, err := prometheus.New()
+	if err != nil {
+		panic(err)
+	}
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
+
+	// Start the prometheus HTTP server and pass the exporter Collector to it
+	go serveMetrics()
+
+	// dependencies
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
 		Password:   "secret",
@@ -75,6 +94,26 @@ func main() {
 
 		_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
 		_ = queue.StartWorkers()
+	}
+
+	{ // example metrics
+		opt := api.WithAttributes(
+			attribute.Key("A").String("B"),
+			attribute.Key("C").String("D"),
+		)
+
+		// This is the equivalent of prometheus.NewCounterVec
+		counter, err := meter.Float64Counter("foo", api.WithDescription("a simple counter"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		counter.Add(ctx, 5, opt)
+
+		router.GET("/add", func(c echo.Context) error {
+			counter.Add(c.Request().Context(), 1, opt)
+
+			return c.HTML(http.StatusOK, "Counter incremented")
+		})
 	}
 
 	router.GET("/", func(c echo.Context) error {
@@ -128,6 +167,16 @@ func randomString(n int) string {
 		s[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(s)
+}
+
+func serveMetrics() {
+	log.Printf("serving metrics at localhost:2223/metrics")
+	http.Handle("/metrics", promhttp.Handler())
+	err := http.ListenAndServe(":2223", nil)
+	if err != nil {
+		fmt.Printf("error serving http: %v", err)
+		return
+	}
 }
 
 func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
