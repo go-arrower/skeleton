@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slog"
+
 	"github.com/go-arrower/arrower"
 
 	"github.com/go-arrower/arrower/jobs"
@@ -25,7 +27,8 @@ func main() {
 	ctx := context.Background()
 	h := arrower.NewFilteredLogger(os.Stderr)
 	// h.SetLogLevel(arrower.LevelTrace)
-	h.SetLogLevel(arrower.LevelDebug)
+	//h.SetLogLevel(arrower.LevelDebug)
+	h.SetLogLevel(slog.LevelDebug)
 	logger := h.Logger
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
@@ -42,6 +45,7 @@ func main() {
 	}
 
 	router := echo.New()
+	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
@@ -94,7 +98,7 @@ func main() {
 	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(router, pg)
+	_ = startup.Init(router, pg, logger)
 
 	router.Logger.Fatal(router.Start(":8080"))
 
