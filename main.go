@@ -13,6 +13,11 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	trace2 "go.opentelemetry.io/otel/trace"
 
 	"github.com/go-arrower/arrower"
 	"github.com/go-arrower/arrower/jobs"
@@ -96,6 +101,31 @@ func main() {
 		_ = queue.StartWorkers()
 	}
 
+	// example trace
+	exporterT, err := otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithEndpoint("localhost:4317"),
+		otlptracegrpc.WithInsecure(),
+	)
+	if err != nil {
+		panic(err)
+	}
+	// labels/tags/resources that are common to all traces.
+	resource := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String("my-tempo-service-name"),
+		attribute.String("some-attribute", "some-value"),
+	)
+
+	providerT := trace.NewTracerProvider(
+		//trace.WithBatcher(exporterT), // prod
+		trace.WithSyncer(exporterT), // dev
+		trace.WithResource(resource),
+		// set the sampling rate based on the parent span to 60%
+		//trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))), // prod
+		trace.WithSampler(trace.AlwaysSample()), // dev
+	)
+
 	{ // example metrics
 		opt := api.WithAttributes(
 			attribute.Key("A").String("B"),
@@ -110,7 +140,14 @@ func main() {
 		counter.Add(ctx, 5, opt)
 
 		router.GET("/add", func(c echo.Context) error {
-			counter.Add(c.Request().Context(), 1, opt)
+
+			newCtx, span := providerT.Tracer("myTracer").Start(c.Request().Context(), "add",
+				trace2.WithAttributes(attribute.String("component", "addition")),
+				trace2.WithAttributes(attribute.String("someKey", "someValue")),
+			)
+			defer span.End()
+
+			counter.Add(newCtx, 1, opt)
 
 			return c.HTML(http.StatusOK, "Counter incremented")
 		})
