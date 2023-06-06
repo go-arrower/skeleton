@@ -115,6 +115,7 @@ func main() {
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String("my-tempo-service-name"),
 		attribute.String("some-attribute", "some-value"),
+		attribute.String("job", "somejob"), // NEEDS TO MATCH WITH THE LOGS LABEL
 	)
 
 	providerT := trace.NewTracerProvider(
@@ -144,10 +145,27 @@ func main() {
 			newCtx, span := providerT.Tracer("myTracer").Start(c.Request().Context(), "add",
 				trace2.WithAttributes(attribute.String("component", "addition")),
 				trace2.WithAttributes(attribute.String("someKey", "someValue")),
+				//trace2.WithAttributes(attribute.String("job", "somejob")), // NEEDS TO MATCH WITH THE LOGS LABEL
+				//trace2.WithAttributes(attribute.String("job", "someJob")),
+				// todo what is the difference between a tempo resource and attribute?
 			)
 			defer span.End()
 
-			counter.Add(newCtx, 1, opt)
+			traceID := span.SpanContext().TraceID().String()
+
+			{
+				time.Sleep(50 * time.Millisecond)
+				span.AddEvent("start adding")
+
+				counter.Add(newCtx, 1, api.WithAttributes(
+					attribute.Key("traceID").String(traceID),
+				))
+				logger.Debug("added a metric counter", slog.String("traceID", traceID),
+					slog.Int("random integer", rand.Intn(1000)))
+
+				span.AddEvent("finish adding")
+				time.Sleep(50 * time.Millisecond)
+			}
 
 			return c.HTML(http.StatusOK, "Counter incremented")
 		})

@@ -13,6 +13,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.16.0
 	go.opentelemetry.io/otel/sdk v1.16.0
 	go.opentelemetry.io/otel/sdk/metric v0.39.0
+	go.opentelemetry.io/otel/trace v1.16.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 )
 
@@ -51,7 +52,6 @@ require (
 	github.com/vgarvardt/gue/v5 v5.2.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.3.0 // indirect
-	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
