@@ -3,15 +3,13 @@ package application_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/go-arrower/arrower"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/stretchr/testify/assert"
-)
 
-type exampleCommand struct{}
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+)
 
 func TestLogged(t *testing.T) {
 	t.Parallel()
@@ -40,7 +38,7 @@ func TestLogged(t *testing.T) {
 		h := arrower.NewFilteredLogger(buf)
 
 		cmd := application.Logged(h.Logger, func(context.Context, exampleCommand) (string, error) {
-			return "", errors.New("some-error")
+			return "", errUseCaseFails
 		})
 
 		_, _ = cmd(context.Background(), exampleCommand{})
@@ -53,6 +51,8 @@ func TestLogged(t *testing.T) {
 }
 
 func TestLoggedU(t *testing.T) {
+	t.Parallel()
+
 	t.Run("successful command", func(t *testing.T) {
 		t.Parallel()
 
@@ -77,7 +77,7 @@ func TestLoggedU(t *testing.T) {
 		h := arrower.NewFilteredLogger(buf)
 
 		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
-			return errors.New("some-error")
+			return errUseCaseFails
 		})
 
 		_ = cmd(context.Background(), exampleCommand{})
