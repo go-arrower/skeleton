@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -13,46 +12,22 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	trace2 "go.opentelemetry.io/otel/trace"
 
-	"github.com/go-arrower/arrower"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/otel/exporters/prometheus"
 	api "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"golang.org/x/exp/slog"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// observability
-	h := arrower.NewFilteredLogger(os.Stderr)
-	// h.SetLogLevel(arrower.LevelTrace)
-	//h.SetLogLevel(arrower.LevelDebug)
-	h.SetLogLevel(slog.LevelDebug)
-	logger := h.Logger
-
-	exporter, err := prometheus.New()
-	if err != nil {
-		panic(err)
-	}
-
-	provider := metric.NewMeterProvider(metric.WithReader(exporter))
-	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
-
-	// Start the prometheus HTTP server and pass the exporter Collector to it
-	go serveMetrics()
+	logger, meterProvider, traceProvider := setupTelemetry(ctx)
 
 	// dependencies
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
@@ -101,39 +76,20 @@ func main() {
 		_ = queue.StartWorkers()
 	}
 
-	// example trace
-	exporterT, err := otlptracegrpc.New(
-		ctx,
-		otlptracegrpc.WithEndpoint("localhost:4317"),
-		otlptracegrpc.WithInsecure(),
-	)
-	if err != nil {
-		panic(err)
-	}
-	// labels/tags/resources that are common to all traces.
-	resource := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("my-tempo-service-name"),
-		attribute.String("some-attribute", "some-value"),
-		attribute.String("job", "somejob"), // NEEDS TO MATCH WITH THE LOGS LABEL
-	)
-
-	providerT := trace.NewTracerProvider(
-		//trace.WithBatcher(exporterT), // prod
-		trace.WithSyncer(exporterT), // dev
-		trace.WithResource(resource),
-		// set the sampling rate based on the parent span to 60%
-		//trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))), // prod
-		trace.WithSampler(trace.AlwaysSample()), // dev
-	)
-
 	{ // example metrics
-		opt := api.WithAttributes(
+		opt := api.WithAttributes( // todo check if metrics and trae attributes can be shared
 			attribute.Key("A").String("B"),
 			attribute.Key("C").String("D"),
 		)
 
+		tracer := traceProvider.Tracer("myTracer", // namespace per library that is instrumented
+			trace2.WithInstrumentationVersion("0.1337"),
+		)
+
 		// This is the equivalent of prometheus.NewCounterVec
+		meter := meterProvider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus",
+			api.WithInstrumentationVersion("0.1337"),
+		)
 		counter, err := meter.Float64Counter("foo", api.WithDescription("a simple counter"))
 		if err != nil {
 			log.Fatal(err)
@@ -141,31 +97,79 @@ func main() {
 		counter.Add(ctx, 5, opt)
 
 		router.GET("/add", func(c echo.Context) error {
-
-			newCtx, span := providerT.Tracer("myTracer").Start(c.Request().Context(), "add",
+			newCtx, span := tracer.Start(c.Request().Context(), "add",
 				trace2.WithAttributes(attribute.String("component", "addition")),
-				trace2.WithAttributes(attribute.String("someKey", "someValue")),
 				//trace2.WithAttributes(attribute.String("job", "somejob")), // NEEDS TO MATCH WITH THE LOGS LABEL
-				//trace2.WithAttributes(attribute.String("job", "someJob")),
 				// todo what is the difference between a tempo resource and attribute?
 			)
 			defer span.End()
 
-			traceID := span.SpanContext().TraceID().String()
+			//traceID := span.SpanContext().TraceID().String()
 
 			{
 				time.Sleep(50 * time.Millisecond)
 				span.AddEvent("start adding")
 
-				counter.Add(newCtx, 1, api.WithAttributes(
-					attribute.Key("traceID").String(traceID),
-				))
-				logger.Debug("added a metric counter", slog.String("traceID", traceID),
-					slog.Int("random integer", rand.Intn(1000)))
+				logger.DebugCtx(newCtx, "some log, to see if it is an event in the outer span")
+
+				{
+					newCtx, spanInner := tracer.Start(newCtx, "addInner")
+
+					examplar := attribute.NewSet(attribute.KeyValue{
+						Key:   "traceID",
+						Value: attribute.StringValue(spanInner.SpanContext().TraceID().String()),
+					})
+					e := &examplar
+
+					counter.Add(newCtx,
+						1,
+						api.WithAttributes(
+							append(e.ToSlice(), attribute.String("component", "addition"))...,
+						),
+					)
+					logger.DebugCtx(newCtx, "added a metric counter",
+						slog.String("component", "addition"),
+						slog.Int("random integer", rand.Intn(1000)))
+
+					spanInner.End()
+				}
 
 				span.AddEvent("finish adding")
 				time.Sleep(50 * time.Millisecond)
 			}
+
+			{ // example metric to test Examplar
+				h, err := meterProvider.Meter("some_hist").Int64Histogram("Das_hist")
+				if err != nil {
+					panic(err)
+				}
+
+				examplar := attribute.NewSet(attribute.KeyValue{
+					//Key:   "traceID",
+					//Value: attribute.StringValue(span.SpanContext().TraceID().String()),
+					Key:   "someKey",
+					Value: attribute.StringValue("someVal"),
+				})
+				e := &examplar
+
+				go func() {
+					for {
+						t := time.NewTicker(1 * time.Second)
+						select {
+						case <-t.C:
+							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+							h.Record(newCtx, int64(rand.Intn(100)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+
+							//h.(prometheus.ExemplarObserver).ObserveWithExemplar(
+							//	time.Since(time.Now().Add(-5*time.Second)).Seconds(), prometheus.Labels{"traceID": span.SpanContext().TraceID().String()},
+							//)
+						}
+					}
+				}()
+			}
+
+			time.Sleep(5 * time.Second)
 
 			return c.HTML(http.StatusOK, "Counter incremented")
 		})
@@ -197,6 +201,8 @@ func main() {
 	router.Logger.Fatal(router.Start(":8080"))
 
 	_ = queue.Shutdown(ctx)
+	_ = traceProvider.Shutdown(ctx)
+	_ = meterProvider.Shutdown(ctx)
 }
 
 type someJob struct {
@@ -222,16 +228,6 @@ func randomString(n int) string {
 		s[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(s)
-}
-
-func serveMetrics() {
-	log.Printf("serving metrics at localhost:2223/metrics")
-	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":2223", nil)
-	if err != nil {
-		fmt.Printf("error serving http: %v", err)
-		return
-	}
 }
 
 func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
