@@ -86,10 +86,10 @@ func serveMetrics() {
 	log.Printf("serving metrics at localhost:2223/metrics")
 
 	//http.Handle("/metrics", promhttp.Handler())
-	http.Handle("/metrics", promhttp.HandlerFor( // to enable Examplars in the export format
+	http.Handle("/metrics", promhttp.HandlerFor(
 		prometheus2.DefaultGatherer,
 		promhttp.HandlerOpts{
-			EnableOpenMetrics: true,
+			EnableOpenMetrics: true, // to enable Examplars in the export format
 		},
 	))
 

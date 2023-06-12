@@ -196,7 +196,7 @@ func main() {
 	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(router, pg, logger, traceProvider)
+	_ = startup.Init(router, pg, logger, traceProvider, meterProvider)
 
 	router.Logger.Fatal(router.Start(":8080"))
 

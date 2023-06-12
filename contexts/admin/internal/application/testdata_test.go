@@ -1,6 +1,7 @@
 package application_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -105,3 +106,59 @@ func (f fakeSpan) SetAttributes(kv ...attribute.KeyValue) {
 func (f fakeSpan) TracerProvider() trace.TracerProvider { //nolint:ireturn
 	panic("implement me")
 }
+
+var (
+	//nolint:lll // needs to match the exact format expected from the prometheus endpoint
+	metricsForSucceedingUseCase = bytes.NewReader([]byte(`
+# HELP usecases_duration_seconds a simple hist
+# TYPE usecases_duration_seconds histogram
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="0"} 0
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="5"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="10"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="25"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="50"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="75"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="100"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="250"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="750"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="1000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="2500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="5000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="7500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="10000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="+Inf"} 1
+usecases_duration_seconds_sum{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version=""} 2.198e-06
+usecases_duration_seconds_count{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version=""} 1
+# HELP usecases_total a simple counter
+# TYPE usecases_total counter
+usecases_total{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",status="success"} 1
+`))
+
+	//nolint:lll // needs to match the exact format expected from the prometheus endpoint
+	metricsForFailingUseCase = bytes.NewReader([]byte(`
+# HELP usecases_duration_seconds a simple hist
+# TYPE usecases_duration_seconds histogram
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="0"} 0
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="5"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="10"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="25"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="50"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="75"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="100"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="250"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="750"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="1000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="2500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="5000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="7500"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="10000"} 1
+usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="+Inf"} 1
+usecases_duration_seconds_sum{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version=""} 2.198e-06
+usecases_duration_seconds_count{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version=""} 1
+# HELP usecases_total a simple counter
+# TYPE usecases_total counter
+usecases_total{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",status="failure"} 1
+`))
+)

@@ -20,11 +20,11 @@ func Traced[in, out any, F DecoratorFunc[in, out]](traceProvider trace.TracerPro
 		)
 		defer span.End()
 
-		r, err := next(newCtx, in)
+		result, err := next(newCtx, in)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 		}
 
-		return r, err
+		return result, err
 	}
 }

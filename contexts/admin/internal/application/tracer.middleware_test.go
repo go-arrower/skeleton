@@ -10,7 +10,7 @@ import (
 func TestTraced(t *testing.T) {
 	t.Parallel()
 
-	t.Run("trace cmd", func(t *testing.T) {
+	t.Run("successful command", func(t *testing.T) {
 		t.Parallel()
 
 		cmd := application.Traced(newFakeTracer(t), func(context.Context, exampleCommand) (string, error) {
@@ -20,7 +20,7 @@ func TestTraced(t *testing.T) {
 		_, _ = cmd(context.Background(), exampleCommand{})
 	})
 
-	t.Run("trace cmd failed", func(t *testing.T) {
+	t.Run("failed command", func(t *testing.T) {
 		t.Parallel()
 
 		cmd := application.Traced(newFakeTracer(t), func(context.Context, exampleCommand) (string, error) {

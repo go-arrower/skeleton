@@ -7,6 +7,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
 )
@@ -16,6 +17,7 @@ func Init(
 	pg *postgres.Handler,
 	logger *slog.Logger,
 	traceProvider trace.TracerProvider,
+	meterProvider metric.MeterProvider,
 ) error {
 
 	admin := e.Group("/admin")
@@ -23,9 +25,29 @@ func Init(
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))
 
 	container := application.JobsCommandContainer{
-		ListAllQueues: application.Traced(traceProvider, application.Logged(logger, application.ListAllQueues(repo))),
-		GetQueue:      application.Traced(traceProvider, application.Logged(logger, application.GetQueue(repo))),
-		GetWorkers:    application.Traced(traceProvider, application.Logged(logger, application.GetWorkers(repo))),
+		ListAllQueues: application.Traced(
+			traceProvider, application.Metric(
+				meterProvider,
+				application.Logged(
+					logger,
+					application.ListAllQueues(repo),
+				),
+			),
+		),
+		GetQueue: application.Traced(
+			traceProvider, application.Metric(
+				meterProvider, application.Logged(
+					logger, application.GetQueue(repo),
+				),
+			),
+		),
+		GetWorkers: application.Traced(
+			traceProvider, application.Metric(
+				meterProvider, application.Logged(
+					logger, application.GetWorkers(repo),
+				),
+			),
+		),
 	}
 
 	cont := web.JobsController{
