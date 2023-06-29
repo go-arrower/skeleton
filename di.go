@@ -38,9 +38,10 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 
 	h := arrower.NewFilteredLogger(os.Stderr)
 	// h.SetLogLevel(arrower.LevelTrace)
-	// h.SetLogLevel(arrower.LevelDebug)
 	h.SetLogLevel(slog.LevelDebug)
 	logger := h.Logger
+
+	logger = arrower.NewDevelopmentLogger()
 
 	exporter, err := prometheus.New()
 	if err != nil {
