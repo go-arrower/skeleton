@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	prometheus2 "github.com/prometheus/client_golang/prometheus"
 
@@ -36,12 +35,7 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 
 	// CAN RESOURCES BE ADDED TO LOGGER SO ALL THREE HAVE THE SAME VALUES?
 
-	h := arrower.NewFilteredLogger(os.Stderr)
-	// h.SetLogLevel(arrower.LevelTrace)
-	h.SetLogLevel(slog.LevelDebug)
-	logger := h.Logger
-
-	logger = arrower.NewDevelopmentLogger()
+	logger := arrower.NewDevelopmentLogger()
 
 	exporter, err := prometheus.New()
 	if err != nil {
