@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-arrower/arrower/alog"
+
 	prometheus2 "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/go-arrower/arrower"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -35,7 +36,7 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 
 	// CAN RESOURCES BE ADDED TO LOGGER SO ALL THREE HAVE THE SAME VALUES?
 
-	logger := arrower.NewDevelopmentLogger()
+	logger := alog.NewDevelopment()
 
 	exporter, err := prometheus.New()
 	if err != nil {
