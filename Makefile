@@ -29,3 +29,7 @@ test-unit:
 .PHONY:dev-tools
 dev-tools: ## Initialise this machine with development dependencies
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b $(go env GOPATH)/bin v1.50.1
+
+.PHONY: dev-upgrade
+dev-upgrade:
+	go get -t -u ./...

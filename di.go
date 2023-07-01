@@ -7,22 +7,17 @@ import (
 	"net/http"
 
 	"github.com/go-arrower/arrower/alog"
-
 	prometheus2 "github.com/prometheus/client_golang/prometheus"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"google.golang.org/grpc"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/sdk/trace"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"golang.org/x/exp/slog"
+	"google.golang.org/grpc"
 )
 
 func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *trace.TracerProvider) {

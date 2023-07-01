@@ -5,7 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-arrower/arrower"
+	"github.com/go-arrower/arrower/alog"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
@@ -18,9 +19,9 @@ func TestLogged(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.Logged(h.Logger, func(context.Context, exampleCommand) (string, error) {
+		cmd := application.Logged(logger, func(context.Context, exampleCommand) (string, error) {
 			return "", nil
 		})
 
@@ -35,9 +36,9 @@ func TestLogged(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.Logged(h.Logger, func(context.Context, exampleCommand) (string, error) {
+		cmd := application.Logged(logger, func(context.Context, exampleCommand) (string, error) {
 			return "", errUseCaseFails
 		})
 
@@ -57,9 +58,9 @@ func TestLoggedU(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
+		cmd := application.LoggedU(logger, func(context.Context, exampleCommand) error {
 			return nil
 		})
 
@@ -74,9 +75,9 @@ func TestLoggedU(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
+		cmd := application.LoggedU(logger, func(context.Context, exampleCommand) error {
 			return errUseCaseFails
 		})
 
