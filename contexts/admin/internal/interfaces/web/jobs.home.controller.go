@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-arrower/skeleton/shared/interfaces/web/views/pages"
@@ -52,6 +53,32 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 		}
 
 		return c.Render(http.StatusOK, "=>jobs.workers", presentWorkers(res.Pool)) //nolint:wrapcheck
+	}
+}
+
+func (cont JobsController) JobsSchedule() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>jobs.schedule", nil) //nolint:wrapcheck
+	}
+}
+
+func (cont JobsController) JobsScheduleNew() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		q := c.FormValue("queue")
+		jt := c.FormValue("job_type")
+		num := c.FormValue("count")
+
+		count, err := strconv.Atoi(num)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		err = cont.Cmds.ScheduleJobs(c.Request().Context(), q, jt, count)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }
 

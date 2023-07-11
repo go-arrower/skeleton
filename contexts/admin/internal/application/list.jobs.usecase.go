@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
@@ -15,6 +17,7 @@ type JobsCommandContainer struct {
 	ListAllQueues func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
+	ScheduleJobs  func(context.Context, string, string, int) error
 }
 
 type (
@@ -116,5 +119,56 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob,
 		EstimateUntilEmpty:   duration,
+	}
+}
+
+func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, string, string, int) error {
+	return func(ctx context.Context, queue string, jobType string, count int) error {
+
+		return jq.Enqueue(ctx, buildJobs(jobType, count))
+	}
+}
+
+func buildJobs(jobType string, count int) []any {
+	jobs := make([]any, count)
+
+	for i := 0; i < count; i++ {
+		switch jobType {
+		case "SomeJob":
+			jobs[i] = SomeJob{}
+		case "LongRunningJob":
+			jobs[i] = LongRunningJob{}
+		}
+	}
+
+	return jobs
+}
+
+type (
+	SomeJob        struct{}
+	LongRunningJob struct{}
+)
+
+func ProcessSomeJob() func(context.Context, SomeJob) error {
+	return func(ctx context.Context, job SomeJob) error {
+		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+
+		if rand.Intn(100) > 80 { //nolint:gosec,gomndworkers.
+			return errors.New("some error") //nolint:goerr113
+		}
+
+		return nil
+	}
+}
+
+func ProcessLongRunningJob() func(context.Context, LongRunningJob) error {
+	return func(ctx context.Context, job LongRunningJob) error {
+		time.Sleep(time.Duration(rand.Intn(5)) * time.Minute)
+
+		if rand.Intn(100) > 95 { //nolint:gosec,gomnd
+			return errors.New("some error") //nolint:goerr113
+		}
+
+		return nil
 	}
 }

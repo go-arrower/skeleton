@@ -13,11 +13,12 @@ import (
 )
 
 func Init(
-	e *echo.Echo,
-	pg *postgres.Handler,
 	logger *slog.Logger,
 	traceProvider trace.TracerProvider,
 	meterProvider metric.MeterProvider,
+	e *echo.Echo,
+	pg *postgres.Handler,
+	jq jobs.Queue,
 ) error {
 
 	admin := e.Group("/admin")
@@ -48,7 +49,17 @@ func Init(
 				),
 			),
 		),
+		ScheduleJobs: application.ScheduleJobs(jq),
 	}
+
+	err := jq.RegisterJobFunc(
+		application.LoggedU(logger,
+			application.ProcessSomeJob())) // todo add meter & tracer
+	logger.Info("REGISTER SOME JOB", slog.Any("err", err))
+
+	_ = jq.RegisterJobFunc(
+		application.LoggedU(logger,
+			application.ProcessLongRunningJob())) // todo add meter & tracer
 
 	cont := web.JobsController{
 		Repo:   repo,
@@ -62,6 +73,8 @@ func Init(
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
 		jobs.GET("/workers", cont.JobsWorkers())
+		jobs.GET("/schedule", cont.JobsSchedule())
+		jobs.POST("/schedule", cont.JobsScheduleNew())
 	}
 
 	return nil

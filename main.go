@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log"
 	"math/rand"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-arrower/arrower/alog"
 
 	"go.opentelemetry.io/otel/attribute"
 	trace2 "go.opentelemetry.io/otel/trace"
@@ -21,13 +22,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	api "go.opentelemetry.io/otel/metric"
-	"golang.org/x/exp/slog"
 )
 
 func main() {
 	ctx := context.Background()
 
 	logger, meterProvider, traceProvider := setupTelemetry(ctx)
+	alog.Unwrap(logger).SetLevel(alog.LevelDebug)
 
 	// dependencies
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
@@ -49,32 +50,7 @@ func main() {
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
-	queue, _ := jobs.NewGueJobs(pg.PGx)
-
-	{ // example queue workers
-		_ = queue.RegisterWorker(func(ctx context.Context, j someJob) error {
-			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
-
-			if rand.Intn(100) > 60 { //nolint:gosec,gomnd
-				return errors.New("some error") //nolint:goerr113
-			}
-
-			return nil
-		})
-
-		_ = queue.RegisterWorker(func(ctx context.Context, j longRunningJob) error {
-			time.Sleep(time.Duration(rand.Intn(5)) * time.Minute)
-
-			if rand.Intn(100) > 95 { //nolint:gosec,gomnd
-				return errors.New("some error") //nolint:goerr113
-			}
-
-			return nil
-		})
-
-		_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
-		_ = queue.StartWorkers()
-	}
+	queue, _ := jobs.NewGueJobs(logger, meterProvider, traceProvider, pg.PGx)
 
 	{ // example metrics
 		opt := api.WithAttributes( // todo check if metrics and trae attributes can be shared
@@ -103,40 +79,6 @@ func main() {
 				// todo what is the difference between a tempo resource and attribute?
 			)
 			defer span.End()
-
-			//traceID := span.SpanContext().TraceID().String()
-
-			{
-				time.Sleep(50 * time.Millisecond)
-				span.AddEvent("start adding")
-
-				logger.DebugCtx(newCtx, "some log, to see if it is an event in the outer span")
-
-				{
-					newCtx, spanInner := tracer.Start(newCtx, "addInner")
-
-					examplar := attribute.NewSet(attribute.KeyValue{
-						Key:   "traceID",
-						Value: attribute.StringValue(spanInner.SpanContext().TraceID().String()),
-					})
-					e := &examplar
-
-					counter.Add(newCtx,
-						1,
-						api.WithAttributes(
-							append(e.ToSlice(), attribute.String("component", "addition"))...,
-						),
-					)
-					logger.DebugCtx(newCtx, "added a metric counter",
-						slog.String("component", "addition"),
-						slog.Int("random integer", rand.Intn(1000)))
-
-					spanInner.End()
-				}
-
-				span.AddEvent("finish adding")
-				time.Sleep(50 * time.Millisecond)
-			}
 
 			{ // example metric to test Examplar
 				h, err := meterProvider.Meter("some_hist").Int64Histogram("Das_hist")
@@ -176,48 +118,19 @@ func main() {
 	}
 
 	router.GET("/", func(c echo.Context) error {
-		for i := 0; i < 256; i++ {
-			_ = queue.Enqueue(ctx, someJob{
-				Val: randomString(rand.Intn(1000)),
-				Field: Field{
-					F0: randomString(8),
-					F1: rand.Intn(32),
-				},
-			}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
-			_ = queue.Enqueue(ctx, otherJob{}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
-		}
-		for i := 0; i < 8; i++ {
-			_ = queue.Enqueue(ctx, longRunningJob{"Hallo long running job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
-		}
-
 		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
 	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(router, pg, logger, traceProvider, meterProvider)
+	_ = startup.Init(logger, traceProvider, meterProvider, router, pg, queue)
 
 	router.Logger.Fatal(router.Start(":8080"))
 
 	_ = queue.Shutdown(ctx)
 	_ = traceProvider.Shutdown(ctx)
 	_ = meterProvider.Shutdown(ctx)
-}
-
-type someJob struct {
-	Val   string
-	Field Field
-}
-type longRunningJob struct {
-	Val string
-}
-
-type otherJob struct{}
-
-type Field struct {
-	F0 string
-	F1 int
 }
 
 func randomString(n int) string {
