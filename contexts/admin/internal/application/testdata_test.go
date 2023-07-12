@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -109,7 +111,8 @@ func (f fakeSpan) TracerProvider() trace.TracerProvider { //nolint:ireturn
 
 var (
 	//nolint:lll // needs to match the exact format expected from the prometheus endpoint
-	metricsForSucceedingUseCase = bytes.NewReader([]byte(`
+	// prepare the output, so it can be read multiple times by different tests, see:https://siongui.github.io/2018/10/28/go-read-twice-from-same-io-reader/
+	rawMetricsForSucceedingUseCase, _ = io.ReadAll(strings.NewReader(`
 # HELP usecases_duration_seconds a simple hist
 # TYPE usecases_duration_seconds histogram
 usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="0"} 0
@@ -134,9 +137,11 @@ usecases_duration_seconds_count{command="exampleCommand",otel_scope_name="arrowe
 # TYPE usecases_total counter
 usecases_total{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",status="success"} 1
 `))
+	metricsForSucceedingUseCase  = bytes.NewReader(rawMetricsForSucceedingUseCase)
+	metricsForSucceedingUseCaseU = bytes.NewReader(rawMetricsForSucceedingUseCase)
 
 	//nolint:lll // needs to match the exact format expected from the prometheus endpoint
-	metricsForFailingUseCase = bytes.NewReader([]byte(`
+	rawMetricsForFailingUseCase, _ = io.ReadAll(strings.NewReader(`
 # HELP usecases_duration_seconds a simple hist
 # TYPE usecases_duration_seconds histogram
 usecases_duration_seconds_bucket{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",le="0"} 0
@@ -161,4 +166,6 @@ usecases_duration_seconds_count{command="exampleCommand",otel_scope_name="arrowe
 # TYPE usecases_total counter
 usecases_total{command="exampleCommand",otel_scope_name="arrower.application",otel_scope_version="",status="failure"} 1
 `))
+	metricsForFailingUseCase  = bytes.NewReader(rawMetricsForFailingUseCase)
+	metricsForFailingUseCaseU = bytes.NewReader(rawMetricsForFailingUseCase)
 )

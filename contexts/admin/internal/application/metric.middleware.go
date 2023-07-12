@@ -31,7 +31,7 @@ func Metric[in, out any, F DecoratorFunc[in, out]](meterProvider metric.MeterPro
 			end := time.Since(start)
 
 			counter.Add(ctx, 1, opt)
-			duration.Record(ctx, end.Seconds(), metric.WithAttributes(attribute.String("command", cmdName)))
+			duration.Record(ctx, end.Seconds(), opt)
 		}()
 
 		opt = metric.WithAttributes(
@@ -48,5 +48,43 @@ func Metric[in, out any, F DecoratorFunc[in, out]](meterProvider metric.MeterPro
 		}
 
 		return result, err
+	}
+}
+
+// MetricU see Metric.
+func MetricU[in any, F DecoratorFuncUnary[in]](meterProvider metric.MeterProvider, next F) F { //nolint:ireturn
+	meter := meterProvider.Meter("arrower.application") // trace.WithInstrumentationVersion("0.0.0"),
+
+	counter, _ := meter.Int64Counter("usecases", metric.WithDescription("a simple counter"))
+	duration, _ := meter.Float64Histogram("usecases_duration_seconds", metric.WithDescription("a simple hist"))
+
+	return func(ctx context.Context, in in) error {
+		var (
+			opt     metric.MeasurementOption
+			cmdName = commandName(in)
+		)
+
+		start := time.Now()
+		defer func() {
+			end := time.Since(start)
+
+			counter.Add(ctx, 1, opt)
+			duration.Record(ctx, end.Seconds(), opt)
+		}()
+
+		opt = metric.WithAttributes(
+			attribute.String("command", cmdName),
+			attribute.String("status", "success"),
+		)
+
+		err := next(ctx, in)
+		if err != nil {
+			opt = metric.WithAttributes(
+				attribute.String("command", cmdName),
+				attribute.String("status", "failure"),
+			)
+		}
+
+		return err
 	}
 }
