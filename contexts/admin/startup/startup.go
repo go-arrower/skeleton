@@ -52,14 +52,30 @@ func Init(
 		ScheduleJobs: application.ScheduleJobs(jq),
 	}
 
-	err := jq.RegisterJobFunc(
-		application.LoggedU(logger,
-			application.ProcessSomeJob())) // todo add meter & tracer
-	logger.Info("REGISTER SOME JOB", slog.Any("err", err))
-
 	_ = jq.RegisterJobFunc(
-		application.LoggedU(logger,
-			application.ProcessLongRunningJob())) // todo add meter & tracer
+		application.TracedU(
+			traceProvider,
+			application.MetricU(
+				meterProvider,
+				application.LoggedU(
+					logger,
+					application.ProcessSomeJob(),
+				),
+			),
+		),
+	)
+	_ = jq.RegisterJobFunc(
+		application.TracedU(
+			traceProvider,
+			application.MetricU(
+				meterProvider,
+				application.LoggedU(
+					logger,
+					application.ProcessLongRunningJob(),
+				),
+			),
+		),
+	)
 
 	cont := web.JobsController{
 		Repo:   repo,
