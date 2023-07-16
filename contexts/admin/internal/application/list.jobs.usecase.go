@@ -18,6 +18,7 @@ type JobsCommandContainer struct {
 	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
 	ScheduleJobs  func(context.Context, string, string, int) error
+	DeleteJob     func(context.Context, DeleteJobRequest) (DeleteJobResponse, error)
 }
 
 type (
@@ -124,7 +125,6 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 
 func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, string, string, int) error {
 	return func(ctx context.Context, queue string, jobType string, count int) error {
-
 		return jq.Enqueue(ctx, buildJobs(jobType, count))
 	}
 }
@@ -170,5 +170,20 @@ func ProcessLongRunningJob() func(context.Context, LongRunningJob) error {
 		}
 
 		return nil
+	}
+}
+
+type (
+	DeleteJobRequest struct {
+		JobID string
+	}
+	DeleteJobResponse struct{}
+)
+
+func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) (DeleteJobResponse, error) {
+	return func(ctx context.Context, in DeleteJobRequest) (DeleteJobResponse, error) {
+		err := repo.Delete(ctx, in.JobID)
+
+		return DeleteJobResponse{}, err
 	}
 }

@@ -158,6 +158,10 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 
 		data, _ := json.MarshalIndent(m, "", "  ")
 		jobs[i].Payload = string(data)
+
+		if jobs[i].Queue == "" {
+			jobs[i].Queue = "Default"
+		}
 	}
 
 	return jobs
@@ -189,5 +193,16 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob,
 		EstimateUntilEmpty:   duration,
+	}
+}
+
+func (cont JobsController) DeleteJob() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		q := c.Param("queue")
+		jobID := c.Param("job_id")
+
+		_, _ = cont.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }

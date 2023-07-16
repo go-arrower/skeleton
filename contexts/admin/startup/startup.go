@@ -28,10 +28,8 @@ func Init(
 	container := application.JobsCommandContainer{
 		ListAllQueues: application.Traced(
 			traceProvider, application.Metric(
-				meterProvider,
-				application.Logged(
-					logger,
-					application.ListAllQueues(repo),
+				meterProvider, application.Logged(
+					logger, application.ListAllQueues(repo),
 				),
 			),
 		),
@@ -50,6 +48,13 @@ func Init(
 			),
 		),
 		ScheduleJobs: application.ScheduleJobs(jq),
+		DeleteJob: application.Traced(
+			traceProvider, application.Metric(
+				meterProvider, application.Logged(
+					logger, application.DeleteJob(repo),
+				),
+			),
+		),
 	}
 
 	_ = jq.RegisterJobFunc(
@@ -88,6 +93,7 @@ func Init(
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
+		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
 		jobs.GET("/workers", cont.JobsWorkers())
 		jobs.GET("/schedule", cont.JobsSchedule())
 		jobs.POST("/schedule", cont.JobsScheduleNew())
