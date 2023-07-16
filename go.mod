@@ -7,6 +7,7 @@ require (
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.4
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.42.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.3.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.39.0

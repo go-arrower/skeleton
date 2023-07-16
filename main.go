@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/go-arrower/arrower/alog"
-
-	"go.opentelemetry.io/otel/attribute"
-	trace2 "go.opentelemetry.io/otel/trace"
-
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
-	"github.com/go-arrower/skeleton/contexts/admin/startup"
-	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
+	trace2 "go.opentelemetry.io/otel/trace"
+
+	"github.com/go-arrower/skeleton/contexts/admin/startup"
+	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
 func main() {
@@ -47,6 +47,7 @@ func main() {
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
+	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(traceProvider)))
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
