@@ -17,7 +17,7 @@ type DecoratorFuncUnary[in any] interface {
 }
 
 // Logged wraps an application function / command with debug logs.
-func Logged[in, out any, F DecoratorFunc[in, out]](logger *slog.Logger, next F) F {
+func Logged[in, out any, F DecoratorFunc[in, out]](logger *slog.Logger, next F) F { //nolint:ireturn
 	return func(ctx context.Context, in in) (out, error) {
 		cmdName := commandName(in)
 
@@ -25,7 +25,7 @@ func Logged[in, out any, F DecoratorFunc[in, out]](logger *slog.Logger, next F) 
 			slog.String("command", cmdName),
 		)
 
-		r, err := next(ctx, in)
+		result, err := next(ctx, in)
 
 		if err == nil {
 			logger.DebugCtx(ctx, "command executed successfully",
@@ -37,12 +37,12 @@ func Logged[in, out any, F DecoratorFunc[in, out]](logger *slog.Logger, next F) 
 			)
 		}
 
-		return r, err
+		return result, err
 	}
 }
 
 // LoggedU is like Logged but for functions only returning errors, e.g. jobs.
-func LoggedU[in any, F DecoratorFuncUnary[in]](logger *slog.Logger, next F) F {
+func LoggedU[in any, F DecoratorFuncUnary[in]](logger *slog.Logger, next F) F { //nolint:ireturn
 	return func(ctx context.Context, in in) error {
 		cmdName := commandName(in)
 
@@ -72,6 +72,7 @@ func LoggedU[in any, F DecoratorFuncUnary[in]](logger *slog.Logger, next F) F {
 // functionname 								=> strings.ToLower(strings.Split(fmt.Sprintf("%T", cmd), ".")[1])
 // packageName.functionName 					=> fmt.Sprintf("%T", cmd)
 // github.com/go-arrower/skeleton/.../package	=> fmt.Sprintln(reflect.TypeOf(cmd).PkgPath())
+// functionName is used, the other examples are for inspiration.
 func commandName(cmd any) string {
 	return strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
 }

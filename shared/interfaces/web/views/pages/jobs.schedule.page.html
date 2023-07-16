@@ -1,0 +1,48 @@
+<div>
+    <h1 class="text-4xl font-bold">Schedule new Jobs</h1>
+</div>
+
+<table class="table-auto border border-collapse mt-6 text-left">
+    <thead class="bg-gray-100">
+    <tr>
+        <th scope="col" class="p-1 border border-slate-300">Queue</th>
+        <th scope="col" class="p-1 border border-slate-300">Job Type</th>
+        <th scope="col" class="p-1 border border-slate-300">Count</th>
+        <th scope="col" class="p-1 border border-slate-300">Schedule</th>
+    </tr>
+    </thead>
+    <tbody>
+        <tr class="odd:bg-white even:bg-slate-50">
+            <form method="POST" action="/admin/jobs/schedule">
+                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
+                <td class="p-1"><input type="text" name="job_type" value="SomeJob" placeholder="Job Type" /></td>
+                <td class="p-1"><input type="text" name="count" value="1" placeholder="Amount" /></td>
+                <td class="p-1"><input type="submit" value="Schedule Job"></td>
+            </form>
+        </tr>
+        <tr class="odd:bg-white even:bg-slate-50">
+            <form method="POST" action="/admin/jobs/schedule">
+                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
+                <td class="p-1"><input type="text" name="job_type" value="SomeJob" placeholder="Job Type" /></td>
+                <td class="p-1"><input type="text" name="count" value="100" placeholder="Amount" /></td>
+                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
+            </form>
+        </tr>
+        <tr class="odd:bg-white even:bg-slate-50">
+            <form method="POST" action="/admin/jobs/schedule">
+                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
+                <td class="p-1"><input type="text" name="job_type" value="LongRunningJob" placeholder="Job Type" /></td>
+                <td class="p-1"><input type="text" name="count" value="10" placeholder="Amount" /></td>
+                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
+            </form>
+        </tr>
+        <tr class="odd:bg-white even:bg-slate-50">
+            <form method="POST" action="/admin/jobs/schedule">
+                <td class="p-1"><input type="text" name="queue" value="" placeholder="Queue name" readonly /></td>
+                <td class="p-1"><input type="text" name="job_type" value="" placeholder="Job Type" /></td>
+                <td class="p-1"><input type="text" name="count" value="" placeholder="Amount" /></td>
+                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
+            </form>
+        </tr>
+    </tbody>
+</table>

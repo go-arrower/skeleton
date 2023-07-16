@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-arrower/arrower"
+	"github.com/go-arrower/arrower/alog"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/exp/slog"
@@ -57,7 +57,7 @@ func NewRenderer(logger *slog.Logger, viewFS fs.FS, hotReload bool) (*Renderer, 
 
 	defaultLayout := getDefaultLayout(rawLayouts)
 
-	logger.LogAttrs(nil, arrower.LevelDebug,
+	logger.LogAttrs(nil, alog.LevelInfo,
 		"renderer created",
 		slog.Bool("hot_reload", hotReload),
 		slog.String("default_layout", defaultLayout),
@@ -119,7 +119,7 @@ func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map
 		}
 	}
 
-	logger.LogAttrs(nil, arrower.LevelTrace,
+	logger.LogAttrs(nil, alog.LevelDebug,
 		"loaded components",
 		slog.Int("component_count", len(componentTemplates.Templates())),
 		slog.Any("component_templates", templateNames(componentTemplates)),
@@ -154,7 +154,7 @@ func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map
 		}
 	}
 
-	logger.LogAttrs(nil, arrower.LevelTrace,
+	logger.LogAttrs(nil, alog.LevelDebug,
 		"loaded pages",
 		slog.Int("page_count", len(pageTemplates)),
 		slog.Any("page_templates", rawTemplateNames(rawPages)),
@@ -177,7 +177,7 @@ func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map
 		rawLayouts[ln] = file
 	}
 
-	logger.LogAttrs(nil, arrower.LevelTrace,
+	logger.LogAttrs(nil, alog.LevelDebug,
 		"loaded layouts",
 		slog.Int("layout_count", len(rawLayouts)),
 		slog.Any("layout_templates", rawTemplateNames(rawLayouts)),
@@ -260,7 +260,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		cleanedName = page
 	}
 
-	r.logger.LogAttrs(nil, arrower.LevelDebug,
+	r.logger.LogAttrs(nil, alog.LevelInfo,
 		"render template",
 		slog.String("called_template", name),
 		slog.String("actual_template", cleanedName),
@@ -270,7 +270,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	defer r.mu.Unlock()
 
 	if r.hotReload {
-		r.logger.LogAttrs(nil, arrower.LevelTrace, "hot reload all templates")
+		r.logger.LogAttrs(nil, alog.LevelDebug, "hot reload all templates")
 
 		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.logger, r.viewFS)
 		if err != nil {
@@ -286,7 +286,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	templ, found := r.templates[cleanedName]
 	if !found || r.hotReload {
-		r.logger.LogAttrs(nil, arrower.LevelTrace,
+		r.logger.LogAttrs(nil, alog.LevelDebug,
 			"template not cached",
 			slog.String("called_template", name),
 			slog.String("layout", layout),
@@ -315,7 +315,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.templates[cleanedName] = newTemplate
 		templ = newTemplate // "found" the template
 
-		r.logger.LogAttrs(nil, arrower.LevelDebug,
+		r.logger.LogAttrs(nil, alog.LevelInfo,
 			"template cached",
 			slog.String("called_template", name),
 			slog.String("actual_template", cleanedName),

@@ -3,15 +3,14 @@ package application_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"testing"
 
-	"github.com/go-arrower/arrower"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
-	"github.com/stretchr/testify/assert"
-)
+	"github.com/go-arrower/arrower/alog"
 
-type exampleCommand struct{}
+	"github.com/stretchr/testify/assert"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+)
 
 func TestLogged(t *testing.T) {
 	t.Parallel()
@@ -20,9 +19,9 @@ func TestLogged(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.Logged(h.Logger, func(context.Context, exampleCommand) (string, error) {
+		cmd := application.Logged(logger, func(context.Context, exampleCommand) (string, error) {
 			return "", nil
 		})
 
@@ -37,10 +36,10 @@ func TestLogged(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.Logged(h.Logger, func(context.Context, exampleCommand) (string, error) {
-			return "", errors.New("some-error")
+		cmd := application.Logged(logger, func(context.Context, exampleCommand) (string, error) {
+			return "", errUseCaseFails
 		})
 
 		_, _ = cmd(context.Background(), exampleCommand{})
@@ -53,13 +52,15 @@ func TestLogged(t *testing.T) {
 }
 
 func TestLoggedU(t *testing.T) {
+	t.Parallel()
+
 	t.Run("successful command", func(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
+		cmd := application.LoggedU(logger, func(context.Context, exampleCommand) error {
 			return nil
 		})
 
@@ -74,10 +75,10 @@ func TestLoggedU(t *testing.T) {
 		t.Parallel()
 
 		buf := &bytes.Buffer{}
-		h := arrower.NewFilteredLogger(buf)
+		logger := alog.NewTest(buf)
 
-		cmd := application.LoggedU(h.Logger, func(context.Context, exampleCommand) error {
-			return errors.New("some-error")
+		cmd := application.LoggedU(logger, func(context.Context, exampleCommand) error {
+			return errUseCaseFails
 		})
 
 		_ = cmd(context.Background(), exampleCommand{})

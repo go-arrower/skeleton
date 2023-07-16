@@ -2,35 +2,35 @@ package main
 
 import (
 	"context"
-	"errors"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"golang.org/x/exp/slog"
+	"github.com/go-arrower/arrower/alog"
 
-	"github.com/go-arrower/arrower"
+	"go.opentelemetry.io/otel/attribute"
+	trace2 "go.opentelemetry.io/otel/trace"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	api "go.opentelemetry.io/otel/metric"
 )
 
 func main() {
 	ctx := context.Background()
-	h := arrower.NewFilteredLogger(os.Stderr)
-	// h.SetLogLevel(arrower.LevelTrace)
-	//h.SetLogLevel(arrower.LevelDebug)
-	h.SetLogLevel(slog.LevelDebug)
-	logger := h.Logger
 
+	logger, meterProvider, traceProvider := setupTelemetry(ctx)
+	alog.Unwrap(logger).SetLevel(alog.LevelDebug)
+
+	// dependencies
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
 		Password:   "secret",
@@ -50,74 +50,87 @@ func main() {
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
-	queue, _ := jobs.NewGueJobs(pg.PGx)
+	queue, _ := jobs.NewGueJobs(logger, meterProvider, traceProvider, pg.PGx)
 
-	{ // example queue workers
-		_ = queue.RegisterWorker(func(ctx context.Context, j someJob) error {
-			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+	{ // example metrics
+		opt := api.WithAttributes( // todo check if metrics and trae attributes can be shared
+			attribute.Key("A").String("B"),
+			attribute.Key("C").String("D"),
+		)
 
-			if rand.Intn(100) > 60 { //nolint:gosec,gomnd
-				return errors.New("some error") //nolint:goerr113
+		tracer := traceProvider.Tracer("myTracer", // namespace per library that is instrumented
+			trace2.WithInstrumentationVersion("0.1337"),
+		)
+
+		// This is the equivalent of prometheus.NewCounterVec
+		meter := meterProvider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus",
+			api.WithInstrumentationVersion("0.1337"),
+		)
+		counter, err := meter.Float64Counter("foo", api.WithDescription("a simple counter"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		counter.Add(ctx, 5, opt)
+
+		router.GET("/add", func(c echo.Context) error {
+			newCtx, span := tracer.Start(c.Request().Context(), "add",
+				trace2.WithAttributes(attribute.String("component", "addition")),
+				//trace2.WithAttributes(attribute.String("job", "somejob")), // NEEDS TO MATCH WITH THE LOGS LABEL
+				// todo what is the difference between a tempo resource and attribute?
+			)
+			defer span.End()
+
+			{ // example metric to test Examplar
+				h, err := meterProvider.Meter("some_hist").Int64Histogram("Das_hist")
+				if err != nil {
+					panic(err)
+				}
+
+				examplar := attribute.NewSet(attribute.KeyValue{
+					//Key:   "traceID",
+					//Value: attribute.StringValue(span.SpanContext().TraceID().String()),
+					Key:   "someKey",
+					Value: attribute.StringValue("someVal"),
+				})
+				e := &examplar
+
+				go func() {
+					for {
+						t := time.NewTicker(1 * time.Second)
+						select {
+						case <-t.C:
+							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+							h.Record(newCtx, int64(rand.Intn(100)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
+
+							//h.(prometheus.ExemplarObserver).ObserveWithExemplar(
+							//	time.Since(time.Now().Add(-5*time.Second)).Seconds(), prometheus.Labels{"traceID": span.SpanContext().TraceID().String()},
+							//)
+						}
+					}
+				}()
 			}
 
-			return nil
+			time.Sleep(5 * time.Second)
+
+			return c.HTML(http.StatusOK, "Counter incremented")
 		})
-
-		_ = queue.RegisterWorker(func(ctx context.Context, j longRunningJob) error {
-			time.Sleep(time.Duration(rand.Intn(5)) * time.Minute)
-
-			if rand.Intn(100) > 95 { //nolint:gosec,gomnd
-				return errors.New("some error") //nolint:goerr113
-			}
-
-			return nil
-		})
-
-		_ = queue.RegisterWorker(func(ctx context.Context, j otherJob) error { return nil })
-		_ = queue.StartWorkers()
 	}
 
 	router.GET("/", func(c echo.Context) error {
-		for i := 0; i < 256; i++ {
-			_ = queue.Enqueue(ctx, someJob{
-				Val: randomString(rand.Intn(1000)),
-				Field: Field{
-					F0: randomString(8),
-					F1: rand.Intn(32),
-				},
-			}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
-			_ = queue.Enqueue(ctx, otherJob{}, jobs.WithRunAt(time.Now().Add(time.Second*20)))
-		}
-		for i := 0; i < 8; i++ {
-			_ = queue.Enqueue(ctx, longRunningJob{"Hallo long running job!"}, jobs.WithRunAt(time.Now().Add(time.Second*10)))
-		}
-
 		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
 	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(router, pg, logger)
+	_ = startup.Init(logger, traceProvider, meterProvider, router, pg, queue)
 
 	router.Logger.Fatal(router.Start(":8080"))
 
 	_ = queue.Shutdown(ctx)
-}
-
-type someJob struct {
-	Val   string
-	Field Field
-}
-type longRunningJob struct {
-	Val string
-}
-
-type otherJob struct{}
-
-type Field struct {
-	F0 string
-	F1 int
+	_ = traceProvider.Shutdown(ctx)
+	_ = meterProvider.Shutdown(ctx)
 }
 
 func randomString(n int) string {
