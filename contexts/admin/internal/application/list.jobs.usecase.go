@@ -18,7 +18,7 @@ type JobsCommandContainer struct {
 	ListAllQueues func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
-	ScheduleJobs  func(context.Context, string, string, int) error
+	ScheduleJobs  func(context.Context, ScheduleJobsRequest) error
 	DeleteJob     func(context.Context, DeleteJobRequest) (DeleteJobResponse, error)
 }
 
@@ -124,9 +124,18 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 	}
 }
 
-func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, string, string, int) error {
-	return func(ctx context.Context, queue string, jobType string, count int) error {
-		err := jq.Enqueue(ctx, buildJobs(jobType, count))
+type (
+	ScheduleJobsRequest struct {
+		Queue   string
+		JobType string
+		Count   int
+	}
+	ScheduleJobsResponse struct{}
+)
+
+func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, ScheduleJobsRequest) error {
+	return func(ctx context.Context, in ScheduleJobsRequest) error {
+		err := jq.Enqueue(ctx, buildJobs(in.JobType, in.Count))
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}

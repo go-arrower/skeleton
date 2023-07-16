@@ -73,7 +73,11 @@ func (cont JobsController) JobsScheduleNew() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		err = cont.Cmds.ScheduleJobs(c.Request().Context(), queue, jt, count)
+		err = cont.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
+			Queue:   queue,
+			JobType: jt,
+			Count:   count,
+		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}

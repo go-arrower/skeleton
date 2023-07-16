@@ -47,7 +47,13 @@ func Init(
 				),
 			),
 		),
-		ScheduleJobs: application.ScheduleJobs(jq),
+		ScheduleJobs: application.TracedU(
+			traceProvider, application.MetricU(
+				meterProvider, application.LoggedU(
+					logger, application.ScheduleJobs(jq),
+				),
+			),
+		),
 		DeleteJob: application.Traced(
 			traceProvider, application.Metric(
 				meterProvider, application.Logged(
