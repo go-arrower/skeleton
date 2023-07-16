@@ -4,12 +4,13 @@ import (
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/postgres"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 )
 
 func Init(
@@ -20,7 +21,6 @@ func Init(
 	pg *postgres.Handler,
 	jq jobs.Queue,
 ) error {
-
 	admin := e.Group("/admin")
 
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))

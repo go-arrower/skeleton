@@ -6,13 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	prometheusSDK "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )
 
 /*
@@ -49,7 +50,7 @@ func TestMetric(t *testing.T) {
 
 		// call the prometheus endpoint to scrape all metrics
 		rec := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodGet, "", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -79,7 +80,7 @@ func TestMetric(t *testing.T) {
 
 		// call the prometheus endpoint to scrape all metrics
 		rec := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodGet, "", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -113,7 +114,7 @@ func TestMetricU(t *testing.T) {
 
 		// call the prometheus endpoint to scrape all metrics
 		rec := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodGet, "", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -143,7 +144,7 @@ func TestMetricU(t *testing.T) {
 
 		// call the prometheus endpoint to scrape all metrics
 		rec := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodGet, "", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)

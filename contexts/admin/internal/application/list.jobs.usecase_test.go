@@ -19,10 +19,12 @@ func TestScheduleJobs(t *testing.T) {
 	scheduleJobs := application.ScheduleJobs(jq)
 
 	_ = scheduleJobs(ctx, "", "SomeJob", 1)
+
 	assert.NotEmpty()
 	assert.Queued(application.SomeJob{}, 1)
 
 	_ = scheduleJobs(ctx, "", "LongRunningJob", 1)
+
 	assert.NotEmpty()
 	assert.Queued(application.SomeJob{}, 1)
 	assert.QueuedTotal(2)

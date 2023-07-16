@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 )
 
-func TestJobsController_JobsHome(t *testing.T) {
+func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 	t.Parallel()
 
 	echoRouter := newTestRouter()
@@ -26,7 +25,7 @@ func TestJobsController_JobsHome(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		handler := web.JobsController{ //nolint:exhaustruct
+		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
 				ListAllQueues: func(context.Context, application.ListAllQueuesRequest) (application.ListAllQueuesResponse, error) {
 					return application.ListAllQueuesResponse{}, nil
@@ -45,7 +44,7 @@ func TestJobsController_JobsHome(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		handler := web.JobsController{ //nolint:exhaustruct
+		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
 				ListAllQueues: func(context.Context, application.ListAllQueuesRequest) (application.ListAllQueuesResponse, error) {
 					return application.ListAllQueuesResponse{}, errUCFailed
@@ -57,7 +56,7 @@ func TestJobsController_JobsHome(t *testing.T) {
 	})
 }
 
-func TestJobsController_JobsQueue(t *testing.T) {
+func TestJobsController_JobsQueue(t *testing.T) { //nolint:dupl
 	t.Parallel()
 
 	echoRouter := newTestRouter()
@@ -69,7 +68,7 @@ func TestJobsController_JobsQueue(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		handler := web.JobsController{ //nolint:exhaustruct
+		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
 				GetQueue: func(context.Context, application.GetQueueRequest) (application.GetQueueResponse, error) {
 					return application.GetQueueResponse{}, nil
@@ -88,7 +87,7 @@ func TestJobsController_JobsQueue(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		handler := web.JobsController{ //nolint:exhaustruct
+		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
 				GetQueue: func(context.Context, application.GetQueueRequest) (application.GetQueueResponse, error) {
 					return application.GetQueueResponse{}, errUCFailed
@@ -100,7 +99,7 @@ func TestJobsController_JobsQueue(t *testing.T) {
 	})
 }
 
-func TestJobsController_JobsWorkers(t *testing.T) {
+func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 	t.Parallel()
 
 	echoRouter := newTestRouter()

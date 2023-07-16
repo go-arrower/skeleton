@@ -3,12 +3,13 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
-
 	"github.com/go-arrower/arrower/jobs"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 )
 
 const defaultQueueName = "Default"
@@ -29,11 +30,11 @@ type (
 )
 
 // ListAllQueues returns all Queues.
-func ListAllQueues(repo jobs.Repository) func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
+func ListAllQueues(repo jobs.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 	return func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 		queues, _ := repo.Queues(ctx) // todo repo needs to return type []QueueName
-
 		qWithStats := make(map[domain.QueueName]domain.QueueStats)
+
 		for _, q := range queues {
 			s, _ := repo.QueueKPIs(ctx, q) // todo accept type QueueName
 			qWithStats[domain.QueueName(q)] = queueKpiToStats(q, s)
@@ -105,7 +106,7 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 		errorRate = float64(kpis.FailedJobs * 100 / kpis.PendingJobs)
 	}
 
-	var duration time.Duration = 0
+	var duration time.Duration
 	if kpis.AvailableWorkers != 0 {
 		duration = time.Duration(kpis.PendingJobs/kpis.AvailableWorkers) * kpis.AverageTimePerJob
 	}
@@ -125,7 +126,12 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
 
 func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, string, string, int) error {
 	return func(ctx context.Context, queue string, jobType string, count int) error {
-		return jq.Enqueue(ctx, buildJobs(jobType, count))
+		err := jq.Enqueue(ctx, buildJobs(jobType, count))
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		return nil
 	}
 }
 
@@ -151,9 +157,9 @@ type (
 
 func ProcessSomeJob() func(context.Context, SomeJob) error {
 	return func(ctx context.Context, job SomeJob) error {
-		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+		time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
 
-		if rand.Intn(100) > 80 { //nolint:gosec,gomndworkers.
+		if rand.Intn(100) > 80 { //nolint:gosec,gomndworkers,gomnd
 			return errors.New("some error") //nolint:goerr113
 		}
 
@@ -163,7 +169,7 @@ func ProcessSomeJob() func(context.Context, SomeJob) error {
 
 func ProcessLongRunningJob() func(context.Context, LongRunningJob) error {
 	return func(ctx context.Context, job LongRunningJob) error {
-		time.Sleep(time.Duration(rand.Intn(5)) * time.Minute)
+		time.Sleep(time.Duration(rand.Intn(5)) * time.Minute) //nolint:gosec,gomnd // weak numbers are ok, it is wait time
 
 		if rand.Intn(100) > 95 { //nolint:gosec,gomnd
 			return errors.New("some error") //nolint:goerr113
@@ -184,6 +190,6 @@ func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) (De
 	return func(ctx context.Context, in DeleteJobRequest) (DeleteJobResponse, error) {
 		err := repo.Delete(ctx, in.JobID)
 
-		return DeleteJobResponse{}, err
+		return DeleteJobResponse{}, fmt.Errorf("%w", err)
 	}
 }

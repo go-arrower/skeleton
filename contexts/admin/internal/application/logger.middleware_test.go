@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-arrower/arrower/alog"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
