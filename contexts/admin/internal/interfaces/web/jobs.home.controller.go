@@ -208,7 +208,18 @@ func (cont JobsController) DeleteJob() func(c echo.Context) error {
 		q := c.Param("queue")
 		jobID := c.Param("job_id")
 
-		_, _ = cont.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+		_ = cont.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q)) //nolint:wrapcheck
+	}
+}
+
+func (cont JobsController) RescheduleJob() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		q := c.Param("queue")
+		jobID := c.Param("job_id")
+
+		_ = cont.Cmds.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
 
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q)) //nolint:wrapcheck
 	}

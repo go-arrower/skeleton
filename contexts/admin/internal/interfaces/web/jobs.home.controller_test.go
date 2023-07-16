@@ -160,10 +160,10 @@ func TestJobsController_DeleteJob(t *testing.T) {
 
 		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
-				DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) (application.DeleteJobResponse, error) {
+				DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) error {
 					assert.Equal(t, "1337", in.JobID)
 
-					return application.DeleteJobResponse{}, nil
+					return nil
 				},
 			},
 		}
@@ -186,8 +186,8 @@ func TestJobsController_DeleteJob(t *testing.T) {
 
 		handler := web.JobsController{
 			Cmds: application.JobsCommandContainer{
-				DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) (application.DeleteJobResponse, error) {
-					return application.DeleteJobResponse{}, errUCFailed
+				DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) error {
+					return errUCFailed
 				},
 			},
 		}

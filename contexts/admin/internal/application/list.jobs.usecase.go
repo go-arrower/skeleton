@@ -19,7 +19,8 @@ type JobsCommandContainer struct {
 	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
 	ScheduleJobs  func(context.Context, ScheduleJobsRequest) error
-	DeleteJob     func(context.Context, DeleteJobRequest) (DeleteJobResponse, error)
+	DeleteJob     func(context.Context, DeleteJobRequest) error
+	RescheduleJob func(context.Context, RescheduleJobRequest) error
 }
 
 type (
@@ -192,13 +193,26 @@ type (
 	DeleteJobRequest struct {
 		JobID string
 	}
-	DeleteJobResponse struct{}
 )
 
-func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) (DeleteJobResponse, error) {
-	return func(ctx context.Context, in DeleteJobRequest) (DeleteJobResponse, error) {
+func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) error {
+	return func(ctx context.Context, in DeleteJobRequest) error {
 		err := repo.Delete(ctx, in.JobID)
 
-		return DeleteJobResponse{}, fmt.Errorf("%w", err)
+		return fmt.Errorf("%w", err)
+	}
+}
+
+type (
+	RescheduleJobRequest struct {
+		JobID string
+	}
+)
+
+func RescheduleJob(repo jobs.Repository) func(context.Context, RescheduleJobRequest) error {
+	return func(ctx context.Context, in RescheduleJobRequest) error {
+		err := repo.RunJobAt(ctx, in.JobID, time.Now())
+
+		return fmt.Errorf("%w", err)
 	}
 }

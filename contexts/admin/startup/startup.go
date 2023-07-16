@@ -54,10 +54,17 @@ func Init(
 				),
 			),
 		),
-		DeleteJob: application.Traced(
-			traceProvider, application.Metric(
-				meterProvider, application.Logged(
+		DeleteJob: application.TracedU(
+			traceProvider, application.MetricU(
+				meterProvider, application.LoggedU(
 					logger, application.DeleteJob(repo),
+				),
+			),
+		),
+		RescheduleJob: application.TracedU(
+			traceProvider, application.MetricU(
+				meterProvider, application.LoggedU(
+					logger, application.RescheduleJob(repo),
 				),
 			),
 		),
@@ -100,6 +107,7 @@ func Init(
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
 		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
+		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
 		jobs.GET("/workers", cont.JobsWorkers())
 		jobs.GET("/schedule", cont.JobsSchedule())
 		jobs.POST("/schedule", cont.JobsScheduleNew())
