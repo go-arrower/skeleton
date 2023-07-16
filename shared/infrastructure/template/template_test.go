@@ -12,6 +12,8 @@ import (
 	"testing/fstest"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/go-arrower/arrower/alog"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +28,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("construct renderer", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(alog.NewTest(nil), views.SharedViews, false)
+		r, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), views.SharedViews, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, r)
 	})
@@ -34,7 +36,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("fail on missing files", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(alog.NewTest(nil), nil, false)
+		r, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), nil, false)
 		assert.Error(t, err)
 		assert.Nil(t, r)
 	})
@@ -43,7 +45,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("initialise raw renderer", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -74,7 +76,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("fs with no files", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.EmptyFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.EmptyFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -91,12 +93,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared pages without layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "p0", nil, nil)
+		err = renderer.Render(buf, "p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.P0Content)
@@ -105,12 +107,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render non existing page", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "non-existing", nil, nil)
+		err = renderer.Render(buf, "non-existing", nil, testdata.EmptyEchoContext())
 		assert.Error(t, err)
 
 		assert.Empty(t, buf.String())
@@ -118,12 +120,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared pages with components", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "p0", nil, nil)
+		err = renderer.Render(buf, "p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.P0Content)
@@ -134,12 +136,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render shared page with different layouts", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "global=>p0", nil, nil)
+		err = renderer.Render(buf, "global=>p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.LContent)
@@ -148,7 +150,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NotContains(t, buf.String(), testdata.C1Content)
 
 		buf.Reset()
-		err = renderer.Render(buf, "other=>p0", nil, nil)
+		err = renderer.Render(buf, "other=>p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), "other")
@@ -162,7 +164,7 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render multiple pages and increase template cache", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutsPagesAndComponents, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutsPagesAndComponents, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -170,7 +172,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Len(t, renderer.templates, 2)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "global=>p0", nil, nil)
+		err = renderer.Render(buf, "global=>p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 		assert.Len(t, renderer.templates, 3) // previous templates + global=>p0
 
@@ -180,7 +182,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NotContains(t, buf.String(), testdata.C1Content)
 
 		buf.Reset()
-		err = renderer.Render(buf, "global=>p1", nil, nil)
+		err = renderer.Render(buf, "global=>p1", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 		assert.Len(t, renderer.templates, 4) // previous templates + global=>p1
 
@@ -190,7 +192,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NotContains(t, buf.String(), testdata.C1Content)
 
 		buf.Reset()
-		err = renderer.Render(buf, "global=>p1", nil, nil)
+		err = renderer.Render(buf, "global=>p1", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 		assert.Len(t, renderer.templates, 4) // template is cached already, so no change
 	})
@@ -198,12 +200,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("render component", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "c0.component", nil, nil)
+		err = renderer.Render(buf, "c0.component", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.C0Content)
@@ -212,12 +214,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("access layout that does not exist", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.SimpleFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "nonExisting=>p0", nil, nil)
+		err = renderer.Render(buf, "nonExisting=>p0", nil, testdata.EmptyEchoContext())
 		assert.Error(t, err)
 
 		assert.Empty(t, buf.String())
@@ -226,12 +228,12 @@ func TestRenderer_Render(t *testing.T) {
 	t.Run("rely on default layout when rendering page", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "=>p0", nil, nil)
+		err = renderer.Render(buf, "=>p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.LDefaultContent)
@@ -242,7 +244,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NoError(t, err)
 
 		buf.Reset()
-		err = renderer.Render(buf, "=>p0", nil, nil)
+		err = renderer.Render(buf, "=>p0", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
 		assert.Contains(t, buf.String(), testdata.LOtherContent)
@@ -268,7 +270,7 @@ func TestRenderer_Render(t *testing.T) {
 		}
 
 		// test
-		renderer, err := NewRenderer(alog.NewTest(nil), fs, true)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), fs, true)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -283,7 +285,7 @@ func TestRenderer_Render(t *testing.T) {
 				page := pages[n]
 
 				buf := &bytes.Buffer{}
-				err := renderer.Render(buf, "=>"+page, nil, nil)
+				err := renderer.Render(buf, "=>"+page, nil, testdata.EmptyEchoContext())
 				assert.NoError(t, err, page)
 				assert.Contains(t, buf.String(), page)
 
@@ -301,7 +303,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("no default layout present", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.EmptyFiles, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.EmptyFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -311,7 +313,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("only one layout file, so it becomes the default", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutOneLayout, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutOneLayout, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -321,7 +323,7 @@ func TestRenderer_Layout(t *testing.T) {
 	t.Run("multiple layouts but with default", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -335,7 +337,7 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 	t.Run("set existing default layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
@@ -347,7 +349,7 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 	t.Run("set non existing layout", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, err := NewRenderer(alog.NewTest(nil), testdata.LayoutWithDefault, false)
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.LayoutWithDefault, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 

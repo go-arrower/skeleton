@@ -122,7 +122,7 @@ func main() {
 		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
-	r, _ := template.NewRenderer(logger, os.DirFS("shared/interfaces/web/views"), true)
+	r, _ := template.NewRenderer(logger, traceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
 	_ = startup.Init(logger, traceProvider, meterProvider, router, pg, queue)

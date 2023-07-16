@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/go-arrower/arrower/alog"
 
 	"github.com/labstack/echo/v4"
@@ -26,7 +28,9 @@ var (
 const separator = "=>"
 
 type Renderer struct {
-	logger     *slog.Logger
+	logger alog.Logger
+	tracer trace.Tracer
+
 	viewFS     fs.FS
 	rawLayouts map[string]string
 	rawPages   map[string]string
@@ -43,12 +47,13 @@ type Renderer struct {
 
 // NewRenderer take multiple FS or can Context views be added later?
 // It prepares a renderer for HTML web views.
-func NewRenderer(logger *slog.Logger, viewFS fs.FS, hotReload bool) (*Renderer, error) {
+func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS fs.FS, hotReload bool) (*Renderer, error) {
 	if viewFS == nil {
 		return nil, ErrInvalidFS
 	}
 
 	logger = logger.WithGroup("arrower.renderer")
+	tracer := traceProvider.Tracer("arrower.renderer")
 
 	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(logger, viewFS)
 	if err != nil {
@@ -65,6 +70,7 @@ func NewRenderer(logger *slog.Logger, viewFS fs.FS, hotReload bool) (*Renderer, 
 
 	return &Renderer{
 		logger:            logger,
+		tracer:            tracer,
 		viewFS:            viewFS,
 		rawLayouts:        rawLayouts,
 		rawPages:          rawPages,
@@ -97,7 +103,7 @@ func getDefaultLayout(rawLayouts map[string]string) string {
 	return defaultLayout
 }
 
-func prepareRenderer(logger *slog.Logger, viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
+func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
@@ -245,6 +251,9 @@ func readFile(sfs fs.FS, name string) (string, error) {
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	_, span := r.tracer.Start(c.Request().Context(), "render")
+	defer span.End()
+
 	layout, page := parseLayoutAndPage(name)
 
 	if strings.HasPrefix(name, separator) {

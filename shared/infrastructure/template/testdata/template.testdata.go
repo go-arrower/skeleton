@@ -1,7 +1,13 @@
 // the template package uses white-box tests, so this is not a _test package.
 package testdata
 
-import "testing/fstest"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing/fstest"
+
+	"github.com/labstack/echo/v4"
+)
 
 const (
 	C0Content       = "c0"
@@ -57,4 +63,11 @@ var LayoutWithDefault = fstest.MapFS{
 	"global.layout.html":  {Data: []byte(LContent)},
 	"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
+}
+
+func EmptyEchoContext() echo.Context {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	return echo.New().NewContext(req, rec)
 }
