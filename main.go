@@ -19,18 +19,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
 	trace2 "go.opentelemetry.io/otel/trace"
+	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
+	"github.com/go-arrower/skeleton/contexts/auth"
+	startup2 "github.com/go-arrower/skeleton/contexts/auth/init"
+	"github.com/go-arrower/skeleton/shared/infrastructure"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
 func main() {
 	ctx := context.Background()
 
-	logger, meterProvider, traceProvider := setupTelemetry(ctx)
-	alog.Unwrap(logger).SetLevel(alog.LevelDebug)
-
 	// dependencies
+	di := &infrastructure.Container{Config: &infrastructure.Config{ApplicationName: "arrower skeleton"}}
+
+	di.Logger, di.MeterProvider, di.TraceProvider = setupTelemetry(ctx)
+	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
 		Password:   "secret",
@@ -39,19 +45,30 @@ func main() {
 		Port:       5432, //nolint:gomnd
 		MaxConns:   100,  //nolint:gomnd
 		Migrations: postgres.ArrowerDefaultMigrations,
-	}, traceProvider)
+	}, di.TraceProvider)
 	if err != nil {
 		panic(err)
 	}
 
+	di.DB = pg.PGx
+
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
-	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(traceProvider)))
+	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider)))
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
-	queue, _ := jobs.NewGueJobs(logger, meterProvider, traceProvider, pg.PGx)
+	di.WebRouter = router
+	di.APIRouter = router.Group("/api")     // todo add api middleware
+	di.AdminRouter = router.Group("/admin") // todo add admin middleware
+
+	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
+	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
+		jobs.WithQueue("arrower"),
+	)
+	di.DefaultQueue = queue
+	di.ArrowerQueue = arrowerQueue
 
 	{ // example metrics
 		opt := api.WithAttributes( // todo check if metrics and trae attributes can be shared
@@ -59,12 +76,12 @@ func main() {
 			attribute.Key("C").String("D"),
 		)
 
-		tracer := traceProvider.Tracer("myTracer", // namespace per library that is instrumented
+		tracer := di.TraceProvider.Tracer("myTracer", // namespace per library that is instrumented
 			trace2.WithInstrumentationVersion("0.1337"),
 		)
 
 		// This is the equivalent of prometheus.NewCounterVec
-		meter := meterProvider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus",
+		meter := di.MeterProvider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus",
 			api.WithInstrumentationVersion("0.1337"),
 		)
 		counter, err := meter.Float64Counter("foo", api.WithDescription("a simple counter"))
@@ -82,7 +99,7 @@ func main() {
 			defer span.End()
 
 			{ // example metric to test Examplar
-				h, err := meterProvider.Meter("some_hist").Int64Histogram("Das_hist")
+				h, err := di.MeterProvider.Meter("some_hist").Int64Histogram("Das_hist")
 				if err != nil {
 					panic(err)
 				}
@@ -122,16 +139,19 @@ func main() {
 		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
 	})
 
-	r, _ := template.NewRenderer(logger, traceProvider, os.DirFS("shared/interfaces/web/views"), true)
+	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(logger, traceProvider, meterProvider, router, pg, queue)
+	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, router, pg, queue)
+	authContext, _ := startup2.NewAuthContext(di)
+	_ = auth.Tenant{}
 
 	router.Logger.Fatal(router.Start(":8080"))
 
+	_ = authContext.Shutdown(ctx)
 	_ = queue.Shutdown(ctx)
-	_ = traceProvider.Shutdown(ctx)
-	_ = meterProvider.Shutdown(ctx)
+	_ = di.TraceProvider.Shutdown(ctx)
+	_ = di.MeterProvider.Shutdown(ctx)
 }
 
 func randomString(n int) string {
