@@ -12,11 +12,15 @@ import (
 )
 
 const allTenants = `-- name: AllTenants :many
-SELECT id, created_at, updated_at, name
+
+SELECT id, created_at, updated_at, name, is_active
 FROM auth.tenant
 ORDER BY name
 `
 
+// ----------------
+// --- Tenant -----
+// ----------------
 func (q *Queries) AllTenants(ctx context.Context) ([]AuthTenant, error) {
 	rows, err := q.db.Query(ctx, allTenants)
 	if err != nil {
@@ -31,6 +35,50 @@ func (q *Queries) AllTenants(ctx context.Context) ([]AuthTenant, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Name,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const allUsers = `-- name: AllUsers :many
+
+SELECT id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
+FROM auth.user
+WHERE credential_type = 'user'
+ORDER BY is_admin, user_login
+`
+
+// ----------------
+// ---- User ------
+// ----------------
+func (q *Queries) AllUsers(ctx context.Context) ([]AuthUser, error) {
+	rows, err := q.db.Query(ctx, allUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuthUser
+	for rows.Next() {
+		var i AuthUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CredentialType,
+			&i.IsActive,
+			&i.UserLogin,
+			&i.UserPasswordHash,
+			&i.UserLoginVerifiedAt,
+			&i.ApiName,
+			&i.ApiKeyPrefix,
+			&i.IsAdmin,
 		); err != nil {
 			return nil, err
 		}
@@ -52,8 +100,24 @@ func (q *Queries) CreateTenant(ctx context.Context, name string) error {
 	return err
 }
 
+const createUser = `-- name: CreateUser :exec
+INSERT INTO auth.user (credential_type, user_login, user_password_hash)
+VALUES ('user', $1, $2)
+RETURNING id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
+`
+
+type CreateUserParams struct {
+	UserLogin        string
+	UserPasswordHash string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.Exec(ctx, createUser, arg.UserLogin, arg.UserPasswordHash)
+	return err
+}
+
 const findTenantByID = `-- name: FindTenantByID :one
-SELECT id, created_at, updated_at, name
+SELECT id, created_at, updated_at, name, is_active
 FROM auth.tenant
 WHERE id = $1
 `
@@ -66,6 +130,89 @@ func (q *Queries) FindTenantByID(ctx context.Context, id pgtype.UUID) (AuthTenan
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.IsActive,
 	)
 	return i, err
+}
+
+const findUserByID = `-- name: FindUserByID :one
+SELECT id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
+FROM auth.user
+WHERE id = $1
+`
+
+func (q *Queries) FindUserByID(ctx context.Context, id pgtype.UUID) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, findUserByID, id)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CredentialType,
+		&i.IsActive,
+		&i.UserLogin,
+		&i.UserPasswordHash,
+		&i.UserLoginVerifiedAt,
+		&i.ApiName,
+		&i.ApiKeyPrefix,
+		&i.IsAdmin,
+	)
+	return i, err
+}
+
+const findUserByLogin = `-- name: FindUserByLogin :one
+SELECT id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
+FROM auth.user
+WHERE credential_type = 'user'
+  AND user_login = $1
+`
+
+func (q *Queries) FindUserByLogin(ctx context.Context, userLogin string) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, findUserByLogin, userLogin)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CredentialType,
+		&i.IsActive,
+		&i.UserLogin,
+		&i.UserPasswordHash,
+		&i.UserLoginVerifiedAt,
+		&i.ApiName,
+		&i.ApiKeyPrefix,
+		&i.IsAdmin,
+	)
+	return i, err
+}
+
+const upsertUser = `-- name: UpsertUser :exec
+INSERT INTO auth.user (credential_type, user_login, user_password_hash)
+VALUES ('user', $1, $2)
+ON CONFLICT (user_login) DO UPDATE SET is_active              = $3,
+                                       user_password_hash     = $4,
+                                       user_login_verified_at = $5,
+                                       is_admin               = $6
+RETURNING id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
+`
+
+type UpsertUserParams struct {
+	UserLogin           string
+	UserPasswordHash    string
+	IsActive            bool
+	UserPasswordHash_2  string
+	UserLoginVerifiedAt pgtype.Timestamptz
+	IsAdmin             bool
+}
+
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) error {
+	_, err := q.db.Exec(ctx, upsertUser,
+		arg.UserLogin,
+		arg.UserPasswordHash,
+		arg.IsActive,
+		arg.UserPasswordHash_2,
+		arg.UserLoginVerifiedAt,
+		arg.IsAdmin,
+	)
+	return err
 }

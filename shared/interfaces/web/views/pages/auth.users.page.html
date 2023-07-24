@@ -1,0 +1,35 @@
+<div>
+    <h1 class="text-4xl font-bold">Users</h1>
+</div>
+
+<a href="/admin/auth/users/create" class="flex my-4">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+    </svg>
+    <span class="pl-1">Create new User</span>
+</a>
+
+<table class="table-auto border border-collapse mt-6 text-left">
+    <thead class="bg-gray-100">
+    <tr>
+        <th scope="col" class="p-1 border border-slate-300">ID</th>
+        <th scope="col" class="p-1 border border-slate-300">CreatedAt</th>
+        <th scope="col" class="p-1 border border-slate-300">User Login</th>
+        <th scope="col" class="p-1 border border-slate-300">Is Active</th>
+        <th scope="col" class="p-1 border border-slate-300">Is Admin</th>
+        <th scope="col" class="p-1 border border-slate-300">Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{ range . }}
+        <tr class="odd:bg-white even:bg-slate-50">
+            <td class="p-1">{{ .ID.Value }}</td>
+            <td class="p-1">{{ .CreatedAt }}</td>
+            <td class="p-1">{{ .UserLogin }}</td>
+            <td class="p-1">{{ .IsActive }}</td>
+            <td class="p-1">{{ .IsAdmin }}</td>
+            <td class="p-1"></td>
+        </tr>
+    {{ end }}
+    </tbody>
+</table>

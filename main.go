@@ -13,6 +13,7 @@ import (
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -55,13 +56,16 @@ func main() {
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
+	router.Validator = &CustomValidator{validator: validator.New()}
 	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider)))
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
-	di.WebRouter = router
 	di.APIRouter = router.Group("/api")     // todo add api middleware
 	di.AdminRouter = router.Group("/admin") // todo add admin middleware
+
+	// router.Use(session.Middleware())
+	di.WebRouter = router
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
@@ -136,7 +140,7 @@ func main() {
 	}
 
 	router.GET("/", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "global=>home", "World") //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>home", "World") //nolint:wrapcheck
 	})
 
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
@@ -154,6 +158,18 @@ func main() {
 	_ = di.MeterProvider.Shutdown(ctx)
 }
 
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return err
+		// Optionally, you could return the error to give each route more control over the status code
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return nil
+}
 func randomString(n int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789 ")
 

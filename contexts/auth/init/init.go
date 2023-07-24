@@ -15,6 +15,7 @@ const contextName = "auth"
 
 type AuthContext struct {
 	tenantController web.TenantController
+	userController   web.UserController
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
@@ -31,9 +32,8 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = tracer
 
 	authContext := AuthContext{
-		tenantController: web.TenantController{
-			Queries: models.New(di.DB),
-		},
+		tenantController: web.TenantController{Queries: models.New(di.DB)},
+		userController:   web.UserController{Queries: models.New(di.DB)},
 	}
 
 	_ = authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))

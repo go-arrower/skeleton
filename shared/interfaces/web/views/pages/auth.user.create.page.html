@@ -1,0 +1,41 @@
+<div>
+    <h1 class="text-4xl font-bold">Create new User</h1>
+</div>
+
+<div>
+    <form action="/admin/auth/users" method="post">
+        <fieldset>
+            <legend>User information</legend>
+
+            <label for="login">
+                <input type="text" id="login" name="login" value="{{ .Login }}">
+                Login
+                {{ with .Errors.Login }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+            <br>
+
+
+            <label for="password">
+                <input type="password" id="password" name="password" value="">
+                Password
+                {{ with .Errors.Password }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+            <br>
+
+            <label for="password_confirmation">
+                <input type="password" id="password_confirmation" name="password_confirmation" value="">
+                Password Confirmation
+                {{ with .Errors.PasswordConfirmation }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+            <br>
+        </fieldset>
+
+        <input type="submit" value="Create User">
+    </form>
+</div>
