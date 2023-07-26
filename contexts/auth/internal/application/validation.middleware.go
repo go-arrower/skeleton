@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-arrower/arrower"
 	"github.com/go-playground/validator/v10"
@@ -30,7 +29,7 @@ func Validate[in, out any, F DecoratorFunc[in, out]](validate *validator.Validat
 	return func(ctx context.Context, in in) (out, error) {
 		err := validate.Struct(in)
 		if err != nil {
-			return *new(out), fmt.Errorf("%w", err)
+			return *new(out), err
 		}
 
 		return next(context.WithValue(ctx, CtxValidated, true), in)
@@ -46,7 +45,7 @@ func ValidateU[in any, F DecoratorFuncUnary[in]](validate *validator.Validate, n
 	return func(ctx context.Context, in in) error {
 		err := validate.Struct(in)
 		if err != nil {
-			return fmt.Errorf("%w", err)
+			return err
 		}
 
 		return next(context.WithValue(ctx, CtxValidated, true), in)

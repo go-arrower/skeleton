@@ -39,12 +39,12 @@ FROM auth.user
 WHERE credential_type = 'user'
   AND user_login = $1;
 
--- name: CreateUser :exec
+-- name: CreateUser :one
 INSERT INTO auth.user (credential_type, user_login, user_password_hash)
 VALUES ('user', $1, $2)
 RETURNING *;
 
--- name: UpsertUser :exec
+-- name: UpsertUser :one
 INSERT INTO auth.user (credential_type, user_login, user_password_hash)
 VALUES ('user', $1, $2)
 ON CONFLICT (user_login) DO UPDATE SET is_active              = $3,

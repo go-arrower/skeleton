@@ -100,7 +100,7 @@ func (q *Queries) CreateTenant(ctx context.Context, name string) error {
 	return err
 }
 
-const createUser = `-- name: CreateUser :exec
+const createUser = `-- name: CreateUser :one
 INSERT INTO auth.user (credential_type, user_login, user_password_hash)
 VALUES ('user', $1, $2)
 RETURNING id, created_at, updated_at, credential_type, is_active, user_login, user_password_hash, user_login_verified_at, api_name, api_key_prefix, is_admin
@@ -111,9 +111,23 @@ type CreateUserParams struct {
 	UserPasswordHash string
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.Exec(ctx, createUser, arg.UserLogin, arg.UserPasswordHash)
-	return err
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.UserLogin, arg.UserPasswordHash)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CredentialType,
+		&i.IsActive,
+		&i.UserLogin,
+		&i.UserPasswordHash,
+		&i.UserLoginVerifiedAt,
+		&i.ApiName,
+		&i.ApiKeyPrefix,
+		&i.IsAdmin,
+	)
+	return i, err
 }
 
 const findTenantByID = `-- name: FindTenantByID :one
@@ -186,7 +200,7 @@ func (q *Queries) FindUserByLogin(ctx context.Context, userLogin string) (AuthUs
 	return i, err
 }
 
-const upsertUser = `-- name: UpsertUser :exec
+const upsertUser = `-- name: UpsertUser :one
 INSERT INTO auth.user (credential_type, user_login, user_password_hash)
 VALUES ('user', $1, $2)
 ON CONFLICT (user_login) DO UPDATE SET is_active              = $3,
@@ -205,8 +219,8 @@ type UpsertUserParams struct {
 	IsAdmin             bool
 }
 
-func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) error {
-	_, err := q.db.Exec(ctx, upsertUser,
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, upsertUser,
 		arg.UserLogin,
 		arg.UserPasswordHash,
 		arg.IsActive,
@@ -214,5 +228,19 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) error {
 		arg.UserLoginVerifiedAt,
 		arg.IsAdmin,
 	)
-	return err
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CredentialType,
+		&i.IsActive,
+		&i.UserLogin,
+		&i.UserPasswordHash,
+		&i.UserLoginVerifiedAt,
+		&i.ApiName,
+		&i.ApiKeyPrefix,
+		&i.IsAdmin,
+	)
+	return i, err
 }

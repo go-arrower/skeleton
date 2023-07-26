@@ -3,9 +3,9 @@ package web
 import (
 	"net/http"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/go-playground/validator/v10"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 
@@ -48,6 +48,8 @@ func (tc UserController) Store() func(echo.Context) error {
 		PasswordConfirmation string `form:"password_confirmation" validate:"eqfield=Password"`
 	}
 
+	registerUser := application.Validate(nil, application.RegisterUser(tc.Queries))
+
 	return func(c echo.Context) error {
 		newUser := registerCredentials{}
 
@@ -55,10 +57,21 @@ func (tc UserController) Store() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		if err := c.Validate(newUser); err != nil {
-			validationErrors := err.(validator.ValidationErrors)
-
+		_, err := registerUser(c.Request().Context(), application.RegisterUserRequest{
+			RegisterEmail:        newUser.Login,
+			Password:             newUser.Password,
+			PasswordConfirmation: newUser.PasswordConfirmation,
+		})
+		if err != nil {
 			var valErrs = make(map[string]string)
+			var validationErrors validator.ValidationErrors
+
+			if _, ok := err.(validator.ValidationErrors); !ok {
+				valErrs["Login"] = "Invalid user name"
+			} else {
+				validationErrors = err.(validator.ValidationErrors)
+			}
+
 			for _, e := range validationErrors {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
@@ -67,19 +80,6 @@ func (tc UserController) Store() func(echo.Context) error {
 				"Errors": valErrs,
 				"Login":  newUser.Login,
 			})
-		}
-
-		hashed, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-
-		err = tc.Queries.CreateUser(c.Request().Context(), models.CreateUserParams{
-			UserLogin:        newUser.Login,
-			UserPasswordHash: string(hashed),
-		})
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
