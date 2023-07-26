@@ -14,6 +14,8 @@ import (
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -59,6 +61,7 @@ func main() {
 	router.Validator = &CustomValidator{validator: validator.New()}
 	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider)))
 	router.Use(middleware.Static("public"))
+	router.Use(session.Middleware(sessions.NewCookieStore([]byte("secret")))) // todo replace by pg sessions store
 	router.Use(injectMW)
 
 	di.APIRouter = router.Group("/api")     // todo add api middleware
