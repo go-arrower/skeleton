@@ -22,6 +22,7 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) error {
 
 	router.GET("/login", c.userController.Login())
 	router.POST("/login", c.userController.Login())
+	router.GET("/logout", c.userController.Logout())
 
 	router.GET("/register/tenant", c.tenantController.Create())
 	router.POST("/register/tenant", c.tenantController.Store())

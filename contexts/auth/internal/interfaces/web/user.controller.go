@@ -30,7 +30,7 @@ type UserController struct {
 	CmdLoginUser func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 }
 
-func (uc UserController) Login() func(ctx echo.Context) error {
+func (uc UserController) Login() func(echo.Context) error {
 	return func(c echo.Context) error {
 		if auth.IsLoggedIn(c.Request().Context()) {
 			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
@@ -92,6 +92,34 @@ func (uc UserController) Login() func(ctx echo.Context) error {
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+	}
+}
+
+func (uc UserController) Logout() func(echo.Context) error {
+	return func(c echo.Context) error {
+		if !auth.IsLoggedIn(c.Request().Context()) {
+			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+		}
+
+		sess, err := session.Get("session", c) // todo extract "session" as variable & rename arrower.auth
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		delete(sess.Values, auth.SessKeyLoggedIn)
+		delete(sess.Values, auth.SessKeyUserID)
+
+		sess.Options = &sessions.Options{
+			Path:   "/",
+			MaxAge: -1, // delete cookie immediately
+		}
+
+		err = sess.Save(c.Request(), c.Response())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/")
 	}
 }
 

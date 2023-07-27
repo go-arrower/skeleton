@@ -76,6 +76,7 @@ func TestUserController_Login(t *testing.T) {
 
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
 		assert.Len(t, result.Cookies(), 1)
+		assert.Equal(t, "/", result.Cookies()[0].Path)
 		assert.Equal(t, "session", result.Cookies()[0].Name)
 	})
 
@@ -103,6 +104,61 @@ func TestUserController_Login(t *testing.T) {
 	})
 }
 
+func TestUserController_Logout(t *testing.T) {
+	t.Parallel()
+
+	echoRouter := newTestRouter()
+
+	t.Run("not logged in", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		c := echoRouter.NewContext(req, rec)
+		// c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), auth.CtxAuthLoggedIn, false)))
+
+		if assert.NoError(t, web.UserController{}.Logout()(c)) {
+			assert.Equal(t, http.StatusSeeOther, rec.Code)
+		}
+	})
+
+	t.Run("logout succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		// log in first
+		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("login=1337&password=12345678"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+
+		controller := web.UserController{
+			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+				return application.LoginUserResponse{}, nil
+			},
+		}
+
+		echoRouter.POST("/login", controller.Login())
+		echoRouter.ServeHTTP(rec, req)
+		assert.Len(t, rec.Result().Cookies(), 1)
+
+		// log out
+		req = httptest.NewRequest(http.MethodGet, "/logout", nil)
+		req.AddCookie(rec.Result().Cookies()[0])
+		rec = httptest.NewRecorder()
+
+		echoRouter.GET("/logout", controller.Logout())
+		echoRouter.ServeHTTP(rec, req)
+
+		result := rec.Result()
+		defer result.Body.Close()
+
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+		assert.Len(t, result.Cookies(), 1)
+		assert.Equal(t, "/", result.Cookies()[0].Path)
+		assert.Equal(t, -1, result.Cookies()[0].MaxAge)
+	})
+}
+
 var errUCFailed = errors.New("use case error")
 
 type emptyRenderer struct{}
@@ -118,6 +174,7 @@ func newTestRouter() *echo.Echo {
 	e := echo.New()
 	e.Renderer = &emptyRenderer{}
 	e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
+	e.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	return e
 }

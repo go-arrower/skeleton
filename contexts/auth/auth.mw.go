@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	SessKeyLoggedIn = "auth.user_logged_in"
+	SessKeyLoggedIn = "auth.user_logged_in" // FIXME don't export from the context => move internally
 	SessKeyUserID   = "auth.user_id"
 )
 
