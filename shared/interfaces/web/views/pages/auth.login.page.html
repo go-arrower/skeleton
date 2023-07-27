@@ -1,0 +1,33 @@
+<div>
+    <h1 class="text-4xl font-bold">Login</h1>
+</div>
+
+<div>
+    <form action="/auth/login" method="post">
+        <fieldset>
+            <legend>Login</legend>
+
+            <label for="login">
+                <input type="text" id="login" name="login" value="{{ .Login }}">
+                Login
+                {{ with .Errors.Login }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+            <br>
+
+
+            <label for="password">
+                <input type="password" id="password" name="password" value="">
+                Password
+                {{ with .Errors.Password }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+            <br>
+
+        </fieldset>
+
+        <input type="submit" value="Login">
+    </form>
+</div>

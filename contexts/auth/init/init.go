@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
@@ -31,9 +33,13 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = meter
 	_ = tracer
 
+	queries := models.New(di.DB)
 	authContext := AuthContext{
-		tenantController: web.TenantController{Queries: models.New(di.DB)},
-		userController:   web.UserController{Queries: models.New(di.DB)},
+		tenantController: web.TenantController{Queries: queries},
+		userController: web.UserController{
+			Queries:      queries,
+			CmdLoginUser: application.Validate(nil, application.LoginUser(queries)), // todo add instrumentation
+		},
 	}
 
 	_ = authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))

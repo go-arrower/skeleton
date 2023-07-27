@@ -3,9 +3,9 @@ package web
 import (
 	"net/http"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-
 	"github.com/labstack/echo/v4"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 /*
@@ -43,6 +43,6 @@ func (tc TenantController) Store() func(echo.Context) error {
 
 		_ = tc.Queries.CreateTenant(c.Request().Context(), name)
 
-		return c.Redirect(http.StatusSeeOther, "/")
+		return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
 	}
 }

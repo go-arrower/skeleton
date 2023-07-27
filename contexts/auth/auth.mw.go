@@ -18,8 +18,8 @@ const (
 )
 
 const (
-	sessKeyLoggedIn = "auth.user_logged_in"
-	sessKeyUserID   = "auth.user_id"
+	SessKeyLoggedIn = "auth.user_logged_in"
+	SessKeyUserID   = "auth.user_id"
 )
 
 // EnrichCtxWithUserInfoMiddleware checks if a User is logged in and puts those values into the http request's context,
@@ -31,8 +31,8 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return fmt.Errorf("%w", err)
 		}
 
-		if sess.Values[sessKeyLoggedIn] != nil {
-			lin, ok := sess.Values[sessKeyLoggedIn].(bool)
+		if sess.Values[SessKeyLoggedIn] != nil {
+			lin, ok := sess.Values[SessKeyLoggedIn].(bool)
 			if !ok {
 				return fmt.Errorf("could not access user_logged_in: %w", ErrInvalidSessionValue)
 			}
@@ -40,8 +40,8 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthLoggedIn, lin)))
 		}
 
-		if sess.Values[sessKeyUserID] != nil {
-			uID, ok := sess.Values[sessKeyUserID].(string)
+		if sess.Values[SessKeyUserID] != nil {
+			uID, ok := sess.Values[SessKeyUserID].(string)
 			if !ok {
 				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
 			}

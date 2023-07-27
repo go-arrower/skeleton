@@ -19,14 +19,32 @@ var (
 	ErrPasswordTooWeak   = errors.New("password too weak")
 )
 
-type RegisterUserRequest struct {
-	RegisterEmail        string `form:"login" validate:"max=1024,required,email"`
-	Password             string `form:"password" validate:"max=1024,min=8"`
-	PasswordConfirmation string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
+type (
+	LoginUserRequest struct {
+		LoginEmail string `form:"login" validate:"max=1024,required,email"`
+		Password   string `form:"password" validate:"max=1024,min=8"`
+	}
+	LoginUserResponse struct {
+		User User
+	}
+)
+
+func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
+		return LoginUserResponse{}, nil
+	}
 }
-type RegisterUserResponse struct {
-	User User
-}
+
+type (
+	RegisterUserRequest struct {
+		RegisterEmail        string `form:"login" validate:"max=1024,required,email"`
+		Password             string `form:"password" validate:"max=1024,min=8"`
+		PasswordConfirmation string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
+	}
+	RegisterUserResponse struct {
+		User User
+	}
+)
 
 func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
