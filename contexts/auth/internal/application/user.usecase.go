@@ -17,6 +17,7 @@ import (
 var (
 	ErrUserAlreadyExists = errors.New("user already exists")
 	ErrPasswordTooWeak   = errors.New("password too weak")
+	ErrLoginFailed       = errors.New("login failed")
 )
 
 type (
@@ -31,7 +32,22 @@ type (
 
 func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		return LoginUserResponse{}, nil
+		user, err := queries.FindUserByLogin(ctx, in.LoginEmail)
+		if err != nil {
+			return LoginUserResponse{}, ErrLoginFailed
+		}
+
+		hash := PasswordHash(user.UserPasswordHash)
+		if !hash.Matches(in.Password) {
+			return LoginUserResponse{}, ErrLoginFailed
+		}
+
+		u := User{
+			ID:    ID(user.ID.String()),
+			Login: Login(user.UserLogin),
+			// todo mapping
+		}
+		return LoginUserResponse{User: u}, nil
 	}
 }
 
@@ -158,8 +174,14 @@ type (
 	}
 )
 
-func (pw PasswordHash) Matches(checkPW string) bool { return false }
-func (pw PasswordHash) String() string              { return "xxx" }
+func (pw PasswordHash) Matches(checkPW string) bool {
+	if err := bcrypt.CompareHashAndPassword([]byte(string(pw)), []byte(checkPW)); err == nil {
+		return true
+	}
+
+	return false
+}
+func (pw PasswordHash) String() string { return "xxxxxx" }
 
 func (t Verified) IsVerified() bool   { return false }
 func (t BlockedFlag) IsBlocked() bool { return false }

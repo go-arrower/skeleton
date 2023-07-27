@@ -36,6 +36,53 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestLoginUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("password does not match", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
+			UserLogin:        userLogin,
+			UserPasswordHash: strongPasswordHash,
+		})
+
+		cmd := application.LoginUser(queries)
+
+		_, err := cmd(ctx, application.LoginUserRequest{
+			LoginEmail: userLogin,
+			Password:   "wrong-password",
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, application.ErrLoginFailed)
+	})
+
+	t.Run("login succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
+			UserLogin:        userLogin,
+			UserPasswordHash: strongPasswordHash,
+		})
+
+		cmd := application.LoginUser(queries)
+
+		res, err := cmd(ctx, application.LoginUserRequest{
+			LoginEmail: userLogin,
+			Password:   strongPassword,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, application.Login(userLogin), res.User.Login)
+		assert.NotEmpty(t, userLogin, res.User.ID)
+	})
+}
+
 func TestRegisterUser(t *testing.T) {
 	t.Parallel()
 

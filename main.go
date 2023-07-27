@@ -66,9 +66,11 @@ func main() {
 
 	di.APIRouter = router.Group("/api")     // todo add api middleware
 	di.AdminRouter = router.Group("/admin") // todo add admin middleware
+	di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	// router.Use(session.Middleware())
 	di.WebRouter = router
+	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,

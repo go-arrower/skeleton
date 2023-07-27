@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -57,7 +58,7 @@ type AuthSession struct {
 	ID           int64
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
-	UserID       pgtype.UUID
+	UserID       uuid.UUID
 	Key          []byte
 	Data         []byte
 	ExpiresOn    pgtype.Timestamptz
@@ -67,7 +68,7 @@ type AuthSession struct {
 }
 
 type AuthTenant struct {
-	ID        pgtype.UUID
+	ID        uuid.UUID
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	Name      string
@@ -75,7 +76,7 @@ type AuthTenant struct {
 }
 
 type AuthUser struct {
-	ID                  pgtype.UUID
+	ID                  uuid.UUID
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
 	CredentialType      AuthCredential

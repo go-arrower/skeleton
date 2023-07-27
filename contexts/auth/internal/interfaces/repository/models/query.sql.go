@@ -8,6 +8,7 @@ package models
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -136,7 +137,7 @@ FROM auth.tenant
 WHERE id = $1
 `
 
-func (q *Queries) FindTenantByID(ctx context.Context, id pgtype.UUID) (AuthTenant, error) {
+func (q *Queries) FindTenantByID(ctx context.Context, id uuid.UUID) (AuthTenant, error) {
 	row := q.db.QueryRow(ctx, findTenantByID, id)
 	var i AuthTenant
 	err := row.Scan(
@@ -155,7 +156,7 @@ FROM auth.user
 WHERE id = $1
 `
 
-func (q *Queries) FindUserByID(ctx context.Context, id pgtype.UUID) (AuthUser, error) {
+func (q *Queries) FindUserByID(ctx context.Context, id uuid.UUID) (AuthUser, error) {
 	row := q.db.QueryRow(ctx, findUserByID, id)
 	var i AuthUser
 	err := row.Scan(
