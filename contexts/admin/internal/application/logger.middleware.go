@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"golang.org/x/exp/slog"
@@ -68,11 +69,18 @@ func LoggedU[in any, F DecoratorFuncUnary[in]](logger *slog.Logger, next F) F { 
 
 // commandName extracts a printable name from cmd in the format of: functionName.
 //
-// functionName 								=> strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
-// functionname 								=> strings.ToLower(strings.Split(fmt.Sprintf("%T", cmd), ".")[1])
-// packageName.functionName 					=> fmt.Sprintf("%T", cmd)
+// structName	 								=> strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
+// structname	 								=> strings.ToLower(strings.Split(fmt.Sprintf("%T", cmd), ".")[1])
+// packageName.structName	 					=> fmt.Sprintf("%T", cmd)
 // github.com/go-arrower/skeleton/.../package	=> fmt.Sprintln(reflect.TypeOf(cmd).PkgPath())
-// functionName is used, the other examples are for inspiration.
+// structName is used, the other examples are for inspiration.
+// The use case function can not be used, as it is anonymous / a closure returned by the use case constructor.
+// Accessing the function name with runtime.Caller(4) will always lead to ".func1".
 func commandName(cmd any) string {
-	return strings.Split(fmt.Sprintf("%T", cmd), ".")[1]
+	pkgPath := reflect.TypeOf(cmd).PkgPath()
+	// example: github.com/go-arrower/skeleton/contexts/admin/internal/application_test
+	// take string after /contexts/ and then take string before /internal/
+	context := strings.Split(strings.Split(pkgPath, "/contexts/")[1], "/internal/")[0]
+
+	return fmt.Sprintf("%s.%T", context, cmd)
 }

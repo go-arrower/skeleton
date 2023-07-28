@@ -27,7 +27,7 @@ func TestLogged(t *testing.T) {
 		_, _ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `command=admin.application_test.exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="command executed successfully"`)
 	})
 
@@ -44,7 +44,7 @@ func TestLogged(t *testing.T) {
 		_, _ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `command=admin.application_test.exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="failed to execute command"`)
 		assert.Contains(t, buf.String(), `error=some-error`)
 	})
@@ -66,7 +66,7 @@ func TestLoggedU(t *testing.T) {
 		_ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `command=admin.application_test.exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="command executed successfully"`)
 	})
 
@@ -83,7 +83,7 @@ func TestLoggedU(t *testing.T) {
 		_ = cmd(context.Background(), exampleCommand{})
 
 		assert.Contains(t, buf.String(), `msg="executing command"`)
-		assert.Contains(t, buf.String(), `command=exampleCommand`)
+		assert.Contains(t, buf.String(), `command=admin.application_test.exampleCommand`)
 		assert.Contains(t, buf.String(), `msg="failed to execute command"`)
 		assert.Contains(t, buf.String(), `error=some-error`)
 	})
