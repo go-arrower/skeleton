@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"time"
 
-	"github.com/google/uuid"
-
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
@@ -26,25 +24,25 @@ type (
 		Password   string `form:"password" validate:"max=1024,min=8"`
 	}
 	LoginUserResponse struct {
-		User User
+		User user.User
 	}
 )
 
 func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		user, err := queries.FindUserByLogin(ctx, in.LoginEmail)
+		dbuser, err := queries.FindUserByLogin(ctx, in.LoginEmail)
 		if err != nil {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		hash := PasswordHash(user.UserPasswordHash)
+		hash := user.PasswordHash(dbuser.UserPasswordHash)
 		if !hash.Matches(in.Password) {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		u := User{
-			ID:    ID(user.ID.String()),
-			Login: Login(user.UserLogin),
+		u := user.User{
+			ID:    user.ID(dbuser.ID.String()),
+			Login: user.Login(dbuser.UserLogin),
 			// todo mapping
 		}
 
@@ -59,7 +57,7 @@ type (
 		PasswordConfirmation string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
 	}
 	RegisterUserResponse struct {
-		User User
+		User user.User
 	}
 )
 
@@ -78,14 +76,14 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 
 		// TODO  Gather metadata: device info, location, timezone?
 
-		user := User{
-			ID:           NewID(),
+		user := user.User{
+			ID:           user.NewID(),
 			Name:         "",
-			Login:        Login(in.RegisterEmail),
+			Login:        user.Login(in.RegisterEmail),
 			PasswordHash: pwHash,
-			IsVerified:   Verified{},
-			IsBlocked:    BlockedFlag{},
-			IsAdmin:      Admin{},
+			Verified:     user.VerifiedFlag{},
+			Blocked:      user.BlockedFlag{},
+			SuperUser:    user.SuperUserFlag{},
 			Profile:      nil,
 		}
 
@@ -108,14 +106,14 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 }
 
 // todo move to domain
-func hashStringPassword(password string) (PasswordHash, error) {
+func hashStringPassword(password string) (user.PasswordHash, error) {
 	if isWeakPassword(password) {
 		return "", ErrPasswordTooWeak
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	return PasswordHash(hash), err
+	return user.PasswordHash(hash), err
 }
 
 var (
@@ -147,49 +145,4 @@ func isWeakPassword(password string) bool {
 	}
 
 	return false
-}
-
-type (
-	ID                string
-	Login             string
-	Email             string
-	PasswordHash      string
-	Verified          time.Time
-	BlockedFlag       time.Time
-	Admin             time.Time
-	VerificationToken string
-	User              struct {
-		ID           ID
-		Name         string
-		Login        Login // email, or phone, or nickname, or whatever the developer wants to have as a login
-		PasswordHash PasswordHash
-		IsVerified   Verified
-		IsBlocked    BlockedFlag
-		IsAdmin      Admin
-		Profile      map[string]string // a quick helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
-		// TenantID tenant.ID
-	}
-	UserRegistered struct {
-		ID         ID
-		RecordedAt time.Time
-	}
-)
-
-func (pw PasswordHash) Matches(checkPW string) bool {
-	if err := bcrypt.CompareHashAndPassword([]byte(string(pw)), []byte(checkPW)); err == nil {
-		return true
-	}
-
-	return false
-}
-func (pw PasswordHash) String() string { return "xxxxxx" }
-
-func (t Verified) IsVerified() bool   { return false }
-func (t BlockedFlag) IsBlocked() bool { return false }
-func (t Admin) IsAdmin() bool         { return false }
-
-func NewUser(...any) User { return User{} }
-
-func NewID() ID {
-	return ID(uuid.NewString())
 }

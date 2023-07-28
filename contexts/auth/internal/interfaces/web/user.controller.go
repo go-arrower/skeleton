@@ -83,7 +83,7 @@ func (uc UserController) Login() func(echo.Context) error {
 			MaxAge:   7 * 24 * 60 * 60, // 7 days * 24 hours * 60 min * 60 sec
 			Secure:   false,
 			HttpOnly: true,
-			SameSite: 0, // todo check which mode means what
+			SameSite: http.SameSiteStrictMode, // cookies will not be sent, if the request originates from a third party, to prevent CSRF
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)

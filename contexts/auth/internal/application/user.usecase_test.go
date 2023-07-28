@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +80,7 @@ func TestLoginUser(t *testing.T) {
 			Password:   strongPassword,
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, application.Login(userLogin), res.User.Login)
+		assert.Equal(t, user.Login(userLogin), res.User.Login)
 		assert.NotEmpty(t, userLogin, res.User.ID)
 	})
 }

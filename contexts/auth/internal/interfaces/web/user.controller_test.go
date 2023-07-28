@@ -78,6 +78,7 @@ func TestUserController_Login(t *testing.T) {
 		assert.Len(t, result.Cookies(), 1)
 		assert.Equal(t, "/", result.Cookies()[0].Path)
 		assert.Equal(t, "session", result.Cookies()[0].Name)
+		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
 	})
 
 	t.Run("login fails", func(t *testing.T) {

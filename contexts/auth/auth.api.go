@@ -6,6 +6,21 @@ import (
 	"time"
 )
 
+// API is the api of the auth Context.
+//
+// SHOULD IT BE MORE TYPED? UserID instead of string, Credentials instead of string,string pair?
+type API interface {
+	User(ctx context.Context) User
+	All() ([]User, error)
+	UserByID(id string) (User, error)
+	UserByLogin(login string) (User, error)
+	Register(info ...any) (User, error)
+	Validate(id string, token string) error
+	Authenticate(username string, password string) (bool, error)
+	Logout(id string) error
+	//ResetPW
+}
+
 const (
 	RouteLogin       = "auth.login"
 	RouteLogout      = "auth.logout"
@@ -13,17 +28,14 @@ const (
 	RouteResetPW     = ""
 )
 
-type Tenant struct{}
-
 type User struct {
-	ID     string
-	Tenant string
-	Login  string // UserName
+	ID    string
+	Login string // UserName
 
 	FirstName         string
 	LastName          string
 	Name              string // DisplayName
-	Birthday          string // make struct to prevent issues with tz or define format?
+	Birthday          string // make struct to prevent issues with tz or define format? // TYPES OR PLAIN?
 	Locale            string
 	TimeZone          string
 	ProfilePictureURL string
@@ -35,8 +47,6 @@ type User struct {
 	VerifiedSince time.Time
 	IsBlocked     bool
 	BlockedSince  time.Time
-	IsAdmin       bool
-	AdminSince    time.Time
 }
 
 type APIKey struct{}
@@ -46,10 +56,6 @@ func UserID(ctx context.Context) string { return "" } // or just ID()
 
 func UserFromContext(ctx context.Context) User { // or just User()
 	return User{}
-}
-
-func TenantFromContext(ctx context.Context) Tenant {
-	return Tenant{}
 }
 
 func IsLoggedInAsOtherUser(ctx context.Context) bool {

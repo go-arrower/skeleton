@@ -72,6 +72,7 @@ func main() {
 
 	// router.Use(session.Middleware())
 	di.WebRouter = router
+	di.WebRouter.Use(middleware.CSRF())
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
@@ -155,7 +156,6 @@ func main() {
 
 	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, router, pg, queue)
 	authContext, _ := startup2.NewAuthContext(di)
-	_ = auth.Tenant{}
 
 	router.Logger.Fatal(router.Start(":8080"))
 
