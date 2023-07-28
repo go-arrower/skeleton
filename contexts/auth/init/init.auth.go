@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-arrower/arrower/mw"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
@@ -21,6 +23,8 @@ type AuthContext struct {
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
+	// todo if di == nil => load and initialise all dependencies from config
+
 	if err := di.EnsureAllDependenciesPresent(); err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -29,7 +33,6 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	logger := di.Logger.WithGroup(contextName)
 	meter := di.MeterProvider.Meter(fmt.Sprintf("%s/%s", di.Config.ApplicationName, contextName))
 	tracer := di.TraceProvider.Tracer(fmt.Sprintf("%s/%s", di.Config.ApplicationName, contextName))
-	_ = logger
 	_ = meter
 	_ = tracer
 
@@ -37,8 +40,16 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	authContext := AuthContext{
 		tenantController: web.TenantController{Queries: queries},
 		userController: web.UserController{
-			Queries:      queries,
-			CmdLoginUser: application.Validate(nil, application.LoginUser(queries)), // todo add instrumentation
+			Queries: queries,
+			CmdLoginUser: mw.Traced(di.TraceProvider,
+				mw.Metric(di.MeterProvider,
+					mw.Logged(logger,
+						mw.Validate(nil,
+							application.LoginUser(queries),
+						),
+					),
+				),
+			),
 		},
 	}
 
@@ -48,7 +59,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	_ = authContext.registerJobs(di.ArrowerQueue)
 
-	return &AuthContext{}, nil
+	return &authContext, nil
 }
 
 func (c *AuthContext) Shutdown(ctx context.Context) error {

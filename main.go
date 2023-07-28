@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-arrower/arrower/alog"
+
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-playground/validator/v10"
@@ -38,7 +39,8 @@ func main() {
 	di := &infrastructure.Container{Config: &infrastructure.Config{ApplicationName: "arrower skeleton"}}
 
 	di.Logger, di.MeterProvider, di.TraceProvider = setupTelemetry(ctx)
-	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	// alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",

@@ -3,6 +3,8 @@ package init
 import (
 	"net/http"
 
+	"github.com/go-arrower/skeleton/contexts/auth"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,9 +22,9 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) error {
 		return nil
 	})
 
-	router.GET("/login", c.userController.Login())
+	router.GET("/login", c.userController.Login()).Name = auth.RouteLogin
 	router.POST("/login", c.userController.Login())
-	router.GET("/logout", c.userController.Logout())
+	router.GET("/logout", c.userController.Logout()).Name = auth.RouteLogout
 
 	router.GET("/register/tenant", c.tenantController.Create())
 	router.POST("/register/tenant", c.tenantController.Store())

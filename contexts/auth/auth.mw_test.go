@@ -39,7 +39,7 @@ func TestJobsController_JobsHome(t *testing.T) {
 		echoRouter := newTestRouterToAssertOnHandler(func(c echo.Context) error {
 			ctx := c.Request().Context()
 			assert.True(t, auth.IsLoggedIn(ctx))
-			assert.Equal(t, auth.UserID("1337"), auth.CurrentUserID(ctx))
+			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
 
 			return c.NoContent(http.StatusOK) //nolint:wrapcheck
 		})

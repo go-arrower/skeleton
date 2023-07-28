@@ -46,11 +46,25 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
 			}
 
-			userID := UserID(uID)
+			userID := uID
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, userID)))
 		}
 
 		return next(c)
+	}
+}
+
+// ensure only authed user can access
+func LoginRequired(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return nil
+	}
+}
+
+// ensure only admins can access
+func AuthAdmin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return nil
 	}
 }
 
@@ -62,8 +76,8 @@ func IsLoggedIn(ctx context.Context) bool {
 	return false
 }
 
-func CurrentUserID(ctx context.Context) UserID {
-	if v, ok := ctx.Value(CtxAuthUserID).(UserID); ok {
+func CurrentUserID(ctx context.Context) string {
+	if v, ok := ctx.Value(CtxAuthUserID).(string); ok {
 		return v
 	}
 

@@ -47,6 +47,7 @@ func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) 
 			Login: Login(user.UserLogin),
 			// todo mapping
 		}
+
 		return LoginUserResponse{User: u}, nil
 	}
 }
