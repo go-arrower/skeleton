@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/go-arrower/arrower/mw"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -144,7 +146,7 @@ func (uc UserController) Store() func(echo.Context) error {
 		PasswordConfirmation string `form:"password_confirmation" validate:"eqfield=Password"`
 	}
 
-	registerUser := application.Validate(nil, application.RegisterUser(uc.Queries))
+	registerUser := mw.Validate(nil, application.RegisterUser(uc.Queries))
 
 	return func(c echo.Context) error {
 		newUser := registerCredentials{} //nolint:exhaustruct

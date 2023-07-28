@@ -3,6 +3,7 @@ package startup
 import (
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
+	"github.com/go-arrower/arrower/mw"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/metric"
@@ -26,44 +27,44 @@ func Init(
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))
 
 	container := application.JobsCommandContainer{
-		ListAllQueues: application.Traced(
-			traceProvider, application.Metric(
-				meterProvider, application.Logged(
+		ListAllQueues: mw.Traced(
+			traceProvider, mw.Metric(
+				meterProvider, mw.Logged(
 					logger, application.ListAllQueues(repo),
 				),
 			),
 		),
-		GetQueue: application.Traced(
-			traceProvider, application.Metric(
-				meterProvider, application.Logged(
+		GetQueue: mw.Traced(
+			traceProvider, mw.Metric(
+				meterProvider, mw.Logged(
 					logger, application.GetQueue(repo),
 				),
 			),
 		),
-		GetWorkers: application.Traced(
-			traceProvider, application.Metric(
-				meterProvider, application.Logged(
+		GetWorkers: mw.Traced(
+			traceProvider, mw.Metric(
+				meterProvider, mw.Logged(
 					logger, application.GetWorkers(repo),
 				),
 			),
 		),
-		ScheduleJobs: application.TracedU(
-			traceProvider, application.MetricU(
-				meterProvider, application.LoggedU(
+		ScheduleJobs: mw.TracedU(
+			traceProvider, mw.MetricU(
+				meterProvider, mw.LoggedU(
 					logger, application.ScheduleJobs(jq),
 				),
 			),
 		),
-		DeleteJob: application.TracedU(
-			traceProvider, application.MetricU(
-				meterProvider, application.LoggedU(
+		DeleteJob: mw.TracedU(
+			traceProvider, mw.MetricU(
+				meterProvider, mw.LoggedU(
 					logger, application.DeleteJob(repo),
 				),
 			),
 		),
-		RescheduleJob: application.TracedU(
-			traceProvider, application.MetricU(
-				meterProvider, application.LoggedU(
+		RescheduleJob: mw.TracedU(
+			traceProvider, mw.MetricU(
+				meterProvider, mw.LoggedU(
 					logger, application.RescheduleJob(repo),
 				),
 			),
@@ -71,11 +72,11 @@ func Init(
 	}
 
 	_ = jq.RegisterJobFunc(
-		application.TracedU(
+		mw.TracedU(
 			traceProvider,
-			application.MetricU(
+			mw.MetricU(
 				meterProvider,
-				application.LoggedU(
+				mw.LoggedU(
 					logger,
 					application.ProcessSomeJob(),
 				),
@@ -83,11 +84,11 @@ func Init(
 		),
 	)
 	_ = jq.RegisterJobFunc(
-		application.TracedU(
+		mw.TracedU(
 			traceProvider,
-			application.MetricU(
+			mw.MetricU(
 				meterProvider,
-				application.LoggedU(
+				mw.LoggedU(
 					logger,
 					application.ProcessLongRunningJob(),
 				),
