@@ -8,7 +8,7 @@
             <legend>User information</legend>
 
             <label for="login">
-                <input type="text" id="login" name="login" value="{{ .Login }}">
+                <input type="text" id="login" name="login" value="{{ .Login }}"/>
                 Login
                 {{ with .Errors.Login }}
                     <br/><span class="">{{ . }}</span>
@@ -18,7 +18,7 @@
 
 
             <label for="password">
-                <input type="password" id="password" name="password" value="">
+                <input type="password" id="password" name="password" value=""/>
                 Password
                 {{ with .Errors.Password }}
                     <br/><span class="">{{ . }}</span>
@@ -27,7 +27,7 @@
             <br>
 
             <label for="password_confirmation">
-                <input type="password" id="password_confirmation" name="password_confirmation" value="">
+                <input type="password" id="password_confirmation" name="password_confirmation" value=""/>
                 Password Confirmation
                 {{ with .Errors.PasswordConfirmation }}
                     <br/><span class="">{{ . }}</span>
@@ -36,6 +36,21 @@
             <br>
         </fieldset>
 
+        <div>
+            <label for="tos">
+                <input type="checkbox" id="tos" name="tos" value=""/>
+                I agree with the Terms of Service
+                {{ with .Errors.TOS }}
+                    <br/><span class="">{{ . }}</span>
+                {{ end }}
+            </label>
+        </div>
+
         <input type="submit" value="Create User">
     </form>
+
+    <br/>
+    <div>
+        Sie haben bereits ein Konto? <a href="/auth/login">Anmelden</a>
+    </div>
 </div>

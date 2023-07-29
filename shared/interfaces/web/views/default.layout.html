@@ -7,7 +7,15 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="description" content="" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <script>
+        tailwind.config = {
+            theme: {},
+            plugins: [
+                require('@tailwindcss/forms'),
+            ],
+        }
+    </script>
     <link rel="stylesheet" href="/css/main.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -27,6 +35,7 @@
                     <a href="#" class="text-gray-500 hover:bg-green-300 hover:text-green-600 rounded-md px-3 py-2 text-sm font-medium">Admin</a>
                     <a href="/auth/login" class="text-gray-500 hover:bg-green-300 hover:text-green-600 rounded-md px-3 py-2 text-sm font-medium">Login</a>
                     <a href="/auth/logout" class="text-gray-500 hover:bg-green-300 hover:text-green-600 rounded-md px-3 py-2 text-sm font-medium">Logout</a>
+                    <a href="/auth/register" class="text-gray-500 hover:bg-green-300 hover:text-green-600 rounded-md px-3 py-2 text-sm font-medium">Register</a>
                 </div>
                 <div class="shrink">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-300">
