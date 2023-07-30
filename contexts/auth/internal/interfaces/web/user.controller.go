@@ -47,10 +47,7 @@ func (uc UserController) Login() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		response, err := uc.CmdLoginUser(c.Request().Context(), application.LoginUserRequest{
-			LoginEmail: loginUser.LoginEmail,
-			Password:   loginUser.Password,
-		})
+		response, err := uc.CmdLoginUser(c.Request().Context(), loginUser)
 		if err != nil {
 			valErrs := make(map[string]string)
 
@@ -67,8 +64,8 @@ func (uc UserController) Login() func(echo.Context) error {
 			}
 
 			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{ //nolint:wrapcheck
-				"Errors": valErrs,
-				"Login":  loginUser.LoginEmail,
+				"Errors":     valErrs,
+				"LoginEmail": loginUser.LoginEmail,
 			})
 		}
 
