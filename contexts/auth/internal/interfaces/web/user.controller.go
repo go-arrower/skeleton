@@ -135,38 +135,32 @@ func (uc UserController) List() func(echo.Context) error {
 
 func (uc UserController) Create() func(echo.Context) error {
 	return func(c echo.Context) error {
+		if auth.IsLoggedIn(c.Request().Context()) {
+			return c.Redirect(http.StatusSeeOther, "/")
+		}
+
 		return c.Render(http.StatusOK, "auth=>auth.user.create", nil) //nolint:wrapcheck
 	}
 }
 
 func (uc UserController) Store() func(echo.Context) error {
-	type registerCredentials struct {
-		Login                string `form:"login" validate:"required,email"`
-		Password             string `form:"password" validate:"min=8,alphanumunicode"`
-		PasswordConfirmation string `form:"password_confirmation" validate:"eqfield=Password"`
-	}
-
 	registerUser := mw.Validate(nil, application.RegisterUser(uc.Queries))
 
 	return func(c echo.Context) error {
-		newUser := registerCredentials{} //nolint:exhaustruct
+		newUser := application.RegisterUserRequest{} //nolint:exhaustruct
 
 		if err := c.Bind(&newUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		_, err := registerUser(c.Request().Context(), application.RegisterUserRequest{
-			RegisterEmail:        newUser.Login,
-			Password:             newUser.Password,
-			PasswordConfirmation: newUser.PasswordConfirmation,
-		})
+		_, err := registerUser(c.Request().Context(), newUser)
 		if err != nil {
 			valErrs := make(map[string]string)
 
 			var validationErrors validator.ValidationErrors
 
 			if _, ok := err.(validator.ValidationErrors); !ok {
-				valErrs["Login"] = "Invalid user name"
+				valErrs["RegisterEmail"] = "Invalid user name"
 			} else {
 				validationErrors = err.(validator.ValidationErrors)
 			}
@@ -176,8 +170,8 @@ func (uc UserController) Store() func(echo.Context) error {
 			}
 
 			return c.Render(http.StatusOK, "auth=>auth.user.create", map[string]any{ //nolint:wrapcheck
-				"Errors": valErrs,
-				"Login":  newUser.Login,
+				"Errors":        valErrs,
+				"RegisterEmail": newUser.RegisterEmail,
 			})
 		}
 

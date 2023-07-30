@@ -72,7 +72,7 @@ func main() {
 
 	// router.Use(session.Middleware())
 	di.WebRouter = router
-	di.WebRouter.Use(middleware.CSRF())
+	//di.WebRouter.Use(middleware.CSRF())
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)

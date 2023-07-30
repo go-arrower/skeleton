@@ -24,7 +24,7 @@ func TestUserController_Login(t *testing.T) {
 
 	echoRouter := newTestRouter()
 
-	t.Run("already logged in", func(t *testing.T) {
+	t.Run("redirect if already logged in", func(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -157,6 +157,26 @@ func TestUserController_Logout(t *testing.T) {
 		assert.Len(t, result.Cookies(), 1)
 		assert.Equal(t, "/", result.Cookies()[0].Path)
 		assert.Equal(t, -1, result.Cookies()[0].MaxAge)
+	})
+}
+
+func TestUserController_Create(t *testing.T) {
+	t.Parallel()
+
+	echoRouter := newTestRouter()
+
+	t.Run("redirect if already logged in", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		c := echoRouter.NewContext(req, rec)
+		c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), auth.CtxAuthLoggedIn, true)))
+
+		if assert.NoError(t, web.UserController{}.Create()(c)) {
+			assert.Equal(t, http.StatusSeeOther, rec.Code)
+		}
 	})
 }
 

@@ -52,9 +52,10 @@ func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) 
 
 type (
 	RegisterUserRequest struct {
-		RegisterEmail        string `form:"login" validate:"max=1024,required,email"`
-		Password             string `form:"password" validate:"max=1024,min=8"`
-		PasswordConfirmation string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
+		RegisterEmail          string `form:"login" validate:"max=1024,required,email"`
+		Password               string `form:"password" validate:"max=1024,min=8"`
+		PasswordConfirmation   string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
+		AcceptedTermsOfService bool   `form:"toc" validate:"required"`
 	}
 	RegisterUserResponse struct {
 		User user.User

@@ -26,6 +26,7 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) error {
 	router.POST("/login", c.userController.Login())
 	router.GET("/logout", c.userController.Logout()).Name = auth.RouteLogout // todo make POST to prevent CSRF
 	router.GET("/register", c.userController.Create())
+	router.POST("/register", c.userController.Store())
 	router.GET("/profile", nil) // todo protect route, so only logged in user can view
 
 	router.GET("/register/tenant", c.tenantController.Create())
