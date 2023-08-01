@@ -38,3 +38,33 @@ func TestVerifiedFlag_IsVerified(t *testing.T) {
 		})
 	}
 }
+
+func TestBlockedFlag_IsBlocked(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		blocked  user.BlockedFlag
+		expected bool
+	}{
+		{
+			"empty time",
+			user.BlockedFlag(time.Time{}),
+			false,
+		},
+		{
+			"blocked",
+			user.BlockedFlag(time.Now()),
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, tt.blocked.IsBlocked())
+		})
+	}
+}

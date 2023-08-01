@@ -18,8 +18,8 @@ FROM auth.user
 WHERE login = $1;
 
 -- name: CreateUser :one
-INSERT INTO auth.user (login, password_hash, verified_at)
-VALUES ($1, $2, $3)
+INSERT INTO auth.user (login, password_hash, verified_at, blocked_at)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- DeleteUser :exec

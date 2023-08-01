@@ -8,15 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
-
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
@@ -74,6 +72,29 @@ func TestLoginUser(t *testing.T) {
 		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
 			Login:        userLogin,
 			PasswordHash: strongPasswordHash,
+		})
+
+		cmd := application.LoginUser(queries)
+
+		_, err := cmd(ctx, application.LoginUserRequest{
+			LoginEmail: userLogin,
+			Password:   strongPassword,
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, application.ErrLoginFailed)
+	})
+
+	t.Run("login fails - user blocked", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
+			Login:        userLogin,
+			PasswordHash: strongPasswordHash,
+			VerifiedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			BlockedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		})
 
 		cmd := application.LoginUser(queries)
@@ -193,5 +214,6 @@ func TestRegisterUser(t *testing.T) {
 
 		user := users[0]
 		assert.Empty(t, user.VerifiedAt)
+		assert.Empty(t, user.BlockedAt)
 	})
 }

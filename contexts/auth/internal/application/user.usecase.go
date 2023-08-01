@@ -39,6 +39,10 @@ func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) 
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
+		if user.Blocked.IsBlocked() {
+			return LoginUserResponse{}, ErrLoginFailed
+		}
+
 		if !user.PasswordHash.Matches(in.Password) {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
