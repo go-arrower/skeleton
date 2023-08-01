@@ -18,8 +18,9 @@ import (
 const contextName = "auth"
 
 type AuthContext struct {
-	tenantController web.TenantController
-	userController   web.UserController
+	tenantController   web.TenantController
+	userController     web.UserController
+	settingsController web.SettingsController
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {

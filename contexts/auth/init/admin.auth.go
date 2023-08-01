@@ -15,6 +15,8 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group) error {
 		return nil
 	})
 
+	router.GET("/settings", c.settingsController.List())
+
 	router.GET("/tenants", c.tenantController.List())
 
 	router.GET("/users", c.userController.List())
