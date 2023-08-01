@@ -17,6 +17,7 @@
         <th scope="col" class="p-1 border border-slate-300">User Login</th>
         <th scope="col" class="p-1 border border-slate-300">Is Active</th>
         <th scope="col" class="p-1 border border-slate-300">Is Admin</th>
+        <th scope="col" class="p-1 border border-slate-300">Profile</th>
         <th scope="col" class="p-1 border border-slate-300">Actions</th>
     </tr>
     </thead>
@@ -25,9 +26,10 @@
         <tr class="odd:bg-white even:bg-slate-50">
             <td class="p-1">{{ .ID.Value }}</td>
             <td class="p-1">{{ .CreatedAt }}</td>
-            <td class="p-1">{{ .UserLogin }}</td>
-            <td class="p-1">{{ .IsActive }}</td>
-            <td class="p-1">{{ .IsAdmin }}</td>
+            <td class="p-1">{{ .Login }}</td>
+            <td class="p-1"></td>
+            <td class="p-1"></td>
+            <td class="p-1">{{ .Profile.Value }}</td>
             <td class="p-1"></td>
         </tr>
     {{ end }}

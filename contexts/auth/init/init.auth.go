@@ -18,7 +18,6 @@ import (
 const contextName = "auth"
 
 type AuthContext struct {
-	tenantController   web.TenantController
 	userController     web.UserController
 	settingsController web.SettingsController
 }
@@ -39,7 +38,6 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	queries := models.New(di.DB)
 	authContext := AuthContext{
-		tenantController: web.TenantController{Queries: queries},
 		userController: web.UserController{
 			Queries: queries,
 			CmdLoginUser: mw.Traced(di.TraceProvider,

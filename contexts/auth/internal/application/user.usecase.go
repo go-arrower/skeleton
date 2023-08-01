@@ -30,24 +30,52 @@ type (
 
 func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		dbuser, err := queries.FindUserByLogin(ctx, in.LoginEmail)
+		user, err := repoGetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		hash := user.PasswordHash(dbuser.UserPasswordHash)
-		if !hash.Matches(in.Password) {
+		if !user.Verified.IsVerified() {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		u := user.User{
-			ID:    user.ID(dbuser.ID.String()),
-			Login: user.Login(dbuser.UserLogin),
-			// todo mapping
+		if !user.PasswordHash.Matches(in.Password) {
+			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		return LoginUserResponse{User: u}, nil
+		return LoginUserResponse{User: user}, nil
 	}
+}
+
+func repoGetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
+	u, err := queries.FindUserByLogin(ctx, loginEmail)
+	if err != nil {
+		return user.User{}, ErrLoginFailed
+	}
+
+	var p = make(map[string]*string)
+	profile := u.Profile.Scan(&p)
+	_ = profile
+	_ = p
+	_ = u.Profile.Value
+
+	return user.User{
+		ID:                user.ID(u.ID.String()),
+		Login:             user.Login(u.Login),
+		PasswordHash:      user.PasswordHash(u.PasswordHash),
+		RegisteredAt:      u.CreatedAt.Time,
+		FirstName:         u.FirstName,
+		LastName:          u.LastName,
+		Name:              u.Name,
+		Birthday:          user.Birthday{}, //todo
+		Locale:            user.Locale{},   //todo
+		TimeZone:          user.TimeZone(u.TimeZone),
+		ProfilePictureURL: user.URL(u.PictureUrl),
+		Profile2:          p, //todo
+		Verified:          user.VerifiedFlag(u.VerifiedAt.Time),
+		Blocked:           user.BlockedFlag(u.BlockedAt.Time),
+		SuperUser:         user.SuperUserFlag(u.SuperUserAt.Time),
+	}, nil
 }
 
 type (
@@ -90,8 +118,8 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 
 		// TODO take the user and persist is completely
 		_, err = queries.CreateUser(ctx, models.CreateUserParams{
-			UserLogin:        string(user.Login),
-			UserPasswordHash: string(user.PasswordHash),
+			Login:        string(user.Login),
+			PasswordHash: string(user.PasswordHash),
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)

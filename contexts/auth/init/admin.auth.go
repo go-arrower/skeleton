@@ -17,8 +17,6 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group) error {
 
 	router.GET("/settings", c.settingsController.List())
 
-	router.GET("/tenants", c.tenantController.List())
-
 	router.GET("/users", c.userController.List())
 	router.GET("/users/create", c.userController.Create())
 	router.POST("/users", c.userController.Store())

@@ -29,8 +29,5 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) error {
 	router.POST("/register", c.userController.Store())
 	router.GET("/profile", nil) // todo protect route, so only logged in user can view
 
-	router.GET("/register/tenant", c.tenantController.Create())
-	router.POST("/register/tenant", c.tenantController.Store())
-
 	return nil
 }

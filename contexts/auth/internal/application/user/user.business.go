@@ -25,7 +25,8 @@ type User struct {
 	TimeZone          TimeZone
 	ProfilePictureURL URL
 	// a quick helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
-	Profile Profile // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
+	Profile  Profile  // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
+	Profile2 Profile2 // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
 	// email, phone???
 
 	Verified  VerifiedFlag
@@ -86,13 +87,17 @@ type (
 	ProfileKey   string
 	ProfileValue string
 
-	Profile map[ProfileKey]ProfileValue
+	Profile  map[ProfileKey]ProfileValue
+	Profile2 map[string]*string
 )
 
 type VerifiedFlag time.Time
 
-func (t VerifiedFlag) IsVerified() bool { return false }
-func (t VerifiedFlag) At() time.Time    { return time.Time(t) }
+func (t VerifiedFlag) IsVerified() bool {
+	return time.Time(t) != time.Time{}
+}
+
+func (t VerifiedFlag) At() time.Time { return time.Time(t) }
 
 type BlockedFlag time.Time
 

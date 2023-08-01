@@ -6,6 +6,9 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 
@@ -48,8 +51,8 @@ func TestLoginUser(t *testing.T) {
 		queries := models.New(pg)
 
 		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			UserLogin:        userLogin,
-			UserPasswordHash: strongPasswordHash,
+			Login:        userLogin,
+			PasswordHash: strongPasswordHash,
 		})
 
 		cmd := application.LoginUser(queries)
@@ -62,6 +65,27 @@ func TestLoginUser(t *testing.T) {
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
 	})
 
+	t.Run("login fails - user not verified", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
+			Login:        userLogin,
+			PasswordHash: strongPasswordHash,
+		})
+
+		cmd := application.LoginUser(queries)
+
+		_, err := cmd(ctx, application.LoginUserRequest{
+			LoginEmail: userLogin,
+			Password:   strongPassword,
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, application.ErrLoginFailed)
+	})
+
 	t.Run("login succeeds", func(t *testing.T) {
 		t.Parallel()
 
@@ -69,8 +93,9 @@ func TestLoginUser(t *testing.T) {
 		queries := models.New(pg)
 
 		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			UserLogin:        userLogin,
-			UserPasswordHash: strongPasswordHash,
+			Login:        userLogin,
+			PasswordHash: strongPasswordHash,
+			VerifiedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		})
 
 		cmd := application.LoginUser(queries)
@@ -95,8 +120,8 @@ func TestRegisterUser(t *testing.T) {
 		queries := models.New(pg)
 
 		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			UserLogin:        userLogin,
-			UserPasswordHash: "xxxxxx",
+			Login:        userLogin,
+			PasswordHash: "xxxxxx",
 		})
 
 		cmd := application.RegisterUser(queries)
@@ -165,5 +190,8 @@ func TestRegisterUser(t *testing.T) {
 		users, err := queries.AllUsers(ctx)
 		assert.NoError(t, err)
 		assert.Len(t, users, 1)
+
+		user := users[0]
+		assert.Empty(t, user.VerifiedAt)
 	})
 }
