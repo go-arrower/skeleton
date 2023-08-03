@@ -36,6 +36,8 @@ type UserController struct {
 	CmdLoginUser func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 }
 
+var knownDeviceKeyPairs = securecookie.CodecsFromPairs([]byte("secret"))
+
 func (uc UserController) Login() func(echo.Context) error {
 	return func(c echo.Context) error {
 		if auth.IsLoggedIn(c.Request().Context()) {
@@ -60,9 +62,10 @@ func (uc UserController) Login() func(echo.Context) error {
 		)
 
 		loginUser := application.LoginUserRequest{
-			IP:         c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
-			UserAgent:  c.Request().UserAgent(),
-			SessionKey: sess.ID,
+			IP:          c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
+			UserAgent:   c.Request().UserAgent(),
+			SessionKey:  sess.ID,
+			IsNewDevice: isUnknownDevice(c),
 		} //nolint:exhaustruct
 		if err := c.Bind(&loginUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -105,8 +108,38 @@ func (uc UserController) Login() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
+		// set known device cookie
+		encoded, err := securecookie.EncodeMulti("arrower.auth.known_device", map[string]bool{"known_device": true}, knownDeviceKeyPairs...)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		http.SetCookie(c.Response(), sessions.NewCookie("arrower.auth.known_device", encoded, &sessions.Options{
+			Path:     "/auth",
+			Domain:   "",
+			MaxAge:   60 * 60 * 24 * 365 * 20, // 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		}))
+
 		return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
 	}
+}
+
+// isUnknownDevice checks if this device is already known, as in has successfully logged in, and is unknown otherwise.
+func isUnknownDevice(c echo.Context) bool {
+	for _, cookie := range c.Request().Cookies() {
+		if cookie.Name == "arrower.auth.known_device" {
+			val := map[string]bool{}
+			err := securecookie.DecodeMulti("arrower.auth.known_device", cookie.Value, &val, knownDeviceKeyPairs...)
+			if err == nil && val["known_device"] == true {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func (uc UserController) Logout() func(echo.Context) error {

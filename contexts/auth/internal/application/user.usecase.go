@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/go-arrower/arrower/jobs"
 	"github.com/jackc/pgx/v5/pgtype"
-
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -34,24 +34,32 @@ type (
 	LoginUserResponse struct {
 		User user.User
 	}
+
+	SendConfirmationNewDeviceLoggedIn struct {
+		UserID     user.ID
+		OccurredAt time.Time
+		IP         string
+		Device     user.Device
+		// Ip Location
+	}
 )
 
-func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+func LoginUser(queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		user, err := repoGetUserByLogin(ctx, queries, in.LoginEmail)
+		usr, err := repoGetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if !user.Verified.IsVerified() {
+		if !usr.Verified.IsVerified() {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if user.Blocked.IsBlocked() {
+		if usr.Blocked.IsBlocked() {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if !user.PasswordHash.Matches(in.Password) {
+		if !usr.PasswordHash.Matches(in.Password) {
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
@@ -67,7 +75,19 @@ func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) 
 			return LoginUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
 		}
 
-		return LoginUserResponse{User: user}, nil
+		if in.IsNewDevice {
+			err = queue.Enqueue(ctx, SendConfirmationNewDeviceLoggedIn{
+				UserID:     usr.ID,
+				OccurredAt: time.Now().UTC(),
+				IP:         in.IP,
+				Device:     user.NewDevice(in.UserAgent),
+			})
+			if err != nil {
+				return LoginUserResponse{}, fmt.Errorf("could not queue confirmation about new device: %w", err)
+			}
+		}
+
+		return LoginUserResponse{User: usr}, nil
 	}
 }
 

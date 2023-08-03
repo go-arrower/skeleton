@@ -1,13 +1,13 @@
 package user
 
 import (
+	"fmt"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"golang.org/x/text/language"
-
 	"github.com/google/uuid"
+	"github.com/mileusna/useragent"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/text/language"
 )
 
 // User represents a user of the software, that can perform all the auth functionalities.
@@ -121,3 +121,22 @@ type (
 )
 
 func NewUser(...any) User { return User{} }
+
+func NewDevice(userAgent string) Device {
+	return Device{userAgent: userAgent}
+}
+
+// Device contains human friendly information about the device the user is using.
+type Device struct {
+	userAgent string
+}
+
+func (d Device) Name() string {
+	ua := useragent.Parse(d.userAgent)
+	return fmt.Sprintf("%s v%s", ua.Name, ua.Version)
+}
+
+func (d Device) OS() string {
+	ua := useragent.Parse(d.userAgent)
+	return fmt.Sprintf("%s v%s", ua.OS, ua.OSVersion)
+}

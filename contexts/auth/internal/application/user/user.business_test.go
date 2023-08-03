@@ -68,3 +68,31 @@ func TestBlockedFlag_IsBlocked(t *testing.T) {
 		})
 	}
 }
+
+func TestDevice(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName     string
+		device       user.Device
+		expectedName string
+		expectedOS   string
+	}{
+		{
+			"",
+			user.NewDevice("Mozilla/5.0 (Linux; Android 4.3; GT-I9300 Build/JSS15J) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"),
+			"Chrome v59.0.3071.125",
+			"Android v4.3",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expectedName, tt.device.Name())
+			assert.Equal(t, tt.expectedOS, tt.device.OS())
+		})
+	}
+}

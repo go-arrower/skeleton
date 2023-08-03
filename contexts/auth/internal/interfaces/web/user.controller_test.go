@@ -79,7 +79,7 @@ func TestUserController_Login(t *testing.T) {
 		defer result.Body.Close()
 
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
-		assert.Len(t, result.Cookies(), 1)
+		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
 		assert.Equal(t, "/", result.Cookies()[0].Path)
 		assert.Equal(t, "session", result.Cookies()[0].Name)
 		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
@@ -106,6 +106,56 @@ func TestUserController_Login(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "login")
+		assert.Len(t, rec.Result().Cookies(), 0, "failed logins should not have a known_device cookie")
+	})
+
+	t.Run("unknown device succeeds login", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("login=1337&password=12345678"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+
+		controller := web.UserController{
+			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+				assert.True(t, in.IsNewDevice)
+
+				return application.LoginUserResponse{}, nil
+			},
+		}
+
+		echoRouter.POST("/", controller.Login())
+		echoRouter.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
+		assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
+		assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
+		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
+
+		t.Run("known device succeeds login", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("login=1337&password=12345678"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.AddCookie(rec.Result().Cookies()[1])
+			rec := httptest.NewRecorder()
+
+			controller := web.UserController{
+				CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+					assert.False(t, in.IsNewDevice)
+
+					return application.LoginUserResponse{}, nil
+				},
+			}
+
+			echoRouter.POST("/", controller.Login())
+			echoRouter.ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusSeeOther, rec.Code)
+			assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
+			assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
+			assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
+			assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
+		})
 	})
 }
 
@@ -144,7 +194,7 @@ func TestUserController_Logout(t *testing.T) {
 
 		echoRouter.POST("/login", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
-		assert.Len(t, rec.Result().Cookies(), 1)
+		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
 
 		// log out
 		req = httptest.NewRequest(http.MethodGet, "/logout", nil)

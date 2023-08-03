@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-arrower/arrower/jobs"
+
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +49,7 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries)
+		cmd := application.LoginUser(queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.ValidUserLogin,
@@ -63,7 +65,7 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries)
+		cmd := application.LoginUser(queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.NotVerifiedUserLogin,
@@ -79,7 +81,7 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries)
+		cmd := application.LoginUser(queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.BlockedUserLogin,
@@ -94,8 +96,9 @@ func TestLoginUser(t *testing.T) {
 
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
+		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(queries)
+		cmd := application.LoginUser(queries, queue)
 
 		res, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.ValidUserLogin,
@@ -113,6 +116,31 @@ func TestLoginUser(t *testing.T) {
 		sessions, _ := queries.AllSessions(ctx)
 		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
 		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
+
+		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 0)
+	})
+
+	t.Run("unknown device - send email about login to user", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+		queue := jobs.NewInMemoryJobs()
+
+		cmd := application.LoginUser(queries, queue)
+
+		_, err := cmd(ctx, application.LoginUserRequest{
+			LoginEmail:  testdata.ValidUserLogin,
+			Password:    testdata.StrongPassword,
+			UserAgent:   testdata.UserAgent,
+			SessionKey:  "new-session-key",
+			IsNewDevice: true,
+		})
+
+		// assert return values
+		assert.NoError(t, err)
+		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 1)
+		// todo assert Job contains: ip & it's meaning, device (not UA), time
 	})
 }
 
