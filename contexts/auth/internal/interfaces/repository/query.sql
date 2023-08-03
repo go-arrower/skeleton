@@ -1,3 +1,31 @@
+---------------------
+------ Session ------
+---------------------
+
+-- name: AllSessions :many
+SELECT *
+FROM auth.session
+ORDER BY created_at ASC;
+
+-- name: FindSessionDataByKey :one
+SELECT data
+FROM auth.session
+WHERE key = $1;
+
+-- name: DeleteSessionByKey :exec
+DELETE
+FROM auth.session
+WHERE key = $1;
+
+-- name: UpsertSession :exec
+INSERT INTO auth.session (key, data, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (key) DO UPDATE SET data       = $2,
+                                expires_at = $3,
+                                user_id    = $4;
+
+
+
 ------------------
 ------ User ------
 ------------------

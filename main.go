@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labstack/echo-contrib/session"
+
 	"github.com/go-arrower/arrower/alog"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/sessions"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -61,19 +61,22 @@ func main() {
 	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
 	router.Validator = &CustomValidator{validator: validator.New()}
+	router.IPExtractor = echo.ExtractIPFromXFFHeader() // see: https://echo.labstack.com/docs/ip-address
 	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider)))
 	router.Use(middleware.Static("public"))
-	router.Use(session.Middleware(sessions.NewCookieStore([]byte("secret")))) // todo replace by pg sessions store
 	router.Use(injectMW)
 
-	di.APIRouter = router.Group("/api")     // todo add api middleware
-	di.AdminRouter = router.Group("/admin") // todo add admin middleware
-	di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
+	di.APIRouter = router.Group("/api") // todo add api middleware
 
 	// router.Use(session.Middleware())
+	ss, _ := auth.NewPGSessionStore(pg.PGx, []byte("secret")) // todo use secure key
 	di.WebRouter = router
+	di.WebRouter.Use(session.Middleware(ss))
 	//di.WebRouter.Use(middleware.CSRF())
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
+
+	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
+	//di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,

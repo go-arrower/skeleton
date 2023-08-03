@@ -12,6 +12,44 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const allSessions = `-- name: AllSessions :many
+
+SELECT key, data, expires_at, user_id, device, created_at, updated_at
+FROM auth.session
+ORDER BY created_at ASC
+`
+
+// -------------------
+// ---- Session ------
+// -------------------
+func (q *Queries) AllSessions(ctx context.Context) ([]AuthSession, error) {
+	rows, err := q.db.Query(ctx, allSessions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuthSession
+	for rows.Next() {
+		var i AuthSession
+		if err := rows.Scan(
+			&i.Key,
+			&i.Data,
+			&i.ExpiresAt,
+			&i.UserID,
+			&i.Device,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const allUsers = `-- name: AllUsers :many
 
 SELECT id, created_at, updated_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone, picture_url, profile, verified_at, blocked_at, super_user_at
@@ -101,6 +139,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUse
 	return i, err
 }
 
+const deleteSessionByKey = `-- name: DeleteSessionByKey :exec
+DELETE
+FROM auth.session
+WHERE key = $1
+`
+
+func (q *Queries) DeleteSessionByKey(ctx context.Context, key []byte) error {
+	_, err := q.db.Exec(ctx, deleteSessionByKey, key)
+	return err
+}
+
+const findSessionDataByKey = `-- name: FindSessionDataByKey :one
+SELECT data
+FROM auth.session
+WHERE key = $1
+`
+
+func (q *Queries) FindSessionDataByKey(ctx context.Context, key []byte) ([]byte, error) {
+	row := q.db.QueryRow(ctx, findSessionDataByKey, key)
+	var data []byte
+	err := row.Scan(&data)
+	return data, err
+}
+
 const findUserByID = `-- name: FindUserByID :one
 SELECT id, created_at, updated_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone, picture_url, profile, verified_at, blocked_at, super_user_at
 FROM auth.user
@@ -159,4 +221,29 @@ func (q *Queries) FindUserByLogin(ctx context.Context, login string) (AuthUser, 
 		&i.SuperUserAt,
 	)
 	return i, err
+}
+
+const upsertSession = `-- name: UpsertSession :exec
+INSERT INTO auth.session (key, data, expires_at, user_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (key) DO UPDATE SET data       = $2,
+                                expires_at = $3,
+                                user_id    = $4
+`
+
+type UpsertSessionParams struct {
+	Key       []byte
+	Data      []byte
+	ExpiresAt pgtype.Timestamptz
+	UserID    uuid.NullUUID
+}
+
+func (q *Queries) UpsertSession(ctx context.Context, arg UpsertSessionParams) error {
+	_, err := q.db.Exec(ctx, upsertSession,
+		arg.Key,
+		arg.Data,
+		arg.ExpiresAt,
+		arg.UserID,
+	)
+	return err
 }
