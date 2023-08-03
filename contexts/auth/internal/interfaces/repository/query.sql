@@ -18,11 +18,12 @@ FROM auth.session
 WHERE key = $1;
 
 -- name: UpsertSession :exec
-INSERT INTO auth.session (key, data, expires_at, user_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth.session (key, data, expires_at, user_id, user_agent)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (key) DO UPDATE SET data       = $2,
                                 expires_at = $3,
                                 user_id    = $4;
+
 
 
 

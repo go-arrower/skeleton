@@ -57,12 +57,16 @@ func TestUserController_Login(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("login=1337&password=12345678"))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
 		controller := web.UserController{
 			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
 				assert.Equal(t, "1337", in.LoginEmail)
 				assert.Equal(t, "12345678", in.Password)
+				assert.NotEmpty(t, in.IP)
+				assert.NotEmpty(t, in.UserAgent)
+				assert.NotEmpty(t, in.SessionKey)
 
 				return application.LoginUserResponse{}, nil
 			},
@@ -88,7 +92,6 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		c := echoRouter.NewContext(req, rec)
 		controller := web.UserController{
 			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
 				assert.Equal(t, "1337", in.LoginEmail)
@@ -98,10 +101,11 @@ func TestUserController_Login(t *testing.T) {
 			},
 		}
 
-		if assert.NoError(t, controller.Login()(c)) {
-			assert.Equal(t, http.StatusOK, rec.Code)
-			assert.Contains(t, rec.Body.String(), "login")
-		}
+		echoRouter.POST("/", controller.Login())
+		echoRouter.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "login")
 	})
 }
 

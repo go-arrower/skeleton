@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
@@ -22,6 +25,11 @@ type (
 	LoginUserRequest struct {
 		LoginEmail string `form:"login" validate:"max=1024,required,email"`
 		Password   string `form:"password" validate:"max=1024,min=8"`
+
+		IsNewDevice bool
+		UserAgent   string
+		IP          string `validate:"ip"`
+		SessionKey  string
 	}
 	LoginUserResponse struct {
 		User user.User
@@ -47,38 +55,51 @@ func LoginUser(queries *models.Queries) func(context.Context, LoginUserRequest) 
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
+		// The session is not persisted until the end of the controller.
+		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
+		err = queries.UpsertSession(ctx, models.UpsertSessionParams{
+			Key:       []byte(in.SessionKey),
+			Data:      []byte(""),
+			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second), Valid: true},
+			UserAgent: in.UserAgent,
+		})
+		if err != nil {
+			return LoginUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
+		}
+
 		return LoginUserResponse{User: user}, nil
 	}
 }
 
 func repoGetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
-	u, err := queries.FindUserByLogin(ctx, loginEmail)
+	dbUser, err := queries.FindUserByLogin(ctx, loginEmail)
 	if err != nil {
 		return user.User{}, ErrLoginFailed
 	}
 
 	var p = make(map[string]*string)
-	profile := u.Profile.Scan(&p)
+	profile := dbUser.Profile.Scan(&p)
 	_ = profile
 	_ = p
-	_ = u.Profile.Value
+	_ = dbUser.Profile.Value
 
 	return user.User{
-		ID:                user.ID(u.ID.String()),
-		Login:             user.Login(u.Login),
-		PasswordHash:      user.PasswordHash(u.PasswordHash),
-		RegisteredAt:      u.CreatedAt.Time,
-		FirstName:         u.FirstName,
-		LastName:          u.LastName,
-		Name:              u.Name,
+		ID:                user.ID(dbUser.ID.String()),
+		Login:             user.Login(dbUser.Login),
+		PasswordHash:      user.PasswordHash(dbUser.PasswordHash),
+		RegisteredAt:      dbUser.CreatedAt.Time,
+		FirstName:         dbUser.FirstName,
+		LastName:          dbUser.LastName,
+		Name:              dbUser.Name,
 		Birthday:          user.Birthday{}, //todo
 		Locale:            user.Locale{},   //todo
-		TimeZone:          user.TimeZone(u.TimeZone),
-		ProfilePictureURL: user.URL(u.PictureUrl),
+		TimeZone:          user.TimeZone(dbUser.TimeZone),
+		ProfilePictureURL: user.URL(dbUser.PictureUrl),
+		Profile:           user.Profile{},
 		Profile2:          p, //todo
-		Verified:          user.VerifiedFlag(u.VerifiedAt.Time),
-		Blocked:           user.BlockedFlag(u.BlockedAt.Time),
-		SuperUser:         user.SuperUserFlag(u.SuperUserAt.Time),
+		Verified:          user.VerifiedFlag(dbUser.VerifiedAt.Time),
+		Blocked:           user.BlockedFlag(dbUser.BlockedAt.Time),
+		SuperUser:         user.SuperUserFlag(dbUser.SuperUserAt.Time),
 	}, nil
 }
 

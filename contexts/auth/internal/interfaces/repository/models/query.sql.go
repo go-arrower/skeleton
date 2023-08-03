@@ -14,7 +14,7 @@ import (
 
 const allSessions = `-- name: AllSessions :many
 
-SELECT key, data, expires_at, user_id, device, created_at, updated_at
+SELECT key, data, expires_at, user_id, user_agent, created_at, updated_at
 FROM auth.session
 ORDER BY created_at ASC
 `
@@ -36,7 +36,7 @@ func (q *Queries) AllSessions(ctx context.Context) ([]AuthSession, error) {
 			&i.Data,
 			&i.ExpiresAt,
 			&i.UserID,
-			&i.Device,
+			&i.UserAgent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -224,8 +224,8 @@ func (q *Queries) FindUserByLogin(ctx context.Context, login string) (AuthUser, 
 }
 
 const upsertSession = `-- name: UpsertSession :exec
-INSERT INTO auth.session (key, data, expires_at, user_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth.session (key, data, expires_at, user_id, user_agent)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (key) DO UPDATE SET data       = $2,
                                 expires_at = $3,
                                 user_id    = $4
@@ -236,6 +236,7 @@ type UpsertSessionParams struct {
 	Data      []byte
 	ExpiresAt pgtype.Timestamptz
 	UserID    uuid.NullUUID
+	UserAgent string
 }
 
 func (q *Queries) UpsertSession(ctx context.Context, arg UpsertSessionParams) error {
@@ -244,6 +245,7 @@ func (q *Queries) UpsertSession(ctx context.Context, arg UpsertSessionParams) er
 		arg.Data,
 		arg.ExpiresAt,
 		arg.UserID,
+		arg.UserAgent,
 	)
 	return err
 }

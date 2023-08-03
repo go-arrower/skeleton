@@ -2,7 +2,11 @@ package web
 
 import (
 	"context"
+	"encoding/base32"
 	"net/http"
+	"strings"
+
+	"github.com/gorilla/securecookie"
 
 	"github.com/go-arrower/arrower/mw"
 
@@ -42,7 +46,24 @@ func (uc UserController) Login() func(echo.Context) error {
 			return c.Render(http.StatusOK, "auth=>auth.login", nil) //nolint:wrapcheck
 		}
 
-		loginUser := application.LoginUserRequest{} //nolint:exhaustruct
+		// POST: Login
+
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		// generate and set a session ID, as it is required for the use case, but the session store only creates one on Save().
+		sess.ID = strings.TrimRight(
+			base32.StdEncoding.EncodeToString(securecookie.GenerateRandomKey(32)),
+			"=",
+		)
+
+		loginUser := application.LoginUserRequest{
+			IP:         c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
+			UserAgent:  c.Request().UserAgent(),
+			SessionKey: sess.ID,
+		} //nolint:exhaustruct
 		if err := c.Bind(&loginUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -62,16 +83,10 @@ func (uc UserController) Login() func(echo.Context) error {
 			for _, e := range validationErrors {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
-
 			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{ //nolint:wrapcheck
 				"Errors":     valErrs,
 				"LoginEmail": loginUser.LoginEmail,
 			})
-		}
-
-		sess, err := session.Get("session", c)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
 		sess.Options = &sessions.Options{

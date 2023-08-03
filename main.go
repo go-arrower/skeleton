@@ -151,7 +151,17 @@ func main() {
 	}
 
 	router.GET("/", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>home", "World") //nolint:wrapcheck
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		userID := "World"
+		if id, ok := sess.Values[auth.SessKeyUserID].(string); ok {
+			userID = id
+		}
+
+		return c.Render(http.StatusOK, "=>home", userID) //nolint:wrapcheck
 	})
 
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)

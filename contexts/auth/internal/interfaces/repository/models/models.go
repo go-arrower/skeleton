@@ -10,16 +10,13 @@ import (
 )
 
 type AuthSession struct {
-	ID           int64
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	UserID       uuid.UUID
-	Key          []byte
-	Data         []byte
-	ExpiresOn    pgtype.Timestamptz
-	LastDevice   string
-	LastLocation string
-	LastTimezone string
+	Key       []byte
+	Data      []byte
+	ExpiresAt pgtype.Timestamptz
+	UserID    uuid.NullUUID
+	UserAgent string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }
 
 type AuthUser struct {

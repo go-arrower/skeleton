@@ -1,0 +1,19 @@
+auth.user:
+  - id: 00000000-0000-0000-0000-000000000000 # fully active user
+    login: 0@test.com
+    password_hash: $2a$10$T7Bq1sNmHoGlGJUsHoF1A.S3oy.P3iLT6MoVXi6WvNdq1jbE.TnZy # hash of: R^&npAL2iu&M6S
+    verified_at: 2000-01-01 00:00:00+00
+
+  - id: 00000000-0000-0000-0000-000000000001 # not verified
+    login: 1@test.com
+    password_hash: $2a$10$T7Bq1sNmHoGlGJUsHoF1A.S3oy.P3iLT6MoVXi6WvNdq1jbE.TnZy
+
+  - id: 00000000-0000-0000-0000-000000000002 # blocked
+    login: 2@test.com
+    password_hash: $2a$10$T7Bq1sNmHoGlGJUsHoF1A.S3oy.P3iLT6MoVXi6WvNdq1jbE.TnZy
+    verified_at: 2000-01-01 00:00:00+00
+    blocked_at: 2002-01-01 00:00:00+00
+
+auth.session:
+  - key: session-key
+    user_id: 00000000-0000-0000-0000-000000000000

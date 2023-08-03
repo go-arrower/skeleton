@@ -6,14 +6,13 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/testdata"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
@@ -48,15 +47,10 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        userLogin,
-			PasswordHash: strongPasswordHash,
-		})
-
 		cmd := application.LoginUser(queries)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: userLogin,
+			LoginEmail: testdata.ValidUserLogin,
 			Password:   "wrong-password",
 		})
 		assert.Error(t, err)
@@ -69,16 +63,11 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        userLogin,
-			PasswordHash: strongPasswordHash,
-		})
-
 		cmd := application.LoginUser(queries)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: userLogin,
-			Password:   strongPassword,
+			LoginEmail: testdata.NotVerifiedUserLogin,
+			Password:   testdata.StrongPassword,
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
@@ -90,18 +79,11 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        userLogin,
-			PasswordHash: strongPasswordHash,
-			VerifiedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
-			BlockedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		})
-
 		cmd := application.LoginUser(queries)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: userLogin,
-			Password:   strongPassword,
+			LoginEmail: testdata.BlockedUserLogin,
+			Password:   testdata.StrongPassword,
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
@@ -113,21 +95,24 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        userLogin,
-			PasswordHash: strongPasswordHash,
-			VerifiedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		})
-
 		cmd := application.LoginUser(queries)
 
 		res, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: userLogin,
-			Password:   strongPassword,
+			LoginEmail: testdata.ValidUserLogin,
+			Password:   testdata.StrongPassword,
+			UserAgent:  testdata.UserAgent,
+			SessionKey: "new-session-key",
 		})
+
+		// assert return values
 		assert.NoError(t, err)
-		assert.Equal(t, user.Login(userLogin), res.User.Login)
-		assert.NotEmpty(t, userLogin, res.User.ID)
+		assert.Equal(t, user.Login(testdata.ValidUserLogin), res.User.Login)
+		assert.NotEmpty(t, testdata.ValidUserLogin, res.User.ID)
+
+		// assert session got updated with device info
+		sessions, _ := queries.AllSessions(ctx)
+		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
+		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
 	})
 }
 
@@ -141,13 +126,13 @@ func TestRegisterUser(t *testing.T) {
 		queries := models.New(pg)
 
 		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        userLogin,
+			Login:        testdata.ValidUserLogin,
 			PasswordHash: "xxxxxx",
 		})
 
 		cmd := application.RegisterUser(queries)
 
-		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: userLogin})
+		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.ValidUserLogin})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrUserAlreadyExists)
 	})
@@ -190,7 +175,7 @@ func TestRegisterUser(t *testing.T) {
 			t.Run(tt.testName, func(t *testing.T) {
 				t.Parallel()
 
-				_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: userLogin, Password: tt.password})
+				_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: tt.password})
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, application.ErrPasswordTooWeak)
 			})
@@ -205,14 +190,11 @@ func TestRegisterUser(t *testing.T) {
 
 		cmd := application.RegisterUser(queries)
 
-		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: userLogin, Password: strongPassword})
+		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: testdata.StrongPassword})
 		assert.NoError(t, err)
 
-		users, err := queries.AllUsers(ctx)
+		user, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
 		assert.NoError(t, err)
-		assert.Len(t, users, 1)
-
-		user := users[0]
 		assert.Empty(t, user.VerifiedAt)
 		assert.Empty(t, user.BlockedAt)
 	})
