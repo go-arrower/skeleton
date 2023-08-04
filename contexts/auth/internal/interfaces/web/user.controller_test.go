@@ -22,14 +22,13 @@ import (
 func TestUserController_Login(t *testing.T) {
 	t.Parallel()
 
-	echoRouter := newTestRouter()
-
 	t.Run("redirect if already logged in", func(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 
+		echoRouter := newTestRouter()
 		c := echoRouter.NewContext(req, rec)
 		c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), auth.CtxAuthLoggedIn, true)))
 
@@ -44,6 +43,7 @@ func TestUserController_Login(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 
+		echoRouter := newTestRouter()
 		c := echoRouter.NewContext(req, rec)
 
 		if assert.NoError(t, web.UserController{}.Login()(c)) {
@@ -74,6 +74,7 @@ func TestUserController_Login(t *testing.T) {
 			},
 		}
 
+		echoRouter := newTestRouter()
 		echoRouter.POST("/login", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
@@ -92,7 +93,7 @@ func TestUserController_Login(t *testing.T) {
 	t.Run("login fails", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload)
+		req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
@@ -105,6 +106,7 @@ func TestUserController_Login(t *testing.T) {
 			},
 		}
 
+		echoRouter := newTestRouter()
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
@@ -116,9 +118,7 @@ func TestUserController_Login(t *testing.T) {
 	t.Run("unknown device succeeds login", func(t *testing.T) {
 		t.Parallel()
 
-		t.Skip() // THE TEST IS PROPER, it fails because of the filesystemStore, see: https://github.com/gorilla/sessions/issues/267
-
-		req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload)
+		req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
@@ -130,6 +130,7 @@ func TestUserController_Login(t *testing.T) {
 			},
 		}
 
+		echoRouter := newTestRouter()
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
@@ -140,7 +141,7 @@ func TestUserController_Login(t *testing.T) {
 		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
 
 		t.Run("known device succeeds login", func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload)
+			req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload())
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.AddCookie(rec.Result().Cookies()[1])
 			rec := httptest.NewRecorder()
@@ -178,6 +179,7 @@ func TestUserController_Login(t *testing.T) {
 			},
 		}
 
+		echoRouter := newTestRouter()
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
@@ -214,7 +216,7 @@ func TestUserController_Logout(t *testing.T) {
 
 		// log in first
 
-		req := httptest.NewRequest(http.MethodPost, "/login", loginPostPayload)
+		req := httptest.NewRequest(http.MethodPost, "/login", loginPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
@@ -270,9 +272,6 @@ func TestUserController_Create(t *testing.T) {
 
 var errUCFailed = errors.New("use case error")
 
-// FIXME the param &remember_me=true is only there because of the bug in https://github.com/gorilla/sessions/issues/267
-var loginPostPayload = strings.NewReader("login=1337&password=12345678&remember_me=true")
-
 type emptyRenderer struct{}
 
 func (t *emptyRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -289,4 +288,10 @@ func newTestRouter() *echo.Echo {
 	e.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	return e
+}
+
+// FIXME the param &remember_me=true is only there because of the bug in https://github.com/gorilla/sessions/issues/267
+func loginPostPayload() io.Reader {
+	// is a function, so each caller is it's own reader, so that it does not get drained, if it was read already
+	return strings.NewReader("login=1337&password=12345678&remember_me=true")
 }
