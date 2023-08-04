@@ -72,6 +72,31 @@ func TestNewPGSessionStore(t *testing.T) {
 	})
 }
 
+func TestPGSessionStore_Save(t *testing.T) {
+	t.Parallel()
+
+	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
+
+	t.Run("save session with max age 0", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		session := sessions.NewSession(ss, "session")
+		session.Options = &sessions.Options{
+			MaxAge: 0,
+		}
+
+		err := ss.Save(req, rec, session)
+		assert.NoError(t, err)
+
+		// assert db entry
+		queries := models.New(pg)
+		sessions, _ := queries.AllSessions(ctx)
+		assert.Len(t, sessions, 1, "session with MaxAge 0, is deleted by browser on close")
+	})
+}
+
 func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 	t.Parallel()
 

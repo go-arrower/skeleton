@@ -85,8 +85,8 @@ func (ss *PGSessionStore) New(r *http.Request, name string) (*sessions.Session, 
 // session cookie handling so no need to trust in the cookie management in the
 // web browser.
 func (ss *PGSessionStore) Save(r *http.Request, w http.ResponseWriter, session *sessions.Session) error { //nolint:varnamelen,lll
-	// Delete if max-age is <= 0
-	if session.Options.MaxAge <= 0 {
+	// Delete if max-age is < 0, if max-age == 0 the cookie will delete ones the browser closes
+	if session.Options.MaxAge < 0 {
 		if err := ss.queries.DeleteSessionByKey(r.Context(), []byte(session.ID)); err != nil {
 			return fmt.Errorf("%w", err)
 		}
