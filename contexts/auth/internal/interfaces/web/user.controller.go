@@ -2,9 +2,7 @@ package web
 
 import (
 	"context"
-	"encoding/base32"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/securecookie"
 
@@ -59,12 +57,6 @@ func (uc UserController) Login() func(echo.Context) error {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
-
-		// generate and set a session ID, as it is required for the use case, but the session store only creates one on Save().
-		sess.ID = strings.TrimRight(
-			base32.StdEncoding.EncodeToString(securecookie.GenerateRandomKey(32)),
-			"=",
-		)
 
 		loginUser := loginCredentials{
 			LoginUserRequest: application.LoginUserRequest{

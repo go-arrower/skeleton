@@ -61,6 +61,7 @@ func (ss *PGSessionStore) New(r *http.Request, name string) (*sessions.Session, 
 	opts := *ss.Options
 	session.Options = &opts
 	session.IsNew = true
+	session.ID = newSessionID()
 
 	var err error
 	if c, errCookie := r.Cookie(name); errCookie == nil {
@@ -97,11 +98,7 @@ func (ss *PGSessionStore) Save(r *http.Request, w http.ResponseWriter, session *
 	}
 
 	if session.ID == "" {
-		const keyLength = 32
-		session.ID = strings.TrimRight(
-			base32.StdEncoding.EncodeToString(securecookie.GenerateRandomKey(keyLength)),
-			"=",
-		)
+		session.ID = newSessionID()
 	}
 
 	if err := ss.save(r.Context(), session); err != nil {
@@ -145,4 +142,13 @@ func (ss *PGSessionStore) save(ctx context.Context, session *sessions.Session) e
 	}
 
 	return nil
+}
+
+func newSessionID() string {
+	const keyLength = 32
+
+	return strings.TrimRight(
+		base32.StdEncoding.EncodeToString(securecookie.GenerateRandomKey(keyLength)),
+		"=",
+	)
 }

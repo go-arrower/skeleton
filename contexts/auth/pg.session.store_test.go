@@ -72,6 +72,21 @@ func TestNewPGSessionStore(t *testing.T) {
 	})
 }
 
+func TestPGSessionStore_New(t *testing.T) {
+	t.Parallel()
+
+	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
+
+	t.Run("save session with max age 0", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+		sess, err := ss.New(req, "session")
+		assert.NoError(t, err)
+		assert.NotEmpty(t, sess.ID)
+	})
+}
+
 func TestPGSessionStore_Save(t *testing.T) {
 	t.Parallel()
 
