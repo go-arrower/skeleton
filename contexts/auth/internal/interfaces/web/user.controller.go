@@ -39,6 +39,11 @@ type UserController struct {
 var knownDeviceKeyPairs = securecookie.CodecsFromPairs([]byte("secret"))
 
 func (uc UserController) Login() func(echo.Context) error {
+	type loginCredentials struct {
+		application.LoginUserRequest
+		RememberMe bool `form:"remember_me"`
+	}
+
 	return func(c echo.Context) error {
 		if auth.IsLoggedIn(c.Request().Context()) {
 			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
@@ -61,17 +66,19 @@ func (uc UserController) Login() func(echo.Context) error {
 			"=",
 		)
 
-		loginUser := application.LoginUserRequest{
-			IP:          c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
-			UserAgent:   c.Request().UserAgent(),
-			SessionKey:  sess.ID,
-			IsNewDevice: isUnknownDevice(c),
+		loginUser := loginCredentials{
+			LoginUserRequest: application.LoginUserRequest{
+				IP:          c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
+				UserAgent:   c.Request().UserAgent(),
+				SessionKey:  sess.ID,
+				IsNewDevice: isUnknownDevice(c),
+			},
 		} //nolint:exhaustruct
 		if err := c.Bind(&loginUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		response, err := uc.CmdLoginUser(c.Request().Context(), loginUser)
+		response, err := uc.CmdLoginUser(c.Request().Context(), loginUser.LoginUserRequest)
 		if err != nil {
 			valErrs := make(map[string]string)
 
@@ -92,10 +99,15 @@ func (uc UserController) Login() func(echo.Context) error {
 			})
 		}
 
+		maxAge := 0 // session cookie => browser should delete the cookie when it closes
+		if loginUser.RememberMe {
+			maxAge = 60 * 60 * 24 * 30 //  60 sec * 60 min * 24 hours * 30 day
+		}
+
 		sess.Options = &sessions.Options{
 			Path:     "/",
 			Domain:   "",
-			MaxAge:   7 * 24 * 60 * 60, // 7 days * 24 hours * 60 min * 60 sec
+			MaxAge:   maxAge,
 			Secure:   false,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode, // cookies will not be sent, if the request originates from a third party, to prevent CSRF
