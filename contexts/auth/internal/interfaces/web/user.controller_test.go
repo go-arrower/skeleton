@@ -316,6 +316,7 @@ func TestUserController_Register(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/", registerPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
 		controller := web.UserController{
@@ -324,6 +325,9 @@ func TestUserController_Register(t *testing.T) {
 				assert.Equal(t, "12345678", in.Password)
 				assert.Equal(t, "12345678", in.PasswordConfirmation)
 				assert.True(t, in.AcceptedTermsOfService)
+				assert.NotEmpty(t, in.IP)
+				assert.NotEmpty(t, in.UserAgent)
+				assert.NotEmpty(t, in.SessionKey)
 
 				return application.RegisterUserResponse{}, nil
 			},

@@ -158,7 +158,7 @@ func TestRegisterUser(t *testing.T) {
 			PasswordHash: "xxxxxx",
 		})
 
-		cmd := application.RegisterUser(queries)
+		cmd := application.RegisterUser(queries, nil)
 
 		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.ValidUserLogin})
 		assert.Error(t, err)
@@ -170,7 +170,7 @@ func TestRegisterUser(t *testing.T) {
 
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
-		cmd := application.RegisterUser(queries)
+		cmd := application.RegisterUser(queries, nil)
 
 		tests := []struct {
 			testName string
@@ -215,10 +215,15 @@ func TestRegisterUser(t *testing.T) {
 
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
+		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.RegisterUser(queries)
+		cmd := application.RegisterUser(queries, queue)
 
-		usr, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: testdata.StrongPassword})
+		usr, err := cmd(ctx, application.RegisterUserRequest{
+			RegisterEmail: testdata.NewUserLogin,
+			Password:      testdata.StrongPassword,
+			UserAgent:     testdata.UserAgent,
+		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, usr.User.ID)
 
@@ -226,5 +231,13 @@ func TestRegisterUser(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, user.VerifiedAt)
 		assert.Empty(t, user.BlockedAt)
+
+		// assert session got updated with device info
+		sessions, _ := queries.AllSessions(ctx)
+		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
+		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
+
+		queue.Assert(t).Queued(application.SendNewUserVerificationEmail{}, 1)
+		// todo assert Job contains: ip & it's meaning, device (not UA), time
 	})
 }

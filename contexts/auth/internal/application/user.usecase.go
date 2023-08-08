@@ -131,13 +131,25 @@ type (
 		Password               string `form:"password" validate:"max=1024,min=8"`
 		PasswordConfirmation   string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
 		AcceptedTermsOfService bool   `form:"tos" validate:"required"`
+
+		UserAgent  string
+		IP         string `validate:"ip"`
+		SessionKey string
 	}
 	RegisterUserResponse struct {
 		User user.User
 	}
+
+	SendNewUserVerificationEmail struct {
+		UserID     user.ID
+		OccurredAt time.Time
+		IP         string
+		Device     user.Device
+		// Ip Location
+	}
 )
 
-func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
+func RegisterUser(queries *models.Queries, queue jobs.Enqueuer) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
 		//if !mw.PassedValidation(ctx) { /* validate OR return err */ }
 
@@ -150,22 +162,36 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 			return RegisterUserResponse{}, err
 		}
 
-		// TODO  Gather metadata: device info, location, timezone?
-
-		// TODO take the user and persist is completely
 		usr, err := queries.CreateUser(ctx, models.CreateUserParams{
 			ID:           uuid.MustParse(string(user.NewID())),
-			Login:        string(in.RegisterEmail),
+			Login:        in.RegisterEmail,
 			PasswordHash: string(pwHash),
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)
 		}
 
-		/*
-		* Send activation message as job (email or sms or nothing depending on the login type)
-		* Emit event of new user
-		 */
+		err = queue.Enqueue(ctx, SendNewUserVerificationEmail{
+			UserID:     user.ID(usr.ID.String()),
+			OccurredAt: time.Now().UTC(),
+			IP:         in.IP,
+			Device:     user.NewDevice(in.UserAgent),
+		})
+		if err != nil {
+			return RegisterUserResponse{}, fmt.Errorf("could not queue job to send verification email: %w", err)
+		}
+
+		// The session is not persisted until the end of the controller.
+		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
+		err = queries.UpsertSession(ctx, models.UpsertSessionParams{
+			Key:       []byte(in.SessionKey),
+			Data:      []byte(""),
+			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second), Valid: true},
+			UserAgent: in.UserAgent,
+		})
+		if err != nil {
+			return RegisterUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
+		}
 
 		return RegisterUserResponse{User: user.User{
 			ID:    user.ID(usr.ID.String()),

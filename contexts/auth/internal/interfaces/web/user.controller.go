@@ -205,7 +205,16 @@ func (uc UserController) Register() func(echo.Context) error {
 			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
 		}
 
-		newUser := application.RegisterUserRequest{} //nolint:exhaustruct
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		newUser := application.RegisterUserRequest{
+			IP:         c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
+			UserAgent:  c.Request().UserAgent(),
+			SessionKey: sess.ID,
+		} //nolint:exhaustruct
 
 		if err := c.Bind(&newUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -231,11 +240,6 @@ func (uc UserController) Register() func(echo.Context) error {
 				"Errors":        valErrs,
 				"RegisterEmail": newUser.RegisterEmail,
 			})
-		}
-
-		sess, err := session.Get("session", c)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
 		sess.Options = &sessions.Options{

@@ -17,7 +17,8 @@ import (
 // The purpose is to work around the bad behaviour in persisting sessions with MaxAge 0,
 // see: https://github.com/gorilla/sessions/issues/267
 // Ones the issue is fixed, this file should be deleted and the tests refactored to use the gorillas implementation.
-// The fix is done in line 107.
+// The fix is done in line 115.
+// Line 86ff. is also new behaviour, to make sessions work better with the use case of accessing them already in the application layer (login, register).
 // FilesystemStore ------------------------------------------------------------
 
 var fileMutex sync.RWMutex
@@ -82,6 +83,13 @@ func (s *FilesystemStore) New(r *http.Request, name string) (*sessions.Session, 
 	opts := *s.Options
 	session.Options = &opts
 	session.IsNew = true
+
+	const keyLength = 32
+	session.ID = strings.TrimRight(
+		base32.StdEncoding.EncodeToString(securecookie.GenerateRandomKey(keyLength)),
+		"=",
+	)
+
 	var err error
 	if c, errCookie := r.Cookie(name); errCookie == nil {
 		err = securecookie.DecodeMulti(name, c.Value, &session.ID, s.Codecs...)

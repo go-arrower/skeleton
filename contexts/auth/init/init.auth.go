@@ -53,7 +53,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 				mw.Metric(di.MeterProvider,
 					mw.Logged(logger,
 						mw.Validate(nil,
-							application.RegisterUser(queries),
+							application.RegisterUser(queries, di.ArrowerQueue),
 						),
 					),
 				),
