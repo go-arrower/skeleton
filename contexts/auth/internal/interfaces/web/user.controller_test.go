@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -251,7 +250,24 @@ func TestUserController_Logout(t *testing.T) {
 func TestUserController_Create(t *testing.T) {
 	t.Parallel()
 
-	echoRouter := newTestRouter()
+	t.Run("redirect if already logged in", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		echoRouter := newTestRouter()
+		c := echoRouter.NewContext(req, rec)
+		c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), auth.CtxAuthLoggedIn, true)))
+
+		if assert.NoError(t, web.UserController{}.Create()(c)) {
+			assert.Equal(t, http.StatusSeeOther, rec.Code)
+		}
+	})
+}
+
+func TestUserController_Register(t *testing.T) {
+	t.Parallel()
 
 	t.Run("redirect if already logged in", func(t *testing.T) {
 		t.Parallel()
@@ -259,12 +275,77 @@ func TestUserController_Create(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 
+		echoRouter := newTestRouter()
 		c := echoRouter.NewContext(req, rec)
 		c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), auth.CtxAuthLoggedIn, true)))
 
-		if assert.NoError(t, web.UserController{}.Create()(c)) {
+		if assert.NoError(t, web.UserController{}.Register()(c)) {
 			assert.Equal(t, http.StatusSeeOther, rec.Code)
+			assert.Equal(t, "/", rec.Header().Get(echo.HeaderLocation))
 		}
+	})
+
+	t.Run("register fails", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "/", registerPostPayload()) // todo change payload
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+
+		controller := web.UserController{
+			CmdRegisterUser: func(ctx context.Context, in application.RegisterUserRequest) (application.RegisterUserResponse, error) {
+				assert.Equal(t, "1337", in.RegisterEmail)
+				assert.Equal(t, "12345678", in.Password)
+				assert.Equal(t, "12345678", in.PasswordConfirmation)
+
+				return application.RegisterUserResponse{}, errUCFailed
+			},
+		}
+
+		echoRouter := newTestRouter()
+		echoRouter.POST("/", controller.Register())
+		echoRouter.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "auth.user.create")
+		assert.Len(t, rec.Result().Cookies(), 0, "failed registration should have no cookies")
+	})
+
+	t.Run("register succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "/", registerPostPayload())
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+
+		controller := web.UserController{
+			CmdRegisterUser: func(ctx context.Context, in application.RegisterUserRequest) (application.RegisterUserResponse, error) {
+				assert.Equal(t, "1337", in.RegisterEmail)
+				assert.Equal(t, "12345678", in.Password)
+				assert.Equal(t, "12345678", in.PasswordConfirmation)
+				assert.True(t, in.AcceptedTermsOfService)
+
+				return application.RegisterUserResponse{}, nil
+			},
+		}
+
+		echoRouter := newTestRouter()
+		echoRouter.POST("/", controller.Register())
+		echoRouter.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+		assert.Empty(t, rec.Body.String())
+		//assert.Len(t, rec.Result().Cookies(), 0, "failed registration should have no cookies")
+
+		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
+		assert.Equal(t, "/", rec.Result().Cookies()[0].Path)
+		assert.Equal(t, "session", rec.Result().Cookies()[0].Name)
+		assert.Equal(t, 0, rec.Result().Cookies()[0].MaxAge, "cookie should expire when browser closes")
+		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[0].SameSite)
+
+		assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
+		assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
+		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
 	})
 }
 
@@ -284,7 +365,8 @@ func (t *emptyRenderer) Render(w io.Writer, name string, data interface{}, c ech
 func newTestRouter() *echo.Echo {
 	e := echo.New()
 	e.Renderer = &emptyRenderer{}
-	e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
+	//e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret")))) // use again, if fixed: https://github.com/gorilla/sessions/issues/267
+	e.Use(session.Middleware(NewFilesystemStore("", []byte("secret"))))
 	e.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	return e
@@ -292,6 +374,10 @@ func newTestRouter() *echo.Echo {
 
 // FIXME the param &remember_me=true is only there because of the bug in https://github.com/gorilla/sessions/issues/267
 func loginPostPayload() io.Reader {
-	// is a function, so each caller is it's own reader, so that it does not get drained, if it was read already
+	// is a function, so each caller is its own reader, so that it does not get drained, if it was read already
 	return strings.NewReader("login=1337&password=12345678&remember_me=true")
+}
+
+func registerPostPayload() io.Reader {
+	return strings.NewReader("login=1337&password=12345678&password_confirmation=12345678&tos=true")
 }

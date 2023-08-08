@@ -98,12 +98,13 @@ func (q *Queries) AllUsers(ctx context.Context) ([]AuthUser, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO auth.user (login, password_hash, verified_at, blocked_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth.user (id, login, password_hash, verified_at, blocked_at)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id, created_at, updated_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone, picture_url, profile, verified_at, blocked_at, super_user_at
 `
 
 type CreateUserParams struct {
+	ID           uuid.UUID
 	Login        string
 	PasswordHash string
 	VerifiedAt   pgtype.Timestamptz
@@ -112,6 +113,7 @@ type CreateUserParams struct {
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
 	row := q.db.QueryRow(ctx, createUser,
+		arg.ID,
 		arg.Login,
 		arg.PasswordHash,
 		arg.VerifiedAt,

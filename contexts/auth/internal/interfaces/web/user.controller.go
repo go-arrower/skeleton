@@ -6,8 +6,6 @@ import (
 
 	"github.com/gorilla/securecookie"
 
-	"github.com/go-arrower/arrower/mw"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -30,8 +28,9 @@ Proposal for naming conventions:
 */
 
 type UserController struct {
-	Queries      *models.Queries
-	CmdLoginUser func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
+	Queries         *models.Queries
+	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
+	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
 }
 
 var knownDeviceKeyPairs = securecookie.CodecsFromPairs([]byte("secret"))
@@ -112,23 +111,31 @@ func (uc UserController) Login() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		// set known device cookie
-		encoded, err := securecookie.EncodeMulti("arrower.auth.known_device", map[string]bool{"known_device": true}, knownDeviceKeyPairs...)
+		err = setKnownDeviceCookie(c)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+			return err
 		}
-
-		http.SetCookie(c.Response(), sessions.NewCookie("arrower.auth.known_device", encoded, &sessions.Options{
-			Path:     "/auth",
-			Domain:   "",
-			MaxAge:   60 * 60 * 24 * 365 * 20, // 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
-			Secure:   false,
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		}))
 
 		return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
 	}
+}
+
+func setKnownDeviceCookie(c echo.Context) error {
+	encoded, err := securecookie.EncodeMulti("arrower.auth.known_device", map[string]bool{"known_device": true}, knownDeviceKeyPairs...)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	http.SetCookie(c.Response(), sessions.NewCookie("arrower.auth.known_device", encoded, &sessions.Options{
+		Path:     "/auth",
+		Domain:   "",
+		MaxAge:   60 * 60 * 24 * 365 * 20, // 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
+		Secure:   false,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}))
+
+	return nil
 }
 
 // isUnknownDevice checks if this device is already known, as in has successfully logged in, and is unknown otherwise.
@@ -193,16 +200,18 @@ func (uc UserController) Create() func(echo.Context) error {
 }
 
 func (uc UserController) Register() func(echo.Context) error {
-	registerUser := mw.Validate(nil, application.RegisterUser(uc.Queries))
-
 	return func(c echo.Context) error {
+		if auth.IsLoggedIn(c.Request().Context()) {
+			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+		}
+
 		newUser := application.RegisterUserRequest{} //nolint:exhaustruct
 
 		if err := c.Bind(&newUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		_, err := registerUser(c.Request().Context(), newUser)
+		response, err := uc.CmdRegisterUser(c.Request().Context(), newUser)
 		if err != nil {
 			valErrs := make(map[string]string)
 
@@ -222,6 +231,32 @@ func (uc UserController) Register() func(echo.Context) error {
 				"Errors":        valErrs,
 				"RegisterEmail": newUser.RegisterEmail,
 			})
+		}
+
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		sess.Options = &sessions.Options{
+			Path:     "/",
+			Domain:   "",
+			MaxAge:   0, // only until browser closes, as the account is not verified yet
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode, // cookies will not be sent, if the request originates from a third party, to prevent CSRF
+		}
+		sess.Values[auth.SessKeyLoggedIn] = true
+		sess.Values[auth.SessKeyUserID] = string(response.User.ID)
+
+		err = sess.Save(c.Request(), c.Response())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		err = setKnownDeviceCookie(c)
+		if err != nil {
+			return err
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users") //nolint:wrapcheck

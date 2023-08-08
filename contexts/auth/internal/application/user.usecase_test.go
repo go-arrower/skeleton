@@ -218,8 +218,9 @@ func TestRegisterUser(t *testing.T) {
 
 		cmd := application.RegisterUser(queries)
 
-		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: testdata.StrongPassword})
+		usr, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: testdata.StrongPassword})
 		assert.NoError(t, err)
+		assert.NotEmpty(t, usr.User.ID)
 
 		user, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
 		assert.NoError(t, err)

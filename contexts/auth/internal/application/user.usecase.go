@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
@@ -150,21 +152,11 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 
 		// TODO  Gather metadata: device info, location, timezone?
 
-		user := user.User{
-			ID:           user.NewID(),
-			Name:         "",
-			Login:        user.Login(in.RegisterEmail),
-			PasswordHash: pwHash,
-			Verified:     user.VerifiedFlag{},
-			Blocked:      user.BlockedFlag{},
-			SuperUser:    user.SuperUserFlag{},
-			Profile:      nil,
-		}
-
 		// TODO take the user and persist is completely
-		_, err = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        string(user.Login),
-			PasswordHash: string(user.PasswordHash),
+		usr, err := queries.CreateUser(ctx, models.CreateUserParams{
+			ID:           uuid.MustParse(string(user.NewID())),
+			Login:        string(in.RegisterEmail),
+			PasswordHash: string(pwHash),
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)
@@ -175,7 +167,10 @@ func RegisterUser(queries *models.Queries) func(context.Context, RegisterUserReq
 		* Emit event of new user
 		 */
 
-		return RegisterUserResponse{}, nil
+		return RegisterUserResponse{User: user.User{
+			ID:    user.ID(usr.ID.String()),
+			Login: user.Login(usr.Login),
+		}}, nil
 	}
 }
 

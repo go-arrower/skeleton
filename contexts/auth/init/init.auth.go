@@ -49,6 +49,15 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 					),
 				),
 			),
+			CmdRegisterUser: mw.Traced(di.TraceProvider,
+				mw.Metric(di.MeterProvider,
+					mw.Logged(logger,
+						mw.Validate(nil,
+							application.RegisterUser(queries),
+						),
+					),
+				),
+			),
 		},
 	}
 
