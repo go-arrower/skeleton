@@ -161,7 +161,17 @@ func main() {
 			userID = id
 		}
 
-		return c.Render(http.StatusOK, "=>home", userID) //nolint:wrapcheck
+		flashes := sess.Flashes()
+
+		err = sess.Save(c.Request(), c.Response())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Render(http.StatusOK, "=>home", echo.Map{
+			"Flashes": flashes,
+			"userID":  userID,
+		}) //nolint:wrapcheck
 	})
 
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)

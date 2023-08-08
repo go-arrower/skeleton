@@ -90,6 +90,8 @@ func (uc UserController) Login() func(echo.Context) error {
 			})
 		}
 
+		sess.AddFlash("Login successful")
+
 		maxAge := 0 // session cookie => browser should delete the cookie when it closes
 		if loginUser.RememberMe {
 			maxAge = 60 * 60 * 24 * 30 //  60 sec * 60 min * 24 hours * 30 day
@@ -172,6 +174,8 @@ func (uc UserController) Logout() func(echo.Context) error {
 			MaxAge: -1, // delete cookie immediately
 		}
 
+		sess.AddFlash("Logout successful")
+
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -185,7 +189,9 @@ func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
 		u, _ := uc.Queries.AllUsers(c.Request().Context())
 
-		return c.Render(http.StatusOK, "=>auth.users", u) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>auth.users", echo.Map{
+			"users": u,
+		}) //nolint:wrapcheck
 	}
 }
 
@@ -252,6 +258,8 @@ func (uc UserController) Register() func(echo.Context) error {
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)
+
+		sess.AddFlash("Register successful")
 
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {

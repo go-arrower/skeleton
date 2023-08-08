@@ -24,7 +24,9 @@ func (cont JobsController) JobsHome() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: res.QueueStats}) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.home", echo.Map{
+			"Queues": res.QueueStats,
+		}) //nolint:wrapcheck
 	}
 }
 
@@ -41,7 +43,11 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
-		return c.Render(http.StatusOK, "=>jobs.queue", page) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.queue", echo.Map{
+			"QueueName": page.QueueName,
+			"Jobs":      page.Jobs,
+			"Stats":     page.Stats,
+		}) //nolint:wrapcheck
 	}
 }
 
@@ -52,7 +58,9 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", presentWorkers(res.Pool)) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.workers", echo.Map{
+			"workers": presentWorkers(res.Pool),
+		}) //nolint:wrapcheck
 	}
 }
 

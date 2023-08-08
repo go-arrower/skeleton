@@ -12,7 +12,7 @@
         </tr>
     </thead>
     <tbody>
-        {{ range . }}
+        {{ range .workers }}
         <tr class="odd:bg-white even:bg-slate-50" title="Last seen {{ .NotSeenSince }} ago">
             <td class="p-1">{{ .ID }}</td>
             <td class="p-1">{{ .Queue }}</td>
