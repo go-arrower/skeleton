@@ -3,9 +3,12 @@
 package application_test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"testing"
+
+	"github.com/go-arrower/arrower/alog"
 
 	"github.com/go-arrower/arrower/jobs"
 
@@ -49,7 +52,11 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries, nil)
+		buf := bytes.Buffer{}
+		logger := alog.NewTest(&buf)
+		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
+
+		cmd := application.LoginUser(logger, queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.ValidUserLogin,
@@ -57,6 +64,9 @@ func TestLoginUser(t *testing.T) {
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
+
+		// assert failed attempt is logged, e.g. for monitoring or fail2ban ect.
+		assert.Contains(t, buf.String(), "login failed")
 	})
 
 	t.Run("login fails - user not verified", func(t *testing.T) {
@@ -65,7 +75,7 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries, nil)
+		cmd := application.LoginUser(alog.NewTest(nil), queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.NotVerifiedUserLogin,
@@ -81,7 +91,7 @@ func TestLoginUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		cmd := application.LoginUser(queries, nil)
+		cmd := application.LoginUser(alog.NewTest(nil), queries, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.BlockedUserLogin,
@@ -98,7 +108,7 @@ func TestLoginUser(t *testing.T) {
 		queries := models.New(pg)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(queries, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), queries, queue)
 
 		res, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.ValidUserLogin,
@@ -127,7 +137,7 @@ func TestLoginUser(t *testing.T) {
 		queries := models.New(pg)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(queries, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), queries, queue)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail:  testdata.ValidUserLogin,
@@ -153,16 +163,18 @@ func TestRegisterUser(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
 
-		_, _ = queries.CreateUser(ctx, models.CreateUserParams{
-			Login:        testdata.ValidUserLogin,
-			PasswordHash: "xxxxxx",
-		})
+		buf := bytes.Buffer{}
+		logger := alog.NewTest(&buf)
+		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.RegisterUser(queries, nil)
+		cmd := application.RegisterUser(logger, queries, nil)
 
 		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.ValidUserLogin})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrUserAlreadyExists)
+
+		// assert failed attempt is logged, e.g. for monitoring or fail2ban ect.
+		assert.Contains(t, buf.String(), "register new user failed")
 	})
 
 	t.Run("password weak", func(t *testing.T) {
@@ -170,7 +182,7 @@ func TestRegisterUser(t *testing.T) {
 
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		queries := models.New(pg)
-		cmd := application.RegisterUser(queries, nil)
+		cmd := application.RegisterUser(alog.NewTest(nil), queries, nil)
 
 		tests := []struct {
 			testName string
@@ -217,7 +229,7 @@ func TestRegisterUser(t *testing.T) {
 		queries := models.New(pg)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.RegisterUser(queries, queue)
+		cmd := application.RegisterUser(alog.NewTest(nil), queries, queue)
 
 		usr, err := cmd(ctx, application.RegisterUserRequest{
 			RegisterEmail: testdata.NewUserLogin,

@@ -7,11 +7,12 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/google/uuid"
-
+	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
@@ -46,22 +47,42 @@ type (
 	}
 )
 
-func LoginUser(queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
 		usr, err := repoGetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
+			logger.Log(ctx, alog.LevelInfo, "login failed",
+				slog.String("email", in.LoginEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
 		if !usr.Verified.IsVerified() {
+			logger.Log(ctx, alog.LevelInfo, "login failed",
+				slog.String("email", in.LoginEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
 		if usr.Blocked.IsBlocked() {
+			logger.Log(ctx, alog.LevelInfo, "login failed",
+				slog.String("email", in.LoginEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
 		if !usr.PasswordHash.Matches(in.Password) {
+			logger.Log(ctx, alog.LevelInfo, "login failed",
+				slog.String("email", in.LoginEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
@@ -149,16 +170,26 @@ type (
 	}
 )
 
-func RegisterUser(queries *models.Queries, queue jobs.Enqueuer) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
+func RegisterUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
 		//if !mw.PassedValidation(ctx) { /* validate OR return err */ }
 
 		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil {
+			logger.Log(ctx, alog.LevelInfo, "register new user failed",
+				slog.String("email", in.RegisterEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return RegisterUserResponse{}, ErrUserAlreadyExists
 		}
 
 		pwHash, err := hashStringPassword(in.Password)
 		if err != nil {
+			logger.Log(ctx, alog.LevelInfo, "register new user failed",
+				slog.String("email", in.RegisterEmail),
+				slog.String("ip", in.IP),
+			)
+
 			return RegisterUserResponse{}, err
 		}
 
