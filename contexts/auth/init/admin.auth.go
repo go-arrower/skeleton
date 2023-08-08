@@ -19,7 +19,7 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group) error {
 
 	router.GET("/users", c.userController.List())
 	router.GET("/users/create", c.userController.Create())
-	router.POST("/users", c.userController.Store())
+	router.POST("/users", c.userController.Register())
 
 	return nil
 }

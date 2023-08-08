@@ -192,7 +192,7 @@ func (uc UserController) Create() func(echo.Context) error {
 	}
 }
 
-func (uc UserController) Store() func(echo.Context) error {
+func (uc UserController) Register() func(echo.Context) error {
 	registerUser := mw.Validate(nil, application.RegisterUser(uc.Queries))
 
 	return func(c echo.Context) error {
