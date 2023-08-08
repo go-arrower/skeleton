@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/go-arrower/arrower"
 	"github.com/labstack/echo-contrib/session"
@@ -23,8 +24,54 @@ const (
 	SessKeyUserID   = "auth.user_id"
 )
 
+// EnsureUserIsLoggedInMiddleware makes sure the routes can only be accessed by a logged-in user.
+// It does set the User in the same way EnrichCtxWithUserInfoMiddleware does.
+func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	type passed struct {
+		loggedIn bool
+		userId   bool
+	}
+
+	return func(c echo.Context) error {
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		passed := passed{}
+
+		if sess.Values[SessKeyLoggedIn] != nil {
+			lin, ok := sess.Values[SessKeyLoggedIn].(bool)
+			if !ok {
+				return fmt.Errorf("could not access user_logged_in: %w", ErrInvalidSessionValue)
+			}
+
+			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthLoggedIn, lin)))
+			passed.loggedIn = true
+		}
+
+		if sess.Values[SessKeyUserID] != nil {
+			uID, ok := sess.Values[SessKeyUserID].(string)
+			if !ok {
+				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
+			}
+
+			userID := uID
+			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, userID)))
+			passed.userId = true
+		}
+
+		if passed.loggedIn && passed.userId {
+			return next(c)
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/")
+	}
+}
+
 // EnrichCtxWithUserInfoMiddleware checks if a User is logged in and puts those values into the http request's context,
 // so they are available in other parts of the app. For convenience use the helpers like: IsLoggedIn.
+// If you want to ensure only logged-in users can access a URL use EnsureUserIsLoggedInMiddleware instead.
 func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sess, err := session.Get("session", c)

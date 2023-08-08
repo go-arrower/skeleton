@@ -5,6 +5,7 @@ import (
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
 	"github.com/go-arrower/arrower/postgres"
+	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -104,6 +105,7 @@ func Init(
 
 	{
 		jobs := admin.Group("/jobs")
+		jobs.Use(auth.EnsureUserIsLoggedInMiddleware)
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
