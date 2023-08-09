@@ -24,6 +24,7 @@ func Init(
 	jq jobs.Queue,
 ) error {
 	admin := e.Group("/admin")
+	admin.Use(auth.EnsureUserIsSuperuserMiddleware)
 
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))
 
@@ -105,7 +106,6 @@ func Init(
 
 	{
 		jobs := admin.Group("/jobs")
-		jobs.Use(auth.EnsureUserIsSuperuserMiddleware)
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())

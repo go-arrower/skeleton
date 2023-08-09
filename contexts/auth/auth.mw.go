@@ -21,9 +21,11 @@ const (
 
 const (
 	// FIXME: is redundant and can disappear from the session, use the existance of user_id to set the flag in the ctx middleware
-	SessKeyLoggedIn    = "auth.user_is_logged_in" // FIXME don't export from the context => move internally
-	SessKeyUserID      = "auth.user_id"
-	SessKeyIsSuperuser = "auth.user_is_superuser"
+	SessKeyLoggedIn               = "auth.user_is_logged_in" // FIXME don't export from the context => move internally
+	SessKeyUserID                 = "auth.user_id"
+	SessKeyIsSuperuser            = "auth.user_is_superuser"
+	SessIsSuperuserLoggedInAsUser = "auth.superuser.is_logged_in_as_user"
+	SessSuperuserOriginalUserID   = "auth.superuser.original_user_id"
 )
 
 // EnsureUserIsLoggedInMiddleware makes sure the routes can only be accessed by a logged-in user.

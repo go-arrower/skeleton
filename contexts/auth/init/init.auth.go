@@ -63,7 +63,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	_ = authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))
 	_ = authContext.registerAPIRoutes(di.APIRouter)
-	_ = authContext.registerAdminRoutes(di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))) // todo only, if admin context is present
+	_ = authContext.registerAdminRoutes(di.AdminRouter.Group(fmt.Sprintf("/%s", contextName)), localDI{queries: queries}) // todo only, if admin context is present
 
 	_ = authContext.registerJobs(di.ArrowerQueue)
 
@@ -72,4 +72,8 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 func (c *AuthContext) Shutdown(ctx context.Context) error {
 	return nil
+}
+
+type localDI struct {
+	queries *models.Queries
 }
