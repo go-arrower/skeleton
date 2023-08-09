@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/text/language"
 )
+
+var ErrInvalidBirthday = errors.New("invalid birthday")
 
 // User represents a user of the software, that can perform all the auth functionalities.
 type User struct {
@@ -24,7 +27,7 @@ type User struct {
 	Locale            Locale
 	TimeZone          TimeZone
 	ProfilePictureURL URL
-	// a quick helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
+	// a helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
 	Profile  Profile  // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
 	Profile2 Profile2 // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
 	// email, phone???
@@ -68,7 +71,30 @@ type (
 	}
 )
 
-func NewBirthday(day Day, month Month, year Year) (Birthday, error) { return Birthday{}, nil } // todo test the API and types, if they cast automatically and the constructor is convenient to use
+func NewBirthday(day Day, month Month, year Year) (Birthday, error) {
+	if day < 1 || day > 31 {
+		return Birthday{}, ErrInvalidBirthday
+	}
+
+	if month < 1 || month > 12 {
+		return Birthday{}, ErrInvalidBirthday
+	}
+
+	const maxAge = 150 * 356 * 24 * time.Hour // 150 years
+	isTooOld := int(year) < time.Now().UTC().Add(-maxAge).Year()
+	isInTheFuture := int(year) > time.Now().UTC().Year()
+
+	if isTooOld || isInTheFuture {
+		return Birthday{}, ErrInvalidBirthday
+	}
+
+	_, err := time.Parse(time.DateOnly, fmt.Sprintf("%d-%02d-%02d", year, month, day))
+	if err != nil {
+		return Birthday{}, ErrInvalidBirthday
+	}
+
+	return Birthday{day: day, month: month, year: year}, nil
+}
 
 func (b Birthday) String() string { return "" }
 
@@ -117,13 +143,12 @@ func (t SuperUserFlag) At() time.Time { return time.Time(t) }
 
 type (
 	VerificationToken string
-	UserRegistered    struct {
+
+	Registered struct {
 		ID         ID
 		RecordedAt time.Time
 	}
 )
-
-func NewUser(...any) User { return User{} }
 
 func NewDevice(userAgent string) Device {
 	return Device{userAgent: userAgent}
@@ -136,10 +161,12 @@ type Device struct {
 
 func (d Device) Name() string {
 	ua := useragent.Parse(d.userAgent)
+
 	return fmt.Sprintf("%s v%s", ua.Name, ua.Version)
 }
 
 func (d Device) OS() string {
 	ua := useragent.Parse(d.userAgent)
+
 	return fmt.Sprintf("%s v%s", ua.OS, ua.OSVersion)
 }
