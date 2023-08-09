@@ -54,8 +54,6 @@ func TestUserController_Login(t *testing.T) {
 	t.Run("login succeeds", func(t *testing.T) {
 		t.Parallel()
 
-		t.Skip() // THE TEST IS PROPER, it fails because of the filesystemStore, see: https://github.com/gorilla/sessions/issues/267
-
 		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("login=1337&password=12345678"))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("User-Agent", "arrower/0")

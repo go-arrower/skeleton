@@ -69,6 +69,36 @@ func TestBlockedFlag_IsBlocked(t *testing.T) {
 	}
 }
 
+func TestSuperUserFlag_IsSuperuser(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName  string
+		superuser user.SuperUserFlag
+		expected  bool
+	}{
+		{
+			"empty time",
+			user.SuperUserFlag(time.Time{}),
+			false,
+		},
+		{
+			"superuser",
+			user.SuperUserFlag(time.Now()),
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, tt.superuser.IsSuperuser())
+		})
+	}
+}
+
 func TestDevice(t *testing.T) {
 	t.Parallel()
 

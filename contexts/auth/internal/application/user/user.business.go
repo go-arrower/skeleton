@@ -109,8 +109,11 @@ func (t BlockedFlag) At() time.Time { return time.Time(t) }
 
 type SuperUserFlag time.Time
 
-func (t SuperUserFlag) IsSuperuser() bool { return false }
-func (t SuperUserFlag) At() time.Time     { return time.Time(t) }
+func (t SuperUserFlag) IsSuperuser() bool {
+	return time.Time(t) != time.Time{}
+}
+
+func (t SuperUserFlag) At() time.Time { return time.Time(t) }
 
 type (
 	VerificationToken string

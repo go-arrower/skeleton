@@ -107,6 +107,7 @@ func (uc UserController) Login() func(echo.Context) error {
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)
+		sess.Values[auth.SessKeyIsSuperuser] = response.User.SuperUser.IsSuperuser()
 
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {
@@ -168,6 +169,7 @@ func (uc UserController) Logout() func(echo.Context) error {
 
 		delete(sess.Values, auth.SessKeyLoggedIn)
 		delete(sess.Values, auth.SessKeyUserID)
+		delete(sess.Values, auth.SessKeyIsSuperuser)
 
 		sess.Options = &sessions.Options{
 			Path:   "/",

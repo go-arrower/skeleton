@@ -55,6 +55,49 @@ func TestEnsureUserIsLoggedInMiddleware(t *testing.T) {
 	})
 }
 
+func TestIsSuperUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no session => redirect", func(t *testing.T) {
+		t.Parallel()
+
+		echoRouter := newEnsureIsSuperuserRouterToAssertOnHandler(func(c echo.Context) error {
+			ctx := c.Request().Context()
+			assert.False(t, auth.IsLoggedIn(ctx))
+			assert.False(t, auth.IsSuperUser(ctx))
+			assert.Empty(t, auth.CurrentUserID(ctx))
+
+			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/admin/", nil)
+		rec := httptest.NewRecorder()
+
+		echoRouter.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+	})
+
+	t.Run("user is superuser", func(t *testing.T) {
+		t.Parallel()
+
+		echoRouter := newEnsureIsSuperuserRouterToAssertOnHandler(func(c echo.Context) error {
+			ctx := c.Request().Context()
+			assert.True(t, auth.IsLoggedIn(ctx))
+			assert.True(t, auth.IsSuperUser(ctx))
+			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
+
+			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/admin/", nil)
+		req.AddCookie(getSessionCookie(echoRouter))
+		rec := httptest.NewRecorder()
+
+		echoRouter.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
 func TestEnrichCtxWithUserInfoMiddleware(t *testing.T) {
 	t.Parallel()
 
@@ -82,6 +125,7 @@ func TestEnrichCtxWithUserInfoMiddleware(t *testing.T) {
 			ctx := c.Request().Context()
 			assert.True(t, auth.IsLoggedIn(ctx))
 			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
+			assert.True(t, auth.IsSuperUser(ctx))
 
 			return c.NoContent(http.StatusOK) //nolint:wrapcheck
 		})
@@ -104,8 +148,8 @@ func newEnsureRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 	echoRouter.GET("/createSession", func(c echo.Context) error {
 		sess, _ := session.Get("session", c)
 
-		sess.Values["auth.user_logged_in"] = true
-		sess.Values["auth.user_id"] = "1337"
+		sess.Values[auth.SessKeyLoggedIn] = true
+		sess.Values[auth.SessKeyUserID] = "1337"
 
 		_ = sess.Save(c.Request(), c.Response())
 
@@ -114,6 +158,31 @@ func newEnsureRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 
 	authRoutes := echoRouter.Group("/auth")
 	authRoutes.Use(auth.EnsureUserIsLoggedInMiddleware)
+	authRoutes.GET("/", handler)
+
+	return echoRouter
+}
+
+func newEnsureIsSuperuserRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.Echo {
+	echoRouter := echo.New()
+
+	echoRouter.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
+
+	// endpoint to set an example cookie, that the middleware under test can work with.
+	echoRouter.GET("/createSession", func(c echo.Context) error {
+		sess, _ := session.Get("session", c)
+
+		sess.Values[auth.SessKeyLoggedIn] = true
+		sess.Values[auth.SessKeyUserID] = "1337"
+		sess.Values[auth.SessKeyIsSuperuser] = true
+
+		_ = sess.Save(c.Request(), c.Response())
+
+		return c.NoContent(http.StatusOK) //nolint:wrapcheck
+	})
+
+	authRoutes := echoRouter.Group("/admin")
+	authRoutes.Use(auth.EnsureUserIsSuperuserMiddleware)
 	authRoutes.GET("/", handler)
 
 	return echoRouter
@@ -131,8 +200,9 @@ func newEnrichRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 	echoRouter.GET("/createSession", func(c echo.Context) error {
 		sess, _ := session.Get("session", c)
 
-		sess.Values["auth.user_logged_in"] = true
-		sess.Values["auth.user_id"] = "1337"
+		sess.Values[auth.SessKeyLoggedIn] = true
+		sess.Values[auth.SessKeyUserID] = "1337"
+		sess.Values[auth.SessKeyIsSuperuser] = true
 
 		_ = sess.Save(c.Request(), c.Response())
 

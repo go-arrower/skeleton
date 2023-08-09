@@ -105,7 +105,7 @@ func Init(
 
 	{
 		jobs := admin.Group("/jobs")
-		jobs.Use(auth.EnsureUserIsLoggedInMiddleware)
+		jobs.Use(auth.EnsureUserIsSuperuserMiddleware)
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
