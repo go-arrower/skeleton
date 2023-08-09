@@ -67,6 +67,6 @@ func (cont SuperUserController) AdminLeaveUser() echo.HandlerFunc {
 			}
 		}
 
-		return c.Redirect(http.StatusSeeOther, "/admin")
+		return c.Redirect(http.StatusSeeOther, "/admin/")
 	}
 }

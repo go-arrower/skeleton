@@ -1,6 +1,8 @@
 package startup
 
 import (
+	"net/http"
+
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
@@ -25,6 +27,9 @@ func Init(
 ) error {
 	admin := e.Group("/admin")
 	admin.Use(auth.EnsureUserIsSuperuserMiddleware)
+	admin.GET("/", func(c echo.Context) error {
+		return c.Redirect(http.StatusSeeOther, "/")
+	})
 
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))
 
