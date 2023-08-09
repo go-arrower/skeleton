@@ -3,31 +3,23 @@ package main
 import (
 	"context"
 	"io"
-	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
-	"time"
-
-	"github.com/labstack/echo-contrib/session"
 
 	"github.com/go-arrower/arrower/alog"
-
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"go.opentelemetry.io/otel/attribute"
-	api "go.opentelemetry.io/otel/metric"
-	trace2 "go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/admin/startup"
 	"github.com/go-arrower/skeleton/contexts/auth"
-	startup2 "github.com/go-arrower/skeleton/contexts/auth/init"
+	auth_init "github.com/go-arrower/skeleton/contexts/auth/init"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
@@ -72,11 +64,11 @@ func main() {
 	ss, _ := auth.NewPGSessionStore(pg.PGx, []byte("secret")) // todo use secure key
 	di.WebRouter = router
 	di.WebRouter.Use(session.Middleware(ss))
-	//di.WebRouter.Use(middleware.CSRF())
+	// di.WebRouter.Use(middleware.CSRF())
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
-	//di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
+	// di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
@@ -84,71 +76,6 @@ func main() {
 	)
 	di.DefaultQueue = queue
 	di.ArrowerQueue = arrowerQueue
-
-	{ // example metrics
-		opt := api.WithAttributes( // todo check if metrics and trae attributes can be shared
-			attribute.Key("A").String("B"),
-			attribute.Key("C").String("D"),
-		)
-
-		tracer := di.TraceProvider.Tracer("myTracer", // namespace per library that is instrumented
-			trace2.WithInstrumentationVersion("0.1337"),
-		)
-
-		// This is the equivalent of prometheus.NewCounterVec
-		meter := di.MeterProvider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus",
-			api.WithInstrumentationVersion("0.1337"),
-		)
-		counter, err := meter.Float64Counter("foo", api.WithDescription("a simple counter"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		counter.Add(ctx, 5, opt)
-
-		router.GET("/add", func(c echo.Context) error {
-			newCtx, span := tracer.Start(c.Request().Context(), "add",
-				trace2.WithAttributes(attribute.String("component", "addition")),
-				//trace2.WithAttributes(attribute.String("job", "somejob")), // NEEDS TO MATCH WITH THE LOGS LABEL
-				// todo what is the difference between a tempo resource and attribute?
-			)
-			defer span.End()
-
-			{ // example metric to test Examplar
-				h, err := di.MeterProvider.Meter("some_hist").Int64Histogram("Das_hist")
-				if err != nil {
-					panic(err)
-				}
-
-				examplar := attribute.NewSet(attribute.KeyValue{
-					//Key:   "traceID",
-					//Value: attribute.StringValue(span.SpanContext().TraceID().String()),
-					Key:   "someKey",
-					Value: attribute.StringValue("someVal"),
-				})
-				e := &examplar
-
-				go func() {
-					for {
-						t := time.NewTicker(1 * time.Second)
-						select {
-						case <-t.C:
-							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
-							h.Record(newCtx, int64(rand.Intn(10)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
-							h.Record(newCtx, int64(rand.Intn(100)), api.WithAttributes(append(e.ToSlice(), attribute.String("component", "hist"))...))
-
-							//h.(prometheus.ExemplarObserver).ObserveWithExemplar(
-							//	time.Since(time.Now().Add(-5*time.Second)).Seconds(), prometheus.Labels{"traceID": span.SpanContext().TraceID().String()},
-							//)
-						}
-					}
-				}()
-			}
-
-			time.Sleep(5 * time.Second)
-
-			return c.HTML(http.StatusOK, "Counter incremented")
-		})
-	}
 
 	router.GET("/", func(c echo.Context) error {
 		sess, err := session.Get(auth.SessionName, c)
@@ -171,14 +98,14 @@ func main() {
 		return c.Render(http.StatusOK, "=>home", echo.Map{
 			"Flashes": flashes,
 			"userID":  userID,
-		}) //nolint:wrapcheck
+		})
 	})
 
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
 	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, router, pg, queue)
-	authContext, _ := startup2.NewAuthContext(di)
+	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))
 
@@ -194,20 +121,13 @@ type CustomValidator struct {
 
 func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.validator.Struct(i); err != nil {
-		return err
-		// Optionally, you could return the error to give each route more control over the status code
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	return nil
-}
-func randomString(n int) string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789 ")
+		return err //nolint:wrapcheck // return the original validate error to not break the API for the caller.
 
-	s := make([]rune, n)
-	for i := range s {
-		s[i] = letters[rand.Intn(len(letters))]
+		// Optionally, you could return the error to give each route more control over the status code
+		// return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return string(s)
+
+	return nil
 }
 
 func injectMW(next echo.HandlerFunc) echo.HandlerFunc {

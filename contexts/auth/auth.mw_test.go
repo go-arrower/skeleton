@@ -1,7 +1,6 @@
 package auth_test
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,7 +24,7 @@ func TestEnsureUserIsLoggedInMiddleware(t *testing.T) {
 			assert.False(t, auth.IsLoggedIn(ctx))
 			assert.Empty(t, auth.CurrentUserID(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/auth/", nil)
@@ -43,7 +42,7 @@ func TestEnsureUserIsLoggedInMiddleware(t *testing.T) {
 			assert.True(t, auth.IsLoggedIn(ctx))
 			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/auth/", nil)
@@ -67,7 +66,7 @@ func TestIsSuperUser(t *testing.T) {
 			assert.False(t, auth.IsSuperUser(ctx))
 			assert.Empty(t, auth.CurrentUserID(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/", nil)
@@ -86,7 +85,7 @@ func TestIsSuperUser(t *testing.T) {
 			assert.True(t, auth.IsSuperUser(ctx))
 			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/", nil)
@@ -109,7 +108,7 @@ func TestEnrichCtxWithUserInfoMiddleware(t *testing.T) {
 			assert.False(t, auth.IsLoggedIn(ctx))
 			assert.Empty(t, auth.CurrentUserID(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -127,7 +126,7 @@ func TestEnrichCtxWithUserInfoMiddleware(t *testing.T) {
 			assert.Equal(t, "1337", auth.CurrentUserID(ctx))
 			assert.True(t, auth.IsSuperUser(ctx))
 
-			return c.NoContent(http.StatusOK) //nolint:wrapcheck
+			return c.NoContent(http.StatusOK)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -153,7 +152,7 @@ func newEnsureRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 
 		_ = sess.Save(c.Request(), c.Response())
 
-		return c.NoContent(http.StatusOK) //nolint:wrapcheck
+		return c.NoContent(http.StatusOK)
 	})
 
 	authRoutes := echoRouter.Group("/auth")
@@ -178,7 +177,7 @@ func newEnsureIsSuperuserRouterToAssertOnHandler(handler func(c echo.Context) er
 
 		_ = sess.Save(c.Request(), c.Response())
 
-		return c.NoContent(http.StatusOK) //nolint:wrapcheck
+		return c.NoContent(http.StatusOK)
 	})
 
 	authRoutes := echoRouter.Group("/admin")
@@ -206,7 +205,7 @@ func newEnrichRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 
 		_ = sess.Save(c.Request(), c.Response())
 
-		return c.NoContent(http.StatusOK) //nolint:wrapcheck
+		return c.NoContent(http.StatusOK)
 	})
 
 	return echoRouter
@@ -221,10 +220,6 @@ func getSessionCookie(e *echo.Echo) *http.Cookie {
 
 	response := rec.Result()
 	defer response.Body.Close()
-
-	fmt.Println(rec.Code)
-	fmt.Println(rec.Result().Body)
-	fmt.Println()
 
 	return response.Cookies()[0]
 }

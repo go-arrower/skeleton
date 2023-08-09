@@ -9,21 +9,17 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gorilla/sessions"
-
-	"github.com/google/uuid"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
+	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 var (
@@ -79,6 +75,8 @@ func TestPGSessionStore_New(t *testing.T) {
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
+		t.Parallel()
+
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 
 		sess, err := ss.New(req, auth.SessionName)
@@ -94,6 +92,8 @@ func TestPGSessionStore_Save(t *testing.T) {
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
+		t.Parallel()
+
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 
@@ -112,6 +112,7 @@ func TestPGSessionStore_Save(t *testing.T) {
 	})
 }
 
+//nolint:tparallel,paralleltest // the tests depend on each other and the order is important.
 func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 	t.Parallel()
 
@@ -120,17 +121,18 @@ func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 
 	var cookie *http.Cookie // the cookie to use over all requests
 
-	t.Run("set initial cookie when surfing the site", func(t *testing.T) { //nolint:parallel // the tests depend on each other and the order is important
+	t.Run("set initial cookie when surfing the site", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		echoRouter.ServeHTTP(rec, req)
 
 		result := rec.Result()
 		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Empty(t, rec.Body.String())
 
-		cookie = rec.Result().Cookies()[0] // safe cookie for reuse later on
+		cookie = result.Cookies()[0] // safe cookie for reuse later on
 
 		// assert cookie
 		assert.Len(t, result.Cookies(), 1)

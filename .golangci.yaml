@@ -226,12 +226,17 @@ issues:
         - exhaustruct # Don't force complete struct initialisation to keep test cases simpler to read
         - fieldalignment # Prefer easier readability to optimal memory layout for tests
 
+    #
     # Allow patterns that are arrower specific
-    - path: controller.go
-      linters:
-        - wrapcheck # echo required an error and the framework considers it alright to return the use case / application layer errors without the need to wrap them, as they are not from a third party
+    #
+    # echo required an error and the framework considers it alright to return the use case / application layer errors without the need to wrap them, as they are not from a third party
+    - linters:
+        - wrapcheck
+      text: "github.com/labstack/echo/v4.Context"
 
+    #
     # Allow patterns that are considered best practises for Corba CLI applications
+    #
     - path: cmd
       linters:
         - exhaustruct # Allow the command to not use all configurations options & hooks Cobra offers

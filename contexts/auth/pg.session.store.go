@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/base32"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -17,23 +18,27 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
+var ErrSessionStoreFailed = errors.New("creating session store failed")
+
 func NewPGSessionStore(pgx *pgxpool.Pool, keyPairs ...[]byte) (*PGSessionStore, error) {
 	if pgx == nil {
-		return nil, fmt.Errorf("could not initialise postgres session store")
+		return nil, fmt.Errorf("missing postgres dependeny: %w", ErrSessionStoreFailed)
 	}
 
 	if err := pgx.Ping(context.Background()); err != nil {
-		return nil, fmt.Errorf("could not initialise postgres session store: %w", err)
+		return nil, fmt.Errorf("%v: could not reach postgres: %w", ErrSessionStoreFailed, err) // todo check, if new go version can have multiple error verbs
 	}
 
 	queries := models.New(pgx)
+
+	const oneMonth = 86400 * 30
 
 	return &PGSessionStore{
 		Codecs: securecookie.CodecsFromPairs(keyPairs...),
 		Options: &sessions.Options{
 			Path:     "/",
 			Domain:   "",
-			MaxAge:   86400 * 30,
+			MaxAge:   oneMonth,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		},

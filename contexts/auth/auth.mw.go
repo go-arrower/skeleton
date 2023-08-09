@@ -30,10 +30,11 @@ const (
 
 // EnsureUserIsLoggedInMiddleware makes sure the routes can only be accessed by a logged-in user.
 // It does set the User in the same way EnrichCtxWithUserInfoMiddleware does.
+// OR LoginRequired.
 func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	type passed struct {
 		loggedIn bool
-		userId   bool
+		userID   bool
 	}
 
 	return func(c echo.Context) error {
@@ -51,6 +52,7 @@ func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthLoggedIn, lin)))
+
 			passed.loggedIn = lin
 		}
 
@@ -61,10 +63,11 @@ func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, uID)))
-			passed.userId = true
+
+			passed.userID = true
 		}
 
-		if passed.loggedIn && passed.userId {
+		if passed.loggedIn && passed.userID {
 			return next(c)
 		}
 
@@ -75,7 +78,7 @@ func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	type passed struct {
 		loggedIn    bool
-		userId      bool
+		userID      bool
 		isSuperuser bool
 	}
 
@@ -94,6 +97,7 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthLoggedIn, lin)))
+
 			passed.loggedIn = lin
 		}
 
@@ -104,7 +108,8 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, uID)))
-			passed.userId = true
+
+			passed.userID = true
 		}
 
 		if sess.Values[SessKeyIsSuperuser] != nil {
@@ -114,10 +119,11 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthIsSuperuser, su)))
+
 			passed.isSuperuser = su
 		}
 
-		if passed.loggedIn && passed.userId && passed.isSuperuser {
+		if passed.loggedIn && passed.userID && passed.isSuperuser {
 			return next(c)
 		}
 
@@ -161,20 +167,6 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		return next(c)
-	}
-}
-
-// ensure only authed user can access
-func LoginRequired(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		return nil
-	}
-}
-
-// ensure only admins can access
-func AuthAdmin(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		return nil
 	}
 }
 

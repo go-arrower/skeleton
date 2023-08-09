@@ -69,7 +69,7 @@ func IsLoggedInAsOtherUser(ctx context.Context) bool {
 // --- --- ---
 // methods are part of auth api and not static auth package:
 
-// if develoepr wants to do the auth himself, instead of the web route
+// Authenticate, if develoepr wants to do the auth himself, instead of the web route.
 func Authenticate(cred any) (worked bool, validationErrs error) { return false, nil }
 
 func Logout(userID any) bool { return false }
