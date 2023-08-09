@@ -151,7 +151,7 @@ func main() {
 	}
 
 	router.GET("/", func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}

@@ -22,6 +22,10 @@ type API interface {
 }
 
 const (
+	SessionName = "arrower.auth"
+)
+
+const (
 	RouteLogin       = "auth.login"
 	RouteLogout      = "auth.logout"
 	RouteVerifyEmail = ""

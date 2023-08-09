@@ -51,7 +51,7 @@ func (uc UserController) Login() func(echo.Context) error {
 
 		// POST: Login
 
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -64,7 +64,7 @@ func (uc UserController) Login() func(echo.Context) error {
 				IsNewDevice: isUnknownDevice(c),
 			},
 		}
-		if err := c.Bind(&loginUser); err != nil {
+		if err = c.Bind(&loginUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
@@ -83,6 +83,7 @@ func (uc UserController) Login() func(echo.Context) error {
 			for _, e := range validationErrors {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
+
 			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{ //nolint:wrapcheck
 				"Errors":     valErrs,
 				"LoginEmail": loginUser.LoginEmail,
@@ -92,8 +93,10 @@ func (uc UserController) Login() func(echo.Context) error {
 		sess.AddFlash("Login successful")
 
 		maxAge := 0 // session cookie => browser should delete the cookie when it closes
+
 		if loginUser.RememberMe {
-			maxAge = 60 * 60 * 24 * 30 //  60 sec * 60 min * 24 hours * 30 day
+			const oneMonth = 60 * 60 * 24 * 30 //  60 sec * 60 min * 24 hours * 30 day
+			maxAge = oneMonth
 		}
 
 		sess.Options = &sessions.Options{
@@ -102,7 +105,8 @@ func (uc UserController) Login() func(echo.Context) error {
 			MaxAge:   maxAge,
 			Secure:   false,
 			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode, // cookies will not be sent, if the request originates from a third party, to prevent CSRF
+			// cookies will not be sent, if the request originates from a third party, to prevent CSRF
+			SameSite: http.SameSiteStrictMode,
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)
@@ -128,13 +132,15 @@ func setKnownDeviceCookie(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	const twentyYears = 60 * 60 * 24 * 365 * 20
+
 	http.SetCookie(c.Response(), sessions.NewCookie("arrower.auth.known_device", encoded, &sessions.Options{
-		Path:   "/auth",
-		Domain: "",
-		// MayAge of 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
-		MaxAge:   60 * 60 * 24 * 365 * 20,
+		Path:     "/auth",
+		Domain:   "",
+		MaxAge:   twentyYears, // chromium has 400 days max: https://developer.chrome.com/blog/cookie-max-age-expires/
 		Secure:   false,
 		HttpOnly: true,
+		// cookies will not be sent, if the request originates from a third party, to prevent CSRF
 		SameSite: http.SameSiteStrictMode,
 	}))
 
@@ -163,7 +169,7 @@ func (uc UserController) Logout() func(echo.Context) error {
 			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
-		sess, err := session.Get("session", c) // todo extract "session" as variable & rename arrower.auth
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -172,12 +178,12 @@ func (uc UserController) Logout() func(echo.Context) error {
 		delete(sess.Values, auth.SessKeyUserID)
 		delete(sess.Values, auth.SessKeyIsSuperuser)
 
-		sess.Options = &sessions.Options{
+		sess.Options = &sessions.Options{ //nolint:exhaustruct // not all options are required, as the cookie will be deleted.
 			Path:   "/",
 			MaxAge: -1, // delete cookie immediately
 		}
 
-		sess.AddFlash("Logout successful")
+		// sess.AddFlash("Logout successful")
 
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {
@@ -214,7 +220,7 @@ func (uc UserController) Register() func(echo.Context) error {
 			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -225,7 +231,7 @@ func (uc UserController) Register() func(echo.Context) error {
 			SessionKey: sess.ID,
 		}
 
-		if err := c.Bind(&newUser); err != nil {
+		if err = c.Bind(&newUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
@@ -257,7 +263,8 @@ func (uc UserController) Register() func(echo.Context) error {
 			MaxAge:   0, // only until browser closes, as the account is not verified yet
 			Secure:   false,
 			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode, // cookies will not be sent, if the request originates from a third party, to prevent CSRF
+			// cookies will not be sent, if the request originates from a third party, to prevent CSRF
+			SameSite: http.SameSiteStrictMode,
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)

@@ -82,8 +82,8 @@ func TestUserController_Login(t *testing.T) {
 		assert.Empty(t, rec.Body.String())
 		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
 		assert.Equal(t, "/", result.Cookies()[0].Path)
-		assert.Equal(t, "session", result.Cookies()[0].Name)
-		assert.Equal(t, 0, rec.Result().Cookies()[0].MaxAge, "cookie should expire when browser closes")
+		assert.Equal(t, auth.SessionName, result.Cookies()[0].Name)
+		assert.Equal(t, 0, result.Cookies()[0].MaxAge, "cookie should expire when browser closes")
 		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
 	})
 
@@ -160,12 +160,15 @@ func TestUserController_Login(t *testing.T) {
 			echoRouter.POST("/", controller.Login())
 			echoRouter.ServeHTTP(rec, req)
 
+			result := rec.Result()
+			defer result.Body.Close()
+
 			assert.Equal(t, http.StatusSeeOther, rec.Code)
 			assert.Empty(t, rec.Body.String())
-			assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
-			assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
-			assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
-			assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
+			assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
+			assert.Equal(t, "/auth", result.Cookies()[1].Path)
+			assert.Equal(t, "arrower.auth.known_device", result.Cookies()[1].Name)
+			assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[1].SameSite)
 		})
 	})
 
@@ -186,12 +189,15 @@ func TestUserController_Login(t *testing.T) {
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
+		result := rec.Result()
+		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
-		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
-		assert.Equal(t, "/", rec.Result().Cookies()[0].Path)
-		assert.Equal(t, "session", rec.Result().Cookies()[0].Name)
-		assert.Equal(t, 60*60*24*30, rec.Result().Cookies()[0].MaxAge)
-		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[0].SameSite)
+		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
+		assert.Equal(t, "/", result.Cookies()[0].Path)
+		assert.Equal(t, auth.SessionName, result.Cookies()[0].Name)
+		assert.Equal(t, 60*60*24*30, result.Cookies()[0].MaxAge)
+		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
 	})
 }
 
@@ -218,7 +224,6 @@ func TestUserController_Logout(t *testing.T) {
 		t.Parallel()
 
 		// log in first
-
 		req := httptest.NewRequest(http.MethodPost, "/login", loginPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
@@ -231,18 +236,19 @@ func TestUserController_Logout(t *testing.T) {
 
 		echoRouter.POST("/login", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
-		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
+
+		result := rec.Result()
+		defer result.Body.Close()
+
+		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
 
 		// log out
 		req = httptest.NewRequest(http.MethodGet, "/logout", nil)
-		req.AddCookie(rec.Result().Cookies()[0])
+		req.AddCookie(result.Cookies()[0])
 		rec = httptest.NewRecorder()
 
 		echoRouter.GET("/logout", controller.Logout())
 		echoRouter.ServeHTTP(rec, req)
-
-		result := rec.Result()
-		defer result.Body.Close()
 
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
 		assert.Len(t, result.Cookies(), 1)
@@ -292,12 +298,15 @@ func TestUserController_Register(t *testing.T) {
 	t.Run("register fails", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodPost, "/", registerPostPayload()) // todo change payload
+		req := httptest.NewRequest(http.MethodPost, "/", registerPostPayload())
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
 		controller := web.UserController{
-			CmdRegisterUser: func(ctx context.Context, in application.RegisterUserRequest) (application.RegisterUserResponse, error) {
+			CmdRegisterUser: func(
+				ctx context.Context,
+				in application.RegisterUserRequest,
+			) (application.RegisterUserResponse, error) {
 				assert.Equal(t, "1337", in.RegisterEmail)
 				assert.Equal(t, "12345678", in.Password)
 				assert.Equal(t, "12345678", in.PasswordConfirmation)
@@ -310,9 +319,12 @@ func TestUserController_Register(t *testing.T) {
 		echoRouter.POST("/", controller.Register())
 		echoRouter.ServeHTTP(rec, req)
 
+		result := rec.Result()
+		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "auth.user.create")
-		assert.Len(t, rec.Result().Cookies(), 0, "failed registration should have no cookies")
+		assert.Len(t, result.Cookies(), 0, "failed registration should have no cookies")
 	})
 
 	t.Run("register succeeds", func(t *testing.T) {
@@ -324,7 +336,10 @@ func TestUserController_Register(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		controller := web.UserController{
-			CmdRegisterUser: func(ctx context.Context, in application.RegisterUserRequest) (application.RegisterUserResponse, error) {
+			CmdRegisterUser: func(
+				ctx context.Context,
+				in application.RegisterUserRequest,
+			) (application.RegisterUserResponse, error) {
 				assert.Equal(t, "1337", in.RegisterEmail)
 				assert.Equal(t, "12345678", in.Password)
 				assert.Equal(t, "12345678", in.PasswordConfirmation)
@@ -341,19 +356,21 @@ func TestUserController_Register(t *testing.T) {
 		echoRouter.POST("/", controller.Register())
 		echoRouter.ServeHTTP(rec, req)
 
+		result := rec.Result()
+		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
 		assert.Empty(t, rec.Body.String())
-		//assert.Len(t, rec.Result().Cookies(), 0, "failed registration should have no cookies")
 
-		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
-		assert.Equal(t, "/", rec.Result().Cookies()[0].Path)
-		assert.Equal(t, "session", rec.Result().Cookies()[0].Name)
-		assert.Equal(t, 0, rec.Result().Cookies()[0].MaxAge, "cookie should expire when browser closes")
-		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[0].SameSite)
+		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
+		assert.Equal(t, "/", result.Cookies()[0].Path)
+		assert.Equal(t, auth.SessionName, result.Cookies()[0].Name)
+		assert.Equal(t, 0, result.Cookies()[0].MaxAge, "cookie should expire when browser closes")
+		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
 
-		assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
-		assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
-		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
+		assert.Equal(t, "/auth", result.Cookies()[1].Path)
+		assert.Equal(t, "arrower.auth.known_device", result.Cookies()[1].Name)
+		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[1].SameSite)
 	})
 }
 
@@ -373,8 +390,11 @@ func (t *emptyRenderer) Render(w io.Writer, name string, data interface{}, c ech
 func newTestRouter() *echo.Echo {
 	e := echo.New()
 	e.Renderer = &emptyRenderer{}
-	//e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret")))) // use again, if fixed: https://github.com/gorilla/sessions/issues/267
+
+	// e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
+	// use again, if fixed: https://github.com/gorilla/sessions/issues/267
 	e.Use(session.Middleware(NewFilesystemStore("", []byte("secret"))))
+
 	e.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	return e

@@ -81,7 +81,7 @@ func TestPGSessionStore_New(t *testing.T) {
 	t.Run("save session with max age 0", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 
-		sess, err := ss.New(req, "session")
+		sess, err := ss.New(req, auth.SessionName)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, sess.ID)
 	})
@@ -97,7 +97,7 @@ func TestPGSessionStore_Save(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 
-		session := sessions.NewSession(ss, "session")
+		session := sessions.NewSession(ss, auth.SessionName)
 		session.Options = &sessions.Options{
 			MaxAge: 0,
 		}
@@ -135,7 +135,7 @@ func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 		// assert cookie
 		assert.Len(t, result.Cookies(), 1)
 		assert.Equal(t, "/", result.Cookies()[0].Path)
-		assert.Equal(t, "session", result.Cookies()[0].Name)
+		assert.Equal(t, auth.SessionName, result.Cookies()[0].Name)
 		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[0].SameSite)
 		assert.Equal(t, 86400*30, result.Cookies()[0].MaxAge)
 
@@ -184,7 +184,7 @@ func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 		assert.Empty(t, rec.Body.String())
 		assert.Len(t, result.Cookies(), 1)
 		assert.Equal(t, "/", result.Cookies()[0].Path)
-		assert.Equal(t, "session", result.Cookies()[0].Name)
+		assert.Equal(t, auth.SessionName, result.Cookies()[0].Name)
 		assert.Equal(t, -1, result.Cookies()[0].MaxAge)
 
 		// assert db entry
@@ -208,7 +208,7 @@ func newTestRouter(pg *pgxpool.Pool) *echo.Echo {
 	echoRouter.Use(session.Middleware(ss))
 
 	echoRouter.GET("/", func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -224,7 +224,7 @@ func newTestRouter(pg *pgxpool.Pool) *echo.Echo {
 	})
 
 	echoRouter.GET("/login", func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -240,7 +240,7 @@ func newTestRouter(pg *pgxpool.Pool) *echo.Echo {
 	})
 
 	echoRouter.GET("/destroy", func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}

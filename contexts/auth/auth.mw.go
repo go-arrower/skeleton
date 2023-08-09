@@ -37,7 +37,7 @@ func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 
 	return func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(SessionName, c)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -80,7 +80,7 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 
 	return func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(SessionName, c)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -130,7 +130,7 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // If you want to ensure only logged-in users can access a URL use EnsureUserIsLoggedInMiddleware instead.
 func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sess, err := session.Get("session", c)
+		sess, err := session.Get(SessionName, c)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}

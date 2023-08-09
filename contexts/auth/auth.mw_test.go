@@ -146,7 +146,7 @@ func newEnsureRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 
 	// endpoint to set an example cookie, that the middleware under test can work with.
 	echoRouter.GET("/createSession", func(c echo.Context) error {
-		sess, _ := session.Get("session", c)
+		sess, _ := session.Get(auth.SessionName, c)
 
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = "1337"
@@ -170,7 +170,7 @@ func newEnsureIsSuperuserRouterToAssertOnHandler(handler func(c echo.Context) er
 
 	// endpoint to set an example cookie, that the middleware under test can work with.
 	echoRouter.GET("/createSession", func(c echo.Context) error {
-		sess, _ := session.Get("session", c)
+		sess, _ := session.Get(auth.SessionName, c)
 
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = "1337"
@@ -198,7 +198,7 @@ func newEnrichRouterToAssertOnHandler(handler func(c echo.Context) error) *echo.
 
 	// endpoint to set an example cookie, that the middleware under test can work with.
 	echoRouter.GET("/createSession", func(c echo.Context) error {
-		sess, _ := session.Get("session", c)
+		sess, _ := session.Get(auth.SessionName, c)
 
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = "1337"
