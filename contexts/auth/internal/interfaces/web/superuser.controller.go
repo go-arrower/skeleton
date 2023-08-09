@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-arrower/skeleton/contexts/auth"
-	"github.com/labstack/echo-contrib/session"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/google/uuid"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+
+	"github.com/go-arrower/skeleton/contexts/auth"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 type SuperUserController struct {

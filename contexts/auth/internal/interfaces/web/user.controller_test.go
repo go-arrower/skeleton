@@ -80,7 +80,7 @@ func TestUserController_Login(t *testing.T) {
 
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
 		assert.Empty(t, rec.Body.String())
-		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
+		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
 		assert.Equal(t, "/", result.Cookies()[0].Path)
 		assert.Equal(t, "session", result.Cookies()[0].Name)
 		assert.Equal(t, 0, rec.Result().Cookies()[0].MaxAge, "cookie should expire when browser closes")
@@ -107,9 +107,12 @@ func TestUserController_Login(t *testing.T) {
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
+		result := rec.Result()
+		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "login")
-		assert.Len(t, rec.Result().Cookies(), 0, "failed logins should not have a known_device cookie")
+		assert.Len(t, result.Cookies(), 0, "failed logins should not have a known_device cookie")
 	})
 
 	t.Run("unknown device succeeds login", func(t *testing.T) {
@@ -131,16 +134,19 @@ func TestUserController_Login(t *testing.T) {
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
+		result := rec.Result()
+		defer result.Body.Close()
+
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
-		assert.Len(t, rec.Result().Cookies(), 2, "login session and known_device cookie expected")
-		assert.Equal(t, "/auth", rec.Result().Cookies()[1].Path)
-		assert.Equal(t, "arrower.auth.known_device", rec.Result().Cookies()[1].Name)
-		assert.Equal(t, http.SameSiteStrictMode, rec.Result().Cookies()[1].SameSite)
+		assert.Len(t, result.Cookies(), 2, "login session and known_device cookie expected")
+		assert.Equal(t, "/auth", result.Cookies()[1].Path)
+		assert.Equal(t, "arrower.auth.known_device", result.Cookies()[1].Name)
+		assert.Equal(t, http.SameSiteStrictMode, result.Cookies()[1].SameSite)
 
 		t.Run("known device succeeds login", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/", loginPostPayload())
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			req.AddCookie(rec.Result().Cookies()[1])
+			req.AddCookie(result.Cookies()[1])
 			rec := httptest.NewRecorder()
 
 			controller := web.UserController{

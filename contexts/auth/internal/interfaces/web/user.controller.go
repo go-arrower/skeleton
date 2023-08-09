@@ -4,9 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gorilla/securecookie"
-
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -43,11 +42,11 @@ func (uc UserController) Login() func(echo.Context) error {
 
 	return func(c echo.Context) error {
 		if auth.IsLoggedIn(c.Request().Context()) {
-			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
 		if c.Request().Method == http.MethodGet {
-			return c.Render(http.StatusOK, "auth=>auth.login", nil) //nolint:wrapcheck
+			return c.Render(http.StatusOK, "auth=>auth.login", nil)
 		}
 
 		// POST: Login
@@ -64,7 +63,7 @@ func (uc UserController) Login() func(echo.Context) error {
 				SessionKey:  sess.ID,
 				IsNewDevice: isUnknownDevice(c),
 			},
-		} //nolint:exhaustruct
+		}
 		if err := c.Bind(&loginUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -119,7 +118,7 @@ func (uc UserController) Login() func(echo.Context) error {
 			return err
 		}
 
-		return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+		return c.Redirect(http.StatusSeeOther, "/")
 	}
 }
 
@@ -130,9 +129,10 @@ func setKnownDeviceCookie(c echo.Context) error {
 	}
 
 	http.SetCookie(c.Response(), sessions.NewCookie("arrower.auth.known_device", encoded, &sessions.Options{
-		Path:     "/auth",
-		Domain:   "",
-		MaxAge:   60 * 60 * 24 * 365 * 20, // 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
+		Path:   "/auth",
+		Domain: "",
+		// MayAge of 20 years, chromium has a max of 400 days, see: https://developer.chrome.com/blog/cookie-max-age-expires/
+		MaxAge:   60 * 60 * 24 * 365 * 20,
 		Secure:   false,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -146,8 +146,9 @@ func isUnknownDevice(c echo.Context) bool {
 	for _, cookie := range c.Request().Cookies() {
 		if cookie.Name == "arrower.auth.known_device" {
 			val := map[string]bool{}
+
 			err := securecookie.DecodeMulti("arrower.auth.known_device", cookie.Value, &val, knownDeviceKeyPairs...)
-			if err == nil && val["known_device"] == true {
+			if err == nil && val["known_device"] {
 				return false
 			}
 		}
@@ -159,7 +160,7 @@ func isUnknownDevice(c echo.Context) bool {
 func (uc UserController) Logout() func(echo.Context) error {
 	return func(c echo.Context) error {
 		if !auth.IsLoggedIn(c.Request().Context()) {
-			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
 		sess, err := session.Get("session", c) // todo extract "session" as variable & rename arrower.auth
@@ -193,7 +194,7 @@ func (uc UserController) List() func(echo.Context) error {
 
 		return c.Render(http.StatusOK, "=>auth.users", echo.Map{
 			"users": u,
-		}) //nolint:wrapcheck
+		})
 	}
 }
 
@@ -203,14 +204,14 @@ func (uc UserController) Create() func(echo.Context) error {
 			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
-		return c.Render(http.StatusOK, "auth=>auth.user.create", nil) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "auth=>auth.user.create", nil)
 	}
 }
 
 func (uc UserController) Register() func(echo.Context) error {
 	return func(c echo.Context) error {
 		if auth.IsLoggedIn(c.Request().Context()) {
-			return c.Redirect(http.StatusSeeOther, "/") //nolint:wrapcheck
+			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
 		sess, err := session.Get("session", c)
@@ -222,7 +223,7 @@ func (uc UserController) Register() func(echo.Context) error {
 			IP:         c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
 			UserAgent:  c.Request().UserAgent(),
 			SessionKey: sess.ID,
-		} //nolint:exhaustruct
+		}
 
 		if err := c.Bind(&newUser); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -244,7 +245,7 @@ func (uc UserController) Register() func(echo.Context) error {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			return c.Render(http.StatusOK, "auth=>auth.user.create", map[string]any{ //nolint:wrapcheck
+			return c.Render(http.StatusOK, "auth=>auth.user.create", map[string]any{
 				"Errors":        valErrs,
 				"RegisterEmail": newUser.RegisterEmail,
 			})
@@ -273,6 +274,6 @@ func (uc UserController) Register() func(echo.Context) error {
 			return err
 		}
 
-		return c.Redirect(http.StatusSeeOther, "/admin/auth/users") //nolint:wrapcheck
+		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
 	}
 }

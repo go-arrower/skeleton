@@ -3,8 +3,9 @@ package web
 import (
 	"net/http"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/labstack/echo/v4"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 /*
