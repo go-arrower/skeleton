@@ -35,6 +35,8 @@ type User struct {
 	Verified  VerifiedFlag
 	Blocked   BlockedFlag
 	SuperUser SuperUserFlag
+
+	Sessions []Session
 }
 
 // ID is the primary identifier of a User.
@@ -169,4 +171,11 @@ func (d Device) OS() string {
 	ua := useragent.Parse(d.userAgent)
 
 	return fmt.Sprintf("%s v%s", ua.OS, ua.OSVersion)
+}
+
+type Session struct {
+	ID        string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	Device    Device
 }

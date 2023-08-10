@@ -165,6 +165,41 @@ func (q *Queries) FindSessionDataByKey(ctx context.Context, key []byte) ([]byte,
 	return data, err
 }
 
+const findSessionsByUserID = `-- name: FindSessionsByUserID :many
+SELECT key, data, expires_at, user_id, user_agent, created_at, updated_at
+FROM auth.session
+WHERE user_id = $1
+ORDER BY created_at
+`
+
+func (q *Queries) FindSessionsByUserID(ctx context.Context, userID uuid.NullUUID) ([]AuthSession, error) {
+	rows, err := q.db.Query(ctx, findSessionsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuthSession
+	for rows.Next() {
+		var i AuthSession
+		if err := rows.Scan(
+			&i.Key,
+			&i.Data,
+			&i.ExpiresAt,
+			&i.UserID,
+			&i.UserAgent,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findUserByID = `-- name: FindUserByID :one
 SELECT id, created_at, updated_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone, picture_url, profile, verified_at, blocked_at, super_user_at
 FROM auth.user

@@ -7,6 +7,12 @@ SELECT *
 FROM auth.session
 ORDER BY created_at ASC;
 
+-- name: FindSessionsByUserID :many
+SELECT *
+FROM auth.session
+WHERE user_id = $1
+ORDER BY created_at;
+
 -- name: FindSessionDataByKey :one
 SELECT data
 FROM auth.session

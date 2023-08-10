@@ -15,6 +15,7 @@ import (
 	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
@@ -22,6 +23,7 @@ var (
 	ErrUserAlreadyExists = errors.New("user already exists")
 	ErrPasswordTooWeak   = errors.New("password too weak")
 	ErrLoginFailed       = errors.New("login failed")
+	ErrInvalidInput      = errors.New("invalid input")
 )
 
 type (
@@ -49,7 +51,7 @@ type (
 
 func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		usr, err := repoGetUserByLogin(ctx, queries, in.LoginEmail)
+		usr, err := repository.RepoGetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
 			logger.Log(ctx, alog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
@@ -112,38 +114,6 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 
 		return LoginUserResponse{User: usr}, nil
 	}
-}
-
-func repoGetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
-	dbUser, err := queries.FindUserByLogin(ctx, loginEmail)
-	if err != nil {
-		return user.User{}, ErrLoginFailed
-	}
-
-	var p = make(map[string]*string)
-	profile := dbUser.Profile.Scan(&p)
-	_ = profile
-	_ = p
-	_ = dbUser.Profile.Value
-
-	return user.User{
-		ID:                user.ID(dbUser.ID.String()),
-		Login:             user.Login(dbUser.Login),
-		PasswordHash:      user.PasswordHash(dbUser.PasswordHash),
-		RegisteredAt:      dbUser.CreatedAt.Time,
-		FirstName:         dbUser.FirstName,
-		LastName:          dbUser.LastName,
-		Name:              dbUser.Name,
-		Birthday:          user.Birthday{}, //todo
-		Locale:            user.Locale{},   //todo
-		TimeZone:          user.TimeZone(dbUser.TimeZone),
-		ProfilePictureURL: user.URL(dbUser.PictureUrl),
-		Profile:           user.Profile{},
-		Profile2:          p, //todo
-		Verified:          user.VerifiedFlag(dbUser.VerifiedAt.Time),
-		Blocked:           user.BlockedFlag(dbUser.BlockedAt.Time),
-		SuperUser:         user.SuperUserFlag(dbUser.SuperUserAt.Time),
-	}, nil
 }
 
 type (
@@ -271,4 +241,28 @@ func isWeakPassword(password string) bool {
 	}
 
 	return false
+}
+
+type (
+	ShowUserRequest struct {
+		UserID user.ID
+	}
+	ShowUserResponse struct {
+		User user.User
+	}
+)
+
+func ShowUser(queries *models.Queries) func(context.Context, ShowUserRequest) (ShowUserResponse, error) {
+	return func(ctx context.Context, in ShowUserRequest) (ShowUserResponse, error) {
+		if in.UserID == "" {
+			return ShowUserResponse{}, ErrInvalidInput
+		}
+
+		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		if err != nil {
+			return ShowUserResponse{}, fmt.Errorf("could not get user: %w", err)
+		}
+
+		return ShowUserResponse{User: usr}, nil
+	}
 }

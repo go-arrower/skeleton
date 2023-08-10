@@ -58,6 +58,15 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 					),
 				),
 			),
+			CmdShowUserUser: mw.Traced(di.TraceProvider,
+				mw.Metric(di.MeterProvider,
+					mw.Logged(logger,
+						mw.Validate(nil,
+							application.ShowUser(queries),
+						),
+					),
+				),
+			),
 		},
 	}
 

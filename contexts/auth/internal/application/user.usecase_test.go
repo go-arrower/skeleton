@@ -253,3 +253,36 @@ func TestRegisterUser(t *testing.T) {
 		// todo assert Job contains: ip & it's meaning, device (not UA), time
 	})
 }
+
+func TestShowUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid userID", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		cmd := application.ShowUser(queries)
+		res, err := cmd(ctx, application.ShowUserRequest{})
+		assert.Error(t, err)
+		assert.Empty(t, res)
+	})
+
+	t.Run("show user", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		cmd := application.ShowUser(queries)
+		res, err := cmd(ctx, application.ShowUserRequest{
+			UserID: testdata.UserIDZero,
+		})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, res)
+
+		assert.Equal(t, testdata.UserIDZero, res.User.ID)
+		assert.Len(t, res.User.Sessions, 1)
+	})
+}

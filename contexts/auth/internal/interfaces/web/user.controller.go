@@ -2,7 +2,10 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/securecookie"
@@ -30,6 +33,7 @@ type UserController struct {
 	Queries         *models.Queries
 	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
+	CmdShowUserUser func(context.Context, application.ShowUserRequest) (application.ShowUserResponse, error)
 }
 
 var knownDeviceKeyPairs = securecookie.CodecsFromPairs([]byte("secret"))
@@ -282,5 +286,24 @@ func (uc UserController) Register() func(echo.Context) error {
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
+	}
+}
+
+func (uc UserController) Show() func(echo.Context) error {
+	return func(c echo.Context) error {
+		userID := c.Param("userID")
+
+		res, err := uc.CmdShowUserUser(c.Request().Context(), application.ShowUserRequest{UserID: user.ID(userID)})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		fmt.Println()
+		fmt.Println(res.User, res.User.Sessions)
+		fmt.Println()
+
+		return c.Render(http.StatusOK, "=>auth.user.show", echo.Map{
+			"User": res.User,
+		})
 	}
 }

@@ -1,5 +1,7 @@
 package testdata
 
+import "github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+
 const (
 	ValidUserLogin       = "0@test.com"
 	NotVerifiedUserLogin = "1@test.com"
@@ -11,4 +13,8 @@ const (
 
 	SessionKey = "session-key"
 	UserAgent  = "arrower/1"
+)
+
+const (
+	UserIDZero = user.ID("00000000-0000-0000-0000-000000000000")
 )
