@@ -31,6 +31,7 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group, di localDI) error 
 	router.GET("/users/create", c.userController.Create())
 	router.POST("/users", c.userController.Register())
 	router.GET("/users/:userID", c.userController.Show())
+	router.GET("/users/:userID/sessions/:sessionKey", c.userController.DestroySession(di.queries))
 
 	return nil
 }

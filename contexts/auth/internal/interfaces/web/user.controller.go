@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -298,12 +297,22 @@ func (uc UserController) Show() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		fmt.Println()
-		fmt.Println(res.User, res.User.Sessions)
-		fmt.Println()
-
 		return c.Render(http.StatusOK, "=>auth.user.show", echo.Map{
 			"User": res.User,
 		})
+	}
+}
+
+func (uc UserController) DestroySession(queries *models.Queries) func(echo.Context) error {
+	return func(c echo.Context) error {
+		userID := c.Param("userID")
+		sessionID := c.Param("sessionKey")
+
+		err := queries.DeleteSessionByKey(c.Request().Context(), []byte(sessionID))
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/admin/auth/users/"+userID)
 	}
 }
