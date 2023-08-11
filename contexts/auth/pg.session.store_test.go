@@ -209,6 +209,8 @@ func newTestRouter(pg *pgxpool.Pool) *echo.Echo {
 	echoRouter := echo.New()
 	echoRouter.Use(session.Middleware(ss))
 
+	queries := *models.New(pg)
+
 	echoRouter.GET("/", func(c echo.Context) error {
 		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
@@ -234,6 +236,16 @@ func newTestRouter(pg *pgxpool.Pool) *echo.Echo {
 		sess.Values[auth.SessKeyUserID] = userID.String()
 
 		err = sess.Save(c.Request(), c.Response())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		// login is required to set the userID and userAgent for a session. This is done manually here
+		err = queries.UpsertNewSession(c.Request().Context(), models.UpsertNewSessionParams{
+			Key:       []byte(sess.ID),
+			UserID:    uuid.NullUUID{UUID: uuid.MustParse(userID.String()), Valid: true},
+			UserAgent: "arrower/1",
+		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}

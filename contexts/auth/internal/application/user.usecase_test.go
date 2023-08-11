@@ -9,9 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-arrower/arrower/alog"
-
 	"github.com/go-arrower/arrower/jobs"
-
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
@@ -126,6 +124,7 @@ func TestLoginUser(t *testing.T) {
 		sessions, _ := queries.AllSessions(ctx)
 		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
 		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
+		assert.NotEmpty(t, sessions[1].UserID)
 
 		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 0)
 	})
@@ -248,6 +247,7 @@ func TestRegisterUser(t *testing.T) {
 		sessions, _ := queries.AllSessions(ctx)
 		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
 		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
+		assert.NotEmpty(t, sessions[1].UserID)
 
 		queue.Assert(t).Queued(application.SendNewUserVerificationEmail{}, 1)
 		// todo assert Job contains: ip & it's meaning, device (not UA), time

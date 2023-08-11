@@ -260,29 +260,36 @@ func (q *Queries) FindUserByLogin(ctx context.Context, login string) (AuthUser, 
 	return i, err
 }
 
-const upsertSession = `-- name: UpsertSession :exec
-INSERT INTO auth.session (key, data, expires_at, user_id, user_agent)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (key) DO UPDATE SET data       = $2,
-                                expires_at = $3,
-                                user_id    = $4
+const upsertNewSession = `-- name: UpsertNewSession :exec
+INSERT INTO auth.session (key, user_id, user_agent)
+VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET (user_id, user_agent) = ($2, $3)
 `
 
-type UpsertSessionParams struct {
+type UpsertNewSessionParams struct {
 	Key       []byte
-	Data      []byte
-	ExpiresAt pgtype.Timestamptz
 	UserID    uuid.NullUUID
 	UserAgent string
 }
 
-func (q *Queries) UpsertSession(ctx context.Context, arg UpsertSessionParams) error {
-	_, err := q.db.Exec(ctx, upsertSession,
-		arg.Key,
-		arg.Data,
-		arg.ExpiresAt,
-		arg.UserID,
-		arg.UserAgent,
-	)
+func (q *Queries) UpsertNewSession(ctx context.Context, arg UpsertNewSessionParams) error {
+	_, err := q.db.Exec(ctx, upsertNewSession, arg.Key, arg.UserID, arg.UserAgent)
+	return err
+}
+
+const upsertSessionData = `-- name: UpsertSessionData :exec
+INSERT INTO auth.session (key, data, expires_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET (data, expires_at) = ($2, $3)
+`
+
+type UpsertSessionDataParams struct {
+	Key       []byte
+	Data      []byte
+	ExpiresAt pgtype.Timestamptz
+}
+
+func (q *Queries) UpsertSessionData(ctx context.Context, arg UpsertSessionDataParams) error {
+	_, err := q.db.Exec(ctx, upsertSessionData, arg.Key, arg.Data, arg.ExpiresAt)
 	return err
 }

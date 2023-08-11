@@ -23,13 +23,15 @@ DELETE
 FROM auth.session
 WHERE key = $1;
 
--- name: UpsertSession :exec
-INSERT INTO auth.session (key, data, expires_at, user_id, user_agent)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (key) DO UPDATE SET data       = $2,
-                                expires_at = $3,
-                                user_id    = $4;
+-- name: UpsertSessionData :exec
+INSERT INTO auth.session (key, data, expires_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET (data, expires_at) = ($2, $3);
 
+-- name: UpsertNewSession :exec
+INSERT INTO auth.session (key, user_id, user_agent)
+VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET (user_id, user_agent) = ($2, $3);
 
 
 

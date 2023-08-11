@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -126,21 +125,10 @@ func (ss *PGSessionStore) save(ctx context.Context, session *sessions.Session) e
 		return err //nolint:wrapcheck // export session.Store errors, as caller expects it
 	}
 
-	userID := uuid.NullUUID{} //nolint:exhaustruct // want empty value
-
-	// set userID in the db column, if it is present in the session, so it can be used for joins.
-	if id, ok := session.Values[SessKeyUserID].(string); ok {
-		userID = uuid.NullUUID{
-			UUID:  uuid.MustParse(id),
-			Valid: true,
-		}
-	}
-
-	err = ss.queries.UpsertSession(ctx, models.UpsertSessionParams{
+	err = ss.queries.UpsertSessionData(ctx, models.UpsertSessionDataParams{
 		Key:       []byte(session.ID),
 		Data:      []byte(encoded),
 		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second * time.Duration(session.Options.MaxAge)), Valid: true},
-		UserID:    userID,
 	})
 	if err != nil {
 		return fmt.Errorf("%w", err)

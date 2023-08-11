@@ -10,7 +10,6 @@ import (
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slog"
 
@@ -90,10 +89,9 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 
 		// The session is not persisted until the end of the controller.
 		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		err = queries.UpsertSession(ctx, models.UpsertSessionParams{
+		err = queries.UpsertNewSession(ctx, models.UpsertNewSessionParams{
 			Key:       []byte(in.SessionKey),
-			Data:      []byte(""),
-			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second), Valid: true},
+			UserID:    uuid.NullUUID{UUID: uuid.MustParse(string(usr.ID)), Valid: true},
 			UserAgent: in.UserAgent,
 		})
 		if err != nil {
@@ -184,10 +182,9 @@ func RegisterUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueu
 
 		// The session is not persisted until the end of the controller.
 		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		err = queries.UpsertSession(ctx, models.UpsertSessionParams{
+		err = queries.UpsertNewSession(ctx, models.UpsertNewSessionParams{
 			Key:       []byte(in.SessionKey),
-			Data:      []byte(""),
-			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second), Valid: true},
+			UserID:    uuid.NullUUID{UUID: usr.ID, Valid: true},
 			UserAgent: in.UserAgent,
 		})
 		if err != nil {
