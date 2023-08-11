@@ -83,6 +83,33 @@ func TestPGSessionStore_New(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, sess.ID)
 	})
+
+	t.Run("access a session that got already deleted (e.g. by a superuser)", func(t *testing.T) {
+		t.Parallel()
+
+		// setup
+		queries := models.New(pg)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		sess0 := sessions.NewSession(ss, auth.SessionName)
+		err := ss.Save(req, rec, sess0)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, sess0.ID)
+
+		req.AddCookie(rec.Result().Cookies()[0]) // set cookie of existing session for next http call
+
+		err = queries.DeleteSessionByKey(ctx, []byte(sess0.ID))
+		assert.NoError(t, err)
+
+		// test
+		sess1, err := ss.New(req, auth.SessionName)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, sess1.ID)
+
+		assert.Len(t, req.Cookies(), 2, "the original cookie and the one to overwrite the deletion. I am not sure what the browser or echo does with the two cookies")
+		assert.Equal(t, 0, req.Cookies()[1].MaxAge, "cookie will be deleted by the browser, as session got deleted")
+	})
 }
 
 func TestPGSessionStore_Save(t *testing.T) {

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -66,16 +68,22 @@ func (ss *PGSessionStore) New(r *http.Request, name string) (*sessions.Session, 
 	session.Options = &opts
 	session.IsNew = true
 	session.ID = newSessionID()
-
 	var err error
 	if c, errCookie := r.Cookie(name); errCookie == nil {
 		err = securecookie.DecodeMulti(name, c.Value, &session.ID, ss.Codecs...)
 		if err == nil {
-			data, _ := ss.queries.FindSessionDataByKey(r.Context(), []byte(session.ID))
+			data, err2 := ss.queries.FindSessionDataByKey(r.Context(), []byte(session.ID))
+			if errors.Is(err2, pgx.ErrNoRows) {
+				// session got deleted => remove cookie
+				c.MaxAge = 0
+				r.AddCookie(c)
+			}
 
-			err = securecookie.DecodeMulti(session.Name(), string(data), &session.Values, ss.Codecs...)
-			if err == nil {
-				session.IsNew = false
+			if err2 == nil {
+				err = securecookie.DecodeMulti(session.Name(), string(data), &session.Values, ss.Codecs...)
+				if err == nil {
+					session.IsNew = false
+				}
 			}
 		}
 	}
