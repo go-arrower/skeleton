@@ -59,16 +59,15 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-				assert.Equal(t, "1337", in.LoginEmail)
-				assert.Equal(t, "12345678", in.Password)
-				assert.NotEmpty(t, in.IP)
-				assert.NotEmpty(t, in.UserAgent)
-				assert.NotEmpty(t, in.SessionKey)
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+			assert.Equal(t, "1337", in.LoginEmail)
+			assert.Equal(t, "12345678", in.Password)
+			assert.NotEmpty(t, in.IP)
+			assert.NotEmpty(t, in.UserAgent)
+			assert.NotEmpty(t, in.SessionKey)
 
-				return application.LoginUserResponse{}, nil
-			},
+			return application.LoginUserResponse{}, nil
 		}
 
 		echoRouter := newTestRouter()
@@ -94,13 +93,12 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-				assert.Equal(t, "1337", in.LoginEmail)
-				assert.Equal(t, "12345678", in.Password)
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+			assert.Equal(t, "1337", in.LoginEmail)
+			assert.Equal(t, "12345678", in.Password)
 
-				return application.LoginUserResponse{}, errUCFailed
-			},
+			return application.LoginUserResponse{}, errUCFailed
 		}
 
 		echoRouter := newTestRouter()
@@ -122,19 +120,21 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-				assert.True(t, in.IsNewDevice)
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdLoginUser = func(
+			ctx context.Context,
+			in application.LoginUserRequest,
+		) (application.LoginUserResponse, error) {
+			assert.True(t, in.IsNewDevice)
 
-				return application.LoginUserResponse{}, nil
-			},
+			return application.LoginUserResponse{}, nil
 		}
 
 		echoRouter := newTestRouter()
 		echoRouter.POST("/", controller.Login())
 		echoRouter.ServeHTTP(rec, req)
 
-		result := rec.Result()
+		result := rec.Result() //nolint:bodyclose // false positive, body gets closed with defer
 		defer result.Body.Close()
 
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
@@ -149,12 +149,14 @@ func TestUserController_Login(t *testing.T) {
 			req.AddCookie(result.Cookies()[1])
 			rec := httptest.NewRecorder()
 
-			controller := web.UserController{
-				CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-					assert.False(t, in.IsNewDevice)
+			controller := web.NewUserController([]byte(secret))
+			controller.CmdLoginUser = func(
+				ctx context.Context,
+				in application.LoginUserRequest,
+			) (application.LoginUserResponse, error) {
+				assert.False(t, in.IsNewDevice)
 
-					return application.LoginUserResponse{}, nil
-				},
+				return application.LoginUserResponse{}, nil
 			}
 
 			echoRouter.POST("/", controller.Login())
@@ -179,10 +181,9 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-				return application.LoginUserResponse{}, nil
-			},
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+			return application.LoginUserResponse{}, nil
 		}
 
 		echoRouter := newTestRouter()
@@ -228,10 +229,9 @@ func TestUserController_Logout(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdLoginUser: func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
-				return application.LoginUserResponse{}, nil
-			},
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+			return application.LoginUserResponse{}, nil
 		}
 
 		echoRouter.POST("/login", controller.Login())
@@ -302,17 +302,16 @@ func TestUserController_Register(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdRegisterUser: func(
-				ctx context.Context,
-				in application.RegisterUserRequest,
-			) (application.RegisterUserResponse, error) {
-				assert.Equal(t, "1337", in.RegisterEmail)
-				assert.Equal(t, "12345678", in.Password)
-				assert.Equal(t, "12345678", in.PasswordConfirmation)
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdRegisterUser = func(
+			ctx context.Context,
+			in application.RegisterUserRequest,
+		) (application.RegisterUserResponse, error) {
+			assert.Equal(t, "1337", in.RegisterEmail)
+			assert.Equal(t, "12345678", in.Password)
+			assert.Equal(t, "12345678", in.PasswordConfirmation)
 
-				return application.RegisterUserResponse{}, errUCFailed
-			},
+			return application.RegisterUserResponse{}, errUCFailed
 		}
 
 		echoRouter := newTestRouter()
@@ -335,21 +334,20 @@ func TestUserController_Register(t *testing.T) {
 		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
-		controller := web.UserController{
-			CmdRegisterUser: func(
-				ctx context.Context,
-				in application.RegisterUserRequest,
-			) (application.RegisterUserResponse, error) {
-				assert.Equal(t, "1337", in.RegisterEmail)
-				assert.Equal(t, "12345678", in.Password)
-				assert.Equal(t, "12345678", in.PasswordConfirmation)
-				assert.True(t, in.AcceptedTermsOfService)
-				assert.NotEmpty(t, in.IP)
-				assert.NotEmpty(t, in.UserAgent)
-				assert.NotEmpty(t, in.SessionKey)
+		controller := web.NewUserController([]byte(secret))
+		controller.CmdRegisterUser = func(
+			ctx context.Context,
+			in application.RegisterUserRequest,
+		) (application.RegisterUserResponse, error) {
+			assert.Equal(t, "1337", in.RegisterEmail)
+			assert.Equal(t, "12345678", in.Password)
+			assert.Equal(t, "12345678", in.PasswordConfirmation)
+			assert.True(t, in.AcceptedTermsOfService)
+			assert.NotEmpty(t, in.IP)
+			assert.NotEmpty(t, in.UserAgent)
+			assert.NotEmpty(t, in.SessionKey)
 
-				return application.RegisterUserResponse{}, nil
-			},
+			return application.RegisterUserResponse{}, nil
 		}
 
 		echoRouter := newTestRouter()
@@ -378,6 +376,8 @@ func TestUserController_Register(t *testing.T) {
 
 var errUCFailed = errors.New("use case error")
 
+const secret = "secret"
+
 type emptyRenderer struct{}
 
 func (t *emptyRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -388,16 +388,16 @@ func (t *emptyRenderer) Render(w io.Writer, name string, data interface{}, c ech
 
 // newTestRouter is a helper for unit tests, by returning a valid web router.
 func newTestRouter() *echo.Echo {
-	e := echo.New()
-	e.Renderer = &emptyRenderer{}
+	router := echo.New()
+	router.Renderer = &emptyRenderer{}
 
-	// e.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
+	// router.Use(session.Middleware(sessions.NewFilesystemStore("", []byte("secret"))))
 	// use again, if fixed: https://github.com/gorilla/sessions/issues/267
-	e.Use(session.Middleware(NewFilesystemStore("", []byte("secret"))))
+	router.Use(session.Middleware(NewFilesystemStore("", []byte("secret"))))
 
-	e.Use(auth.EnrichCtxWithUserInfoMiddleware)
+	router.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
-	return e
+	return router
 }
 
 // FIXME the param &remember_me=true is only there because of the bug in https://github.com/gorilla/sessions/issues/267

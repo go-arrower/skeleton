@@ -2,9 +2,8 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/securecookie"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
@@ -28,14 +28,19 @@ Proposal for naming conventions:
 	- delete
 */
 
+func NewUserController(secret []byte) UserController {
+	return UserController{knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret)} //nolint:exhaustruct
+}
+
 type UserController struct {
-	Queries         *models.Queries
+	Queries *models.Queries
+
 	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
 	CmdShowUserUser func(context.Context, application.ShowUserRequest) (application.ShowUserResponse, error)
-}
 
-var knownDeviceKeyPairs = securecookie.CodecsFromPairs([]byte("secret"))
+	knownDeviceKeyPairs []securecookie.Codec
+}
 
 func (uc UserController) Login() func(echo.Context) error {
 	type loginCredentials struct {
@@ -59,12 +64,12 @@ func (uc UserController) Login() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		loginUser := loginCredentials{
+		loginUser := loginCredentials{ //nolint:exhaustruct // other values will be set with bind below
 			LoginUserRequest: application.LoginUserRequest{
 				IP:          c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
 				UserAgent:   c.Request().UserAgent(),
 				SessionKey:  sess.ID,
-				IsNewDevice: isUnknownDevice(c),
+				IsNewDevice: isUnknownDevice(uc.knownDeviceKeyPairs, c),
 			},
 		}
 		if err = c.Bind(&loginUser); err != nil {
@@ -77,17 +82,15 @@ func (uc UserController) Login() func(echo.Context) error {
 
 			var validationErrors validator.ValidationErrors
 
-			if _, ok := err.(validator.ValidationErrors); !ok {
-				valErrs["Login"] = "Invalid user name"
-			} else {
-				validationErrors = err.(validator.ValidationErrors)
+			if !errors.As(err, &validationErrors) {
+				valErrs["LoginEmail"] = "Invalid user name"
 			}
 
 			for _, e := range validationErrors {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{ //nolint:wrapcheck
+			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{
 				"Errors":     valErrs,
 				"LoginEmail": loginUser.LoginEmail,
 			})
@@ -120,7 +123,7 @@ func (uc UserController) Login() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		err = setKnownDeviceCookie(c)
+		err = setKnownDeviceCookie(uc.knownDeviceKeyPairs, c) // set the Cookie always to renew the MaxAge
 		if err != nil {
 			return err
 		}
@@ -129,8 +132,12 @@ func (uc UserController) Login() func(echo.Context) error {
 	}
 }
 
-func setKnownDeviceCookie(c echo.Context) error {
-	encoded, err := securecookie.EncodeMulti("arrower.auth.known_device", map[string]bool{"known_device": true}, knownDeviceKeyPairs...)
+func setKnownDeviceCookie(knownDeviceKeyPairs []securecookie.Codec, c echo.Context) error {
+	encoded, err := securecookie.EncodeMulti(
+		"arrower.auth.known_device",
+		map[string]bool{"known_device": true},
+		knownDeviceKeyPairs...,
+	)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -151,7 +158,7 @@ func setKnownDeviceCookie(c echo.Context) error {
 }
 
 // isUnknownDevice checks if this device is already known, as in has successfully logged in, and is unknown otherwise.
-func isUnknownDevice(c echo.Context) bool {
+func isUnknownDevice(knownDeviceKeyPairs []securecookie.Codec, c echo.Context) bool {
 	for _, cookie := range c.Request().Cookies() {
 		if cookie.Name == "arrower.auth.known_device" {
 			val := map[string]bool{}
@@ -228,7 +235,7 @@ func (uc UserController) Register() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		newUser := application.RegisterUserRequest{
+		newUser := application.RegisterUserRequest{ //nolint:exhaustruct // other values will be set with bind below
 			IP:         c.RealIP(), // see: https://echo.labstack.com/docs/ip-address
 			UserAgent:  c.Request().UserAgent(),
 			SessionKey: sess.ID,
@@ -244,10 +251,8 @@ func (uc UserController) Register() func(echo.Context) error {
 
 			var validationErrors validator.ValidationErrors
 
-			if _, ok := err.(validator.ValidationErrors); !ok {
+			if !errors.As(err, &validationErrors) {
 				valErrs["RegisterEmail"] = "Invalid user name"
-			} else {
-				validationErrors = err.(validator.ValidationErrors)
 			}
 
 			for _, e := range validationErrors {
@@ -279,7 +284,7 @@ func (uc UserController) Register() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		err = setKnownDeviceCookie(c)
+		err = setKnownDeviceCookie(uc.knownDeviceKeyPairs, c)
 		if err != nil {
 			return err
 		}
