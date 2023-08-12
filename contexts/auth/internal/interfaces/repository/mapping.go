@@ -34,10 +34,11 @@ func RepoGetUserByID(ctx context.Context, queries *models.Queries, userID user.I
 }
 
 func userFromModel(dbUser models.AuthUser, sessions []models.AuthSession) user.User {
-	var p = make(map[string]*string)
-	profile := dbUser.Profile.Scan(&p)
+	prof := make(map[string]*string)
+
+	profile := dbUser.Profile.Scan(&prof)
 	_ = profile
-	_ = p
+	_ = prof
 	_ = dbUser.Profile.Value
 
 	return user.User{
@@ -48,12 +49,12 @@ func userFromModel(dbUser models.AuthUser, sessions []models.AuthSession) user.U
 		FirstName:         dbUser.FirstName,
 		LastName:          dbUser.LastName,
 		Name:              dbUser.Name,
-		Birthday:          user.Birthday{}, //todo
-		Locale:            user.Locale{},   //todo
+		Birthday:          user.Birthday{}, // todo
+		Locale:            user.Locale{},   // todo
 		TimeZone:          user.TimeZone(dbUser.TimeZone),
 		ProfilePictureURL: user.URL(dbUser.PictureUrl),
 		Profile:           user.Profile{},
-		Profile2:          p, //todo
+		Profile2:          prof, // todo
 		Verified:          user.VerifiedFlag(dbUser.VerifiedAt.Time),
 		Blocked:           user.BlockedFlag(dbUser.BlockedAt.Time),
 		SuperUser:         user.SuperUserFlag(dbUser.SuperUserAt.Time),
@@ -68,7 +69,7 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 
 	sessions := make([]user.Session, len(sess))
 
-	for i, _ := range sess {
+	for i := range sess {
 		sessions[i] = user.Session{
 			ID:        string(sess[i].Key),
 			CreatedAt: sess[i].CreatedAt.Time,
