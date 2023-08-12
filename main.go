@@ -68,7 +68,7 @@ func main() {
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
 	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
-	// di.AdminRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
+	di.AdminRouter.Use(auth.EnsureUserIsSuperuserMiddleware)
 
 	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
@@ -104,7 +104,7 @@ func main() {
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, router, pg, queue)
+	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, di.AdminRouter, pg, queue)
 	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))

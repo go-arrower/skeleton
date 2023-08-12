@@ -7,7 +7,6 @@ import (
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
 	"github.com/go-arrower/arrower/postgres"
-	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -17,17 +16,8 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 )
 
-func Init(
-	logger *slog.Logger,
-	traceProvider trace.TracerProvider,
-	meterProvider metric.MeterProvider,
-	e *echo.Echo,
-	pg *postgres.Handler,
-	jq jobs.Queue,
-) error {
-	admin := e.Group("/admin")
-	admin.Use(auth.EnsureUserIsSuperuserMiddleware)
-	admin.GET("/", func(c echo.Context) error {
+func Init(logger *slog.Logger, traceProvider trace.TracerProvider, meterProvider metric.MeterProvider, e *echo.Group, pg *postgres.Handler, jq jobs.Queue) error {
+	e.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	})
 
@@ -110,7 +100,7 @@ func Init(
 	}
 
 	{
-		jobs := admin.Group("/jobs")
+		jobs := e.Group("/jobs")
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
