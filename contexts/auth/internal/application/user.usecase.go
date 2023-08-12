@@ -10,6 +10,7 @@ import (
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slog"
 
@@ -138,10 +139,12 @@ type (
 	}
 )
 
-func RegisterUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
+func RegisterUser(
+	logger alog.Logger,
+	queries *models.Queries,
+	queue jobs.Enqueuer,
+) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
-		//if !mw.PassedValidation(ctx) { /* validate OR return err */ }
-
 		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil {
 			logger.Log(ctx, alog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
@@ -165,6 +168,8 @@ func RegisterUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueu
 			ID:           uuid.MustParse(string(user.NewID())),
 			Login:        in.RegisterEmail,
 			PasswordHash: string(pwHash),
+			VerifiedAt:   pgtype.Timestamptz{}, //nolint:exhaustruct
+			BlockedAt:    pgtype.Timestamptz{}, //nolint:exhaustruct
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)
@@ -198,7 +203,7 @@ func RegisterUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueu
 	}
 }
 
-// todo move to domain
+// todo move to domain.
 func hashStringPassword(password string) (user.PasswordHash, error) {
 	if isWeakPassword(password) {
 		return "", ErrPasswordTooWeak
@@ -221,7 +226,7 @@ var (
 // - contain at least one lower case letter
 // - contain at least one upper case letter
 // - contain at least one number
-// - contain at least one special character
+// - contain at least one special character.
 func isWeakPassword(password string) bool {
 	minPasswordLength := 8
 	if len(password) < minPasswordLength {

@@ -63,7 +63,7 @@ func TestLoginUser(t *testing.T) {
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
 
-		// assert failed attempt is logged, e.g. for monitoring or fail2ban ect.
+		// assert failed attempt is logged, e.g. for monitoring or fail2ban etc.
 		assert.Contains(t, buf.String(), "login failed")
 	})
 
@@ -172,7 +172,7 @@ func TestRegisterUser(t *testing.T) {
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrUserAlreadyExists)
 
-		// assert failed attempt is logged, e.g. for monitoring or fail2ban ect.
+		// assert failed attempt is logged, e.g. for monitoring or fail2ban etc.
 		assert.Contains(t, buf.String(), "register new user failed")
 	})
 

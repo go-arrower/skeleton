@@ -39,12 +39,12 @@ type User struct {
 	Sessions []Session
 }
 
-// ID is the primary identifier of a User.
-type ID string
-
 func NewID() ID {
 	return ID(uuid.NewString())
 }
+
+// ID is the primary identifier of a User.
+type ID string
 
 type Login string
 
@@ -60,18 +60,6 @@ func (pw PasswordHash) Matches(checkPW string) bool {
 
 // String prevents a hash to exponentially leak by masking it in functions like fmt.
 func (pw PasswordHash) String() string { return "xxxxxx" }
-
-type (
-	Day   uint8
-	Month uint8
-	Year  uint16
-
-	Birthday struct {
-		day   Day
-		month Month
-		year  Year
-	}
-)
 
 func NewBirthday(day Day, month Month, year Year) (Birthday, error) {
 	if day < 1 || day > 31 {
@@ -98,6 +86,18 @@ func NewBirthday(day Day, month Month, year Year) (Birthday, error) {
 	return Birthday{day: day, month: month, year: year}, nil
 }
 
+type (
+	Day   uint8
+	Month uint8
+	Year  uint16
+
+	Birthday struct {
+		day   Day
+		month Month
+		year  Year
+	}
+)
+
 func (b Birthday) String() string { return "" }
 
 // func (b Birthday) Format(layout string) string { return "" }
@@ -107,9 +107,9 @@ type Locale language.Tag
 
 type TimeZone string
 
-type URL string
-
 func NewURL(url string) (URL, error) { return "", nil }
+
+type URL string
 
 type (
 	ProfileKey   string

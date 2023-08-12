@@ -60,7 +60,10 @@ func TestUserController_Login(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		controller := web.NewUserController([]byte(secret))
-		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+		controller.CmdLoginUser = func(
+			ctx context.Context,
+			in application.LoginUserRequest,
+		) (application.LoginUserResponse, error) {
 			assert.Equal(t, "1337", in.LoginEmail)
 			assert.Equal(t, "12345678", in.Password)
 			assert.NotEmpty(t, in.IP)
@@ -94,7 +97,10 @@ func TestUserController_Login(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		controller := web.NewUserController([]byte(secret))
-		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+		controller.CmdLoginUser = func(
+			ctx context.Context,
+			in application.LoginUserRequest,
+		) (application.LoginUserResponse, error) {
 			assert.Equal(t, "1337", in.LoginEmail)
 			assert.Equal(t, "12345678", in.Password)
 
@@ -182,7 +188,10 @@ func TestUserController_Login(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		controller := web.NewUserController([]byte(secret))
-		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+		controller.CmdLoginUser = func(
+			ctx context.Context,
+			in application.LoginUserRequest,
+		) (application.LoginUserResponse, error) {
 			return application.LoginUserResponse{}, nil
 		}
 
@@ -230,7 +239,10 @@ func TestUserController_Logout(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		controller := web.NewUserController([]byte(secret))
-		controller.CmdLoginUser = func(ctx context.Context, in application.LoginUserRequest) (application.LoginUserResponse, error) {
+		controller.CmdLoginUser = func(
+			ctx context.Context,
+			in application.LoginUserRequest,
+		) (application.LoginUserResponse, error) {
 			return application.LoginUserResponse{}, nil
 		}
 

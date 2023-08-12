@@ -214,17 +214,25 @@ linters:
 
 issues:
   exclude-rules:
+    #
     # Exclude lll issues for long lines with go:generate
+    #
     - linters:
         - lll
       source: "^//go:generate "
 
+    #
+    # Exclude issues from test files
+    #
     - path: _test.go
       linters:
         - gochecknoglobals # Allow globals so testdata & integration helpers can be made available in a convenient way
         - funlen  # Allow test functions of any length
         - exhaustruct # Don't force complete struct initialisation to keep test cases simpler to read
-        - fieldalignment # Prefer easier readability to optimal memory layout for tests
+    - path: _test.go # partly exclude false positives, but not all. Can not mix with complete exclusion above or "text" filter applies to all linters and e.g. doesn't catch funlen any more
+      linters:
+        - govet
+      text: "fieldalignment" # Prefer easier readability to optimal memory layout for tests
 
     #
     # Allow patterns that are arrower specific
