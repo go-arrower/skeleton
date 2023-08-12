@@ -18,7 +18,7 @@ type API interface {
 	Validate(id string, token string) error
 	Authenticate(username string, password string) (bool, error)
 	Logout(id string) error
-	//ResetPW
+	// ResetPW
 }
 
 const (
@@ -55,7 +55,7 @@ type User struct {
 
 type APIKey struct{}
 
-// see CurrentUserID
+// see CurrentUserID.
 func UserID(ctx context.Context) string { return "" } // or just ID()
 
 func UserFromContext(ctx context.Context) User { // or just User()

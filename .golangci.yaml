@@ -229,6 +229,7 @@ issues:
         - gochecknoglobals # Allow globals so testdata & integration helpers can be made available in a convenient way
         - funlen  # Allow test functions of any length
         - exhaustruct # Don't force complete struct initialisation to keep test cases simpler to read
+        - lll # Mostly because of lengthy msgAndArgs params in assertions
     - path: _test.go # partly exclude false positives, but not all. Can not mix with complete exclusion above or "text" filter applies to all linters and e.g. doesn't catch funlen any more
       linters:
         - govet

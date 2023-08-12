@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -68,6 +67,7 @@ func (ss *PGSessionStore) New(r *http.Request, name string) (*sessions.Session, 
 	session.Options = &opts
 	session.IsNew = true
 	session.ID = newSessionID()
+
 	var err error
 	if c, errCookie := r.Cookie(name); errCookie == nil {
 		err = securecookie.DecodeMulti(name, c.Value, &session.ID, ss.Codecs...)
@@ -134,9 +134,13 @@ func (ss *PGSessionStore) save(ctx context.Context, session *sessions.Session) e
 	}
 
 	err = ss.queries.UpsertSessionData(ctx, models.UpsertSessionDataParams{
-		Key:       []byte(session.ID),
-		Data:      []byte(encoded),
-		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Second * time.Duration(session.Options.MaxAge)), Valid: true},
+		Key:  []byte(session.ID),
+		Data: []byte(encoded),
+		ExpiresAt: pgtype.Timestamptz{
+			Time:             time.Now().Add(time.Second * time.Duration(session.Options.MaxAge)),
+			Valid:            true,
+			InfinityModifier: pgtype.Finite,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("%w", err)
