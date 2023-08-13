@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,10 +12,13 @@ import (
 	"golang.org/x/text/language"
 )
 
-var ErrInvalidBirthday = errors.New("invalid birthday")
+var (
+	ErrPasswordTooWeak = errors.New("password too weak")
+	ErrInvalidBirthday = errors.New("invalid birthday")
+)
 
 // User represents a user of the software, that can perform all the auth functionalities.
-type User struct {
+type User struct { //nolint:govet // fieldalignment less important than grouping of fields.
 	ID           ID
 	Login        Login // UserName / email, or phone, or nickname, or whatever the developer wants to have as a login
 	PasswordHash PasswordHash
@@ -47,6 +51,53 @@ func NewID() ID {
 type ID string
 
 type Login string
+
+// NewPasswordHash returns a PasswordHash. Consider NewStrongPasswordHash instead.
+func NewPasswordHash(password string) (PasswordHash, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	return PasswordHash(hash), err
+}
+
+// NewStrongPasswordHash returns a PasswordHash or an error, if the password is too weak.
+func NewStrongPasswordHash(password string) (PasswordHash, error) {
+	if isWeakPassword(password) {
+		return "", ErrPasswordTooWeak
+	}
+
+	return NewPasswordHash(password)
+}
+
+var (
+	upperCase   = regexp.MustCompile("[A-Z]")
+	lowerCase   = regexp.MustCompile("[a-z]")
+	number      = regexp.MustCompile("[0-9]")
+	specialChar = regexp.MustCompile("[!@#$%^&*]")
+)
+
+// isWeakPassword required the password to be:
+// - 8 characters or longer
+// - contain at least one lower case letter
+// - contain at least one upper case letter
+// - contain at least one number
+// - contain at least one special character.
+func isWeakPassword(password string) bool {
+	minPasswordLength := 8
+	if len(password) < minPasswordLength {
+		return true
+	}
+
+	matchRules := []*regexp.Regexp{upperCase, lowerCase, number, specialChar}
+	mPW := []byte(password)
+
+	for _, r := range matchRules {
+		if !r.Match(mPW) {
+			return true
+		}
+	}
+
+	return false
+}
 
 type PasswordHash string
 
@@ -146,7 +197,7 @@ func (t SuperUserFlag) At() time.Time { return time.Time(t) }
 type (
 	VerificationToken string
 
-	Registered struct {
+	Registered struct { //nolint:govet // fieldalignment less important than grouping of fields.
 		ID         ID
 		RecordedAt time.Time
 	}

@@ -193,24 +193,8 @@ func TestRegisterUser(t *testing.T) {
 			password string
 		}{
 			{
-				"too short",
-				"123456",
-			},
-			{
-				"missing lower case letter",
-				"1234567890",
-			},
-			{
-				"missing upper case letter",
-				"123456abc",
-			},
-			{
-				"missing number",
-				"abcdefghi",
-			},
-			{
-				"missing special character",
-				"123456abCD",
+				"weak pw",
+				"123",
 			},
 		}
 
@@ -221,7 +205,7 @@ func TestRegisterUser(t *testing.T) {
 
 				_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: tt.password})
 				assert.Error(t, err)
-				assert.ErrorIs(t, err, application.ErrPasswordTooWeak)
+				assert.ErrorIs(t, err, user.ErrPasswordTooWeak)
 			})
 		}
 	})

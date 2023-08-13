@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -21,13 +19,12 @@ import (
 
 var (
 	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrPasswordTooWeak   = errors.New("password too weak")
 	ErrLoginFailed       = errors.New("login failed")
 	ErrInvalidInput      = errors.New("invalid input")
 )
 
 type (
-	LoginUserRequest struct {
+	LoginUserRequest struct { //nolint:govet // fieldalignment less important than grouping of params.
 		LoginEmail string `form:"login" validate:"max=1024,required,email"`
 		Password   string `form:"password" validate:"max=1024,min=8"`
 
@@ -116,7 +113,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 }
 
 type (
-	RegisterUserRequest struct {
+	RegisterUserRequest struct { //nolint:govet // fieldalignment less important than grouping of params.
 		RegisterEmail          string `form:"login" validate:"max=1024,required,email"`
 		Password               string `form:"password" validate:"max=1024,min=8"`
 		PasswordConfirmation   string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
@@ -154,7 +151,7 @@ func RegisterUser(
 			return RegisterUserResponse{}, ErrUserAlreadyExists
 		}
 
-		pwHash, err := hashStringPassword(in.Password)
+		pwHash, err := user.NewStrongPasswordHash(in.Password)
 		if err != nil {
 			logger.Log(ctx, alog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
@@ -196,53 +193,11 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
 		}
 
-		return RegisterUserResponse{User: user.User{
+		return RegisterUserResponse{User: user.User{ //nolint:exhaustruct // at this point the user has not more information.
 			ID:    user.ID(usr.ID.String()),
 			Login: user.Login(usr.Login),
 		}}, nil
 	}
-}
-
-// todo move to domain.
-func hashStringPassword(password string) (user.PasswordHash, error) {
-	if isWeakPassword(password) {
-		return "", ErrPasswordTooWeak
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-	return user.PasswordHash(hash), err
-}
-
-var (
-	upperCase   = regexp.MustCompile("[A-Z]")
-	lowerCase   = regexp.MustCompile("[a-z]")
-	number      = regexp.MustCompile("[0-9]")
-	specialChar = regexp.MustCompile("[!@#$%^&*]")
-)
-
-// isWeakPassword required the password to be:
-// - 8 characters or longer
-// - contain at least one lower case letter
-// - contain at least one upper case letter
-// - contain at least one number
-// - contain at least one special character.
-func isWeakPassword(password string) bool {
-	minPasswordLength := 8
-	if len(password) < minPasswordLength {
-		return true
-	}
-
-	matchRules := []*regexp.Regexp{upperCase, lowerCase, number, specialChar}
-	mPW := []byte(password)
-
-	for _, r := range matchRules {
-		if !r.Match(mPW) {
-			return true
-		}
-	}
-
-	return false
 }
 
 type (

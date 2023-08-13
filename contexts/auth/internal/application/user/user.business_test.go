@@ -9,6 +9,78 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
+func TestNewPasswordHash(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		pw       string
+		err      error
+	}{
+		{
+			"empty pw",
+			"",
+			nil,
+		},
+		{
+			"pw",
+			"some-pw",
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := user.NewPasswordHash(tt.pw)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestNewStrongPasswordHash(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		password string
+	}{
+		{
+			"too short",
+			"123456",
+		},
+		{
+			"missing lower case letter",
+			"1234567890",
+		},
+		{
+			"missing upper case letter",
+			"123456abc",
+		},
+		{
+			"missing number",
+			"abcdefghi",
+		},
+		{
+			"missing special character",
+			"123456abCD",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := user.NewStrongPasswordHash(tt.password)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, user.ErrPasswordTooWeak)
+		})
+	}
+}
+
 func TestNewBirthday(t *testing.T) {
 	t.Parallel()
 
@@ -196,7 +268,7 @@ func TestDevice(t *testing.T) {
 	}{
 		{
 			"",
-			user.NewDevice("Mozilla/5.0 (Linux; Android 4.3; GT-I9300 Build/JSS15J) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"), //nolint:lll
+			user.NewDevice("Mozilla/5.0 (Linux; Android 4.3; GT-I9300 Build/JSS15J) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"),
 			"Chrome v59.0.3071.125",
 			"Android v4.3",
 		},
