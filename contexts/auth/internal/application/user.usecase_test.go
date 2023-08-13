@@ -142,6 +142,7 @@ func TestLoginUser(t *testing.T) {
 			LoginEmail:  testdata.ValidUserLogin,
 			Password:    testdata.StrongPassword,
 			UserAgent:   testdata.UserAgent,
+			IP:          testdata.IP,
 			SessionKey:  "new-session-key",
 			IsNewDevice: true,
 		})
@@ -149,7 +150,11 @@ func TestLoginUser(t *testing.T) {
 		// assert return values
 		assert.NoError(t, err)
 		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 1)
-		// todo assert Job contains: ip & it's meaning, device (not UA), time
+		job := queue.GetFirstOf(application.SendConfirmationNewDeviceLoggedIn{}).(application.SendConfirmationNewDeviceLoggedIn)
+		assert.NotEmpty(t, job.UserID)
+		assert.NotEmpty(t, job.OccurredAt)
+		assert.Equal(t, testdata.IP, job.IP)
+		assert.Equal(t, user.NewDevice(testdata.UserAgent), job.Device)
 	})
 }
 
@@ -234,14 +239,15 @@ func TestRegisterUser(t *testing.T) {
 			RegisterEmail: testdata.NewUserLogin,
 			Password:      testdata.StrongPassword,
 			UserAgent:     testdata.UserAgent,
+			IP:            testdata.IP,
 		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, usr.User.ID)
 
-		user, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
+		dbUser, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
 		assert.NoError(t, err)
-		assert.Empty(t, user.VerifiedAt)
-		assert.Empty(t, user.BlockedAt)
+		assert.Empty(t, dbUser.VerifiedAt)
+		assert.Empty(t, dbUser.BlockedAt)
 
 		// assert session got updated with device info
 		sessions, _ := queries.AllSessions(ctx)
@@ -250,7 +256,11 @@ func TestRegisterUser(t *testing.T) {
 		assert.NotEmpty(t, sessions[1].UserID)
 
 		queue.Assert(t).Queued(application.SendNewUserVerificationEmail{}, 1)
-		// todo assert Job contains: ip & it's meaning, device (not UA), time
+		job := queue.GetFirstOf(application.SendNewUserVerificationEmail{}).(application.SendNewUserVerificationEmail)
+		assert.NotEmpty(t, job.UserID)
+		assert.NotEmpty(t, job.OccurredAt)
+		assert.Equal(t, testdata.IP, job.IP)
+		assert.Equal(t, user.NewDevice(testdata.UserAgent), job.Device)
 	})
 }
 

@@ -13,6 +13,7 @@ const (
 
 	SessionKey = "session-key"
 	UserAgent  = "arrower/1"
+	IP         = "127.0.0.1"
 )
 
 const (
