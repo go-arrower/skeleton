@@ -32,7 +32,7 @@ const (
 	RouteResetPW     = ""
 )
 
-type User struct {
+type User struct { //nolint:govet // fieldalignment less important than grouping of fields.
 	ID    string
 	Login string // UserName
 

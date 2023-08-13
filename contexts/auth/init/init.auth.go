@@ -7,27 +7,23 @@ import (
 	"github.com/go-arrower/arrower/mw"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
-
 	"github.com/go-arrower/skeleton/shared/infrastructure"
 )
 
 const contextName = "auth"
 
 type AuthContext struct {
-	userController     web.UserController
 	settingsController web.SettingsController
+	userController     web.UserController
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	// todo if di == nil => load and initialise all dependencies from config
 
 	if err := di.EnsureAllDependenciesPresent(); err != nil {
-		fmt.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("could not initialise auth context: %w", err)
 	}
 
 	logger := di.Logger.WithGroup(contextName)
@@ -68,13 +64,16 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		),
 	)
 
-	authContext := AuthContext{userController: userController}
+	authContext := AuthContext{
+		settingsController: web.SettingsController{Queries: queries},
+		userController:     userController,
+	}
 
-	_ = authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))
-	_ = authContext.registerAPIRoutes(di.APIRouter)
-	_ = authContext.registerAdminRoutes(di.AdminRouter.Group(fmt.Sprintf("/%s", contextName)), localDI{queries: queries}) // todo only, if admin context is present
+	authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))
+	authContext.registerAPIRoutes(di.APIRouter)
+	authContext.registerAdminRoutes(di.AdminRouter.Group(fmt.Sprintf("/%s", contextName)), localDI{queries: queries}) // todo only, if admin context is present
 
-	_ = authContext.registerJobs(di.ArrowerQueue)
+	authContext.registerJobs(di.ArrowerQueue)
 
 	return &authContext, nil
 }

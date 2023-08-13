@@ -6,16 +6,12 @@ type PWConfirmation struct {
 }
 
 type Config struct {
-	InsecureAllowAnyPWStrength bool
-	RegisterAllowed            bool //enabled / disabled
+	Mailer                     any // smtp <> local etc.
+	UserProvider               any // future music
+	PWConfirmation             PWConfirmation
 	PwHashCost                 int
-
-	RegisterAdminRoutes bool
-
-	LoginThrottle int // time in sec until a new login attempt can be made
-
-	PWConfirmation PWConfirmation
-	UserProvider   any // future music
-
-	Mailer any // smtp <> local ect.
+	LoginThrottle              int // time in sec until a new login attempt can be made
+	InsecureAllowAnyPWStrength bool
+	RegisterAllowed            bool // enabled | disabled
+	RegisterAdminRoutes        bool
 }

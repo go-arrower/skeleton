@@ -97,7 +97,10 @@ func TestPGSessionStore_New(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, sess0.ID)
 
-		req.AddCookie(rec.Result().Cookies()[0]) // set cookie of existing session for next http call
+		result := rec.Result()
+		defer result.Body.Close()
+
+		req.AddCookie(result.Cookies()[0]) // set cookie of existing session for next http call
 
 		err = queries.DeleteSessionByKey(ctx, []byte(sess0.ID))
 		assert.NoError(t, err)

@@ -158,7 +158,7 @@ func RegisterUser(
 				slog.String("ip", in.IP),
 			)
 
-			return RegisterUserResponse{}, err
+			return RegisterUserResponse{}, fmt.Errorf("%w", err)
 		}
 
 		usr, err := queries.CreateUser(ctx, models.CreateUserParams{
