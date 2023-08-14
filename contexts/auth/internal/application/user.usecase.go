@@ -48,7 +48,7 @@ type (
 
 func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		usr, err := repository.RepoGetUserByLogin(ctx, queries, in.LoginEmail)
+		usr, err := repository.GetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
 			logger.Log(ctx, alog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
@@ -215,7 +215,7 @@ func ShowUser(queries *models.Queries) func(context.Context, ShowUserRequest) (S
 			return ShowUserResponse{}, ErrInvalidInput
 		}
 
-		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
 		if err != nil {
 			return ShowUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
@@ -233,7 +233,7 @@ type (
 
 func BlockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
-		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
@@ -251,7 +251,7 @@ func BlockUser(queries *models.Queries) func(context.Context, BlockUserRequest) 
 
 func UnblockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
-		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}

@@ -296,7 +296,7 @@ func TestBlockUser(t *testing.T) {
 		assert.NoError(t, err)
 
 		// verify
-		usr, err := repository.RepoGetUserByID(ctx, queries, testdata.UserIDZero)
+		usr, err := repository.GetUserByID(ctx, queries, testdata.UserIDZero)
 		assert.NoError(t, err)
 		assert.True(t, usr.IsBlocked())
 	})
@@ -316,7 +316,7 @@ func TestUnblockUser(t *testing.T) {
 		assert.NoError(t, err)
 
 		// verify
-		usr, err := repository.RepoGetUserByID(ctx, queries, testdata.UserIDZero)
+		usr, err := repository.GetUserByID(ctx, queries, testdata.UserIDZero)
 		assert.NoError(t, err)
 		assert.True(t, !usr.IsBlocked())
 	})

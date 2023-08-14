@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/text/language"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/text/language"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
-func RepoGetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
+func GetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
 	dbUser, err := queries.FindUserByLogin(ctx, loginEmail)
 	if err != nil {
 		return user.User{}, fmt.Errorf("%w", err)
@@ -23,7 +22,7 @@ func RepoGetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail
 	return userFromModel(dbUser, nil), nil
 }
 
-func RepoGetUserByID(ctx context.Context, queries *models.Queries, userID user.ID) (user.User, error) {
+func GetUserByID(ctx context.Context, queries *models.Queries, userID user.ID) (user.User, error) {
 	dbUser, err := queries.FindUserByID(ctx, uuid.MustParse(string(userID)))
 	if err != nil {
 		return user.User{}, fmt.Errorf("%w", err)
@@ -85,8 +84,9 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 
 func SaveUser(ctx context.Context, queries *models.Queries, user user.User) error {
 	_, err := queries.UpsertUser(ctx, models.UpsertUserParams{
-		ID:           uuid.MustParse(string(user.ID)),
-		CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}, // only for insert
+		ID: uuid.MustParse(string(user.ID)),
+		// only required for insert, otherwise the time will not be updated.
+		CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true, InfinityModifier: pgtype.Finite},
 		Login:        string(user.Login),
 		PasswordHash: string(user.PasswordHash),
 		FirstName:    user.Name.FirstName(),
@@ -97,9 +97,9 @@ func SaveUser(ctx context.Context, queries *models.Queries, user user.User) erro
 		TimeZone:     string(user.TimeZone),
 		PictureUrl:   string(user.ProfilePictureURL),
 		Profile:      map[string]*string{}, // todo
-		VerifiedAt:   pgtype.Timestamptz{Time: user.Verified.At(), Valid: true},
-		BlockedAt:    pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true},
-		SuperUserAt:  pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true},
+		VerifiedAt:   pgtype.Timestamptz{Time: user.Verified.At(), Valid: true, InfinityModifier: pgtype.Finite},
+		BlockedAt:    pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true, InfinityModifier: pgtype.Finite},
+		SuperUserAt:  pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true, InfinityModifier: pgtype.Finite},
 	})
 	if err != nil {
 		return fmt.Errorf("could not upsert user: %w", err)
