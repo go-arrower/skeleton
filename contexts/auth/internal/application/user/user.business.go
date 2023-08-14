@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/mileusna/useragent"
@@ -24,9 +26,7 @@ type User struct { //nolint:govet // fieldalignment less important than grouping
 	PasswordHash PasswordHash
 	RegisteredAt time.Time
 
-	FirstName         string
-	LastName          string
-	Name              string // DisplayName
+	Name              Name
 	Birthday          Birthday
 	Locale            Locale
 	TimeZone          TimeZone
@@ -43,6 +43,7 @@ type User struct { //nolint:govet // fieldalignment less important than grouping
 	Sessions []Session
 }
 
+// NewID generates a new ID for a User.
 func NewID() ID {
 	return ID(uuid.NewString())
 }
@@ -77,10 +78,10 @@ var (
 
 // isWeakPassword required the password to be:
 // - 8 characters or longer
-// - contain at least one lower case letter
-// - contain at least one upper case letter
+// - contain at least one lowerCase letter
+// - contain at least one upperCase letter
 // - contain at least one number
-// - contain at least one special character.
+// - contain at least one specialChar.
 func isWeakPassword(password string) bool {
 	minPasswordLength := 8
 	if len(password) < minPasswordLength {
@@ -99,7 +100,7 @@ func isWeakPassword(password string) bool {
 	return false
 }
 
-type PasswordHash string
+type PasswordHash string // todo make VO that can not be changed??
 
 func (pw PasswordHash) Matches(checkPW string) bool {
 	if err := bcrypt.CompareHashAndPassword([]byte(pw), []byte(checkPW)); err == nil {
@@ -111,6 +112,66 @@ func (pw PasswordHash) Matches(checkPW string) bool {
 
 // String prevents a hash to exponentially leak by masking it in functions like fmt.
 func (pw PasswordHash) String() string { return "xxxxxx" }
+
+// NewName will be capitalised all values.
+// If no displayName is given, it is concatenated from firstName and lastName.
+func NewName(firstName string, lastName string, displayName string) Name {
+	if firstName != "" {
+		firstName = toTitle(firstName)
+	}
+
+	if lastName != "" {
+		lastName = toTitle(lastName)
+	}
+
+	if displayName != "" {
+		displayName = toTitle(displayName)
+	}
+
+	if displayName == "" {
+		displayName = strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+	}
+
+	return Name{
+		firstName:   firstName,
+		lastName:    lastName,
+		displayName: displayName,
+	}
+}
+
+// toTitle takes a string and:
+// - trims whitespace
+// - splits it at each space " "
+// - capitalises the first unicode symbol of each part.
+func toTitle(s string) string {
+	ret := []string{}
+
+	for _, ss := range strings.Split(strings.TrimSpace(s), " ") {
+		r := []rune(ss)
+		ret = append(ret, string(append([]rune{unicode.ToTitle(r[0])}, r[1:]...)))
+	}
+
+	return strings.Join(ret, " ")
+}
+
+// Name represents the name of a User.
+type Name struct {
+	firstName   string
+	lastName    string
+	displayName string
+}
+
+func (name Name) FirstName() string {
+	return name.firstName
+}
+
+func (name Name) LastName() string {
+	return name.lastName
+}
+
+func (name Name) DisplayName() string {
+	return name.displayName
+}
 
 func NewBirthday(day Day, month Month, year Year) (Birthday, error) {
 	if day < 1 || day > 31 {

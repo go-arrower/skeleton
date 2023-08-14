@@ -81,6 +81,78 @@ func TestNewStrongPasswordHash(t *testing.T) {
 	}
 }
 
+func TestName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		fn       string
+		ln       string
+		dn       string
+		expFN    string
+		expLN    string
+		expDN    string
+	}{
+		{
+			"empty name",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+		},
+		{
+			"full name",
+			"Arrower",
+			"Project",
+			"Arrower Project",
+			"Arrower",
+			"Project",
+			"Arrower Project",
+		},
+		{
+			"sanitise name",
+			" Arrower",
+			"Project ",
+			" Arrower Project ",
+			"Arrower",
+			"Project",
+			"Arrower Project",
+		},
+		{
+			"automatic capitalise",
+			"arrower",
+			"project",
+			"arrower project",
+			"Arrower",
+			"Project",
+			"Arrower Project",
+		},
+		{
+			"build display name",
+			"arrower",
+			"project",
+			"",
+			"Arrower",
+			"Project",
+			"Arrower Project",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			name := user.NewName(tt.fn, tt.ln, tt.dn)
+			assert.Equal(t, tt.expFN, name.FirstName())
+			assert.Equal(t, tt.expLN, name.LastName())
+			assert.Equal(t, tt.expDN, name.DisplayName())
+		})
+	}
+}
+
 func TestNewBirthday(t *testing.T) {
 	t.Parallel()
 
