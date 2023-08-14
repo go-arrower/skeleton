@@ -3,8 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"golang.org/x/text/language"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
@@ -77,4 +81,29 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 	}
 
 	return sessions
+}
+
+func SaveUser(ctx context.Context, queries *models.Queries, user user.User) error {
+	_, err := queries.UpsertUser(ctx, models.UpsertUserParams{
+		ID:           uuid.MustParse(string(user.ID)),
+		CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}, // only for insert
+		Login:        string(user.Login),
+		PasswordHash: string(user.PasswordHash),
+		FirstName:    user.Name.FirstName(),
+		LastName:     user.Name.LastName(),
+		Name:         user.Name.DisplayName(),
+		Birthday:     pgtype.Date{}, // todo
+		Locale:       language.Tag(user.Locale).String(),
+		TimeZone:     string(user.TimeZone),
+		PictureUrl:   string(user.ProfilePictureURL),
+		Profile:      map[string]*string{}, // todo
+		VerifiedAt:   pgtype.Timestamptz{Time: user.Verified.At(), Valid: true},
+		BlockedAt:    pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true},
+		SuperUserAt:  pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("could not upsert user: %w", err)
+	}
+
+	return nil
 }

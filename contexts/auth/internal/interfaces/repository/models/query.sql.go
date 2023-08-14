@@ -293,3 +293,70 @@ func (q *Queries) UpsertSessionData(ctx context.Context, arg UpsertSessionDataPa
 	_, err := q.db.Exec(ctx, upsertSessionData, arg.Key, arg.Data, arg.ExpiresAt)
 	return err
 }
+
+const upsertUser = `-- name: UpsertUser :one
+INSERT INTO auth.user(id, created_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
+                      picture_url, profile, verified_at, blocked_at, super_user_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+ON CONFLICT (id) DO UPDATE SET (login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
+                                picture_url, profile, verified_at, blocked_at, super_user_at) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+RETURNING id, created_at, updated_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone, picture_url, profile, verified_at, blocked_at, super_user_at
+`
+
+type UpsertUserParams struct {
+	ID           uuid.UUID
+	CreatedAt    pgtype.Timestamptz
+	Login        string
+	PasswordHash string
+	FirstName    string
+	LastName     string
+	Name         string
+	Birthday     pgtype.Date
+	Locale       string
+	TimeZone     string
+	PictureUrl   string
+	Profile      pgtype.Hstore
+	VerifiedAt   pgtype.Timestamptz
+	BlockedAt    pgtype.Timestamptz
+	SuperUserAt  pgtype.Timestamptz
+}
+
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, upsertUser,
+		arg.ID,
+		arg.CreatedAt,
+		arg.Login,
+		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.Name,
+		arg.Birthday,
+		arg.Locale,
+		arg.TimeZone,
+		arg.PictureUrl,
+		arg.Profile,
+		arg.VerifiedAt,
+		arg.BlockedAt,
+		arg.SuperUserAt,
+	)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Login,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Name,
+		&i.Birthday,
+		&i.Locale,
+		&i.TimeZone,
+		&i.PictureUrl,
+		&i.Profile,
+		&i.VerifiedAt,
+		&i.BlockedAt,
+		&i.SuperUserAt,
+	)
+	return i, err
+}

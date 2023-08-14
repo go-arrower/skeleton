@@ -17,6 +17,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/testdata"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
@@ -278,5 +279,45 @@ func TestShowUser(t *testing.T) {
 
 		assert.Equal(t, testdata.UserIDZero, res.User.ID)
 		assert.Len(t, res.User.Sessions, 1)
+	})
+}
+
+func TestBlockUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("block user", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		cmd := application.BlockUser(queries)
+		_, err := cmd(ctx, application.BlockUserRequest{UserID: testdata.UserIDZero})
+		assert.NoError(t, err)
+
+		// verify
+		usr, err := repository.RepoGetUserByID(ctx, queries, testdata.UserIDZero)
+		assert.NoError(t, err)
+		assert.True(t, usr.IsBlocked())
+	})
+}
+
+func TestUnblockUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unblock user", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		cmd := application.UnblockUser(queries)
+		_, err := cmd(ctx, application.BlockUserRequest{UserID: testdata.UserBlockedUserID})
+		assert.NoError(t, err)
+
+		// verify
+		usr, err := repository.RepoGetUserByID(ctx, queries, testdata.UserIDZero)
+		assert.NoError(t, err)
+		assert.True(t, !usr.IsBlocked())
 	})
 }

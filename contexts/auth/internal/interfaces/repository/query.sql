@@ -59,6 +59,14 @@ INSERT INTO auth.user (id, login, password_hash, verified_at, blocked_at)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
+-- name: UpsertUser :one
+INSERT INTO auth.user(id, created_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
+                      picture_url, profile, verified_at, blocked_at, super_user_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+ON CONFLICT (id) DO UPDATE SET (login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
+                                picture_url, profile, verified_at, blocked_at, super_user_at) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+RETURNING *;
+
 -- DeleteUser :exec
 DELETE
 FROM auth.user

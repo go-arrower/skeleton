@@ -223,3 +223,46 @@ func ShowUser(queries *models.Queries) func(context.Context, ShowUserRequest) (S
 		return ShowUserResponse{User: usr}, nil
 	}
 }
+
+type (
+	BlockUserRequest struct {
+		UserID user.ID
+	}
+	BlockUserResponse struct{}
+)
+
+func BlockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
+		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		if err != nil {
+			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
+		}
+
+		usr.Block()
+
+		err = repository.SaveUser(ctx, queries, usr)
+		if err != nil {
+			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
+		}
+
+		return BlockUserResponse{}, nil
+	}
+}
+
+func UnblockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
+		usr, err := repository.RepoGetUserByID(ctx, queries, in.UserID)
+		if err != nil {
+			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
+		}
+
+		usr.Unblock()
+
+		err = repository.SaveUser(ctx, queries, usr)
+		if err != nil {
+			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
+		}
+
+		return BlockUserResponse{}, nil
+	}
+}

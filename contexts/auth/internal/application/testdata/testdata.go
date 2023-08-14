@@ -17,5 +17,6 @@ const (
 )
 
 const (
-	UserIDZero = user.ID("00000000-0000-0000-0000-000000000000")
+	UserIDZero        = user.ID("00000000-0000-0000-0000-000000000000")
+	UserBlockedUserID = user.ID("00000000-0000-0000-0000-000000000002")
 )
