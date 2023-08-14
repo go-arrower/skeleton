@@ -36,11 +36,37 @@ type User struct { //nolint:govet // fieldalignment less important than grouping
 	Profile2 Profile2 // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
 	// email, phone???
 
-	Verified  VerifiedFlag
-	Blocked   BlockedFlag
-	SuperUser SuperUserFlag
+	Verified  BoolFlag // todo make all flags private, so they can not be manipulated outside of the business logic
+	Blocked   BoolFlag
+	SuperUser BoolFlag
 
 	Sessions []Session
+}
+
+func (u *User) IsVerified() bool {
+	return u.Verified.IsTrue()
+}
+
+func (u *User) IsBlocked() bool {
+	return u.Blocked.IsTrue()
+}
+
+func (u *User) Block() {
+	if u.IsBlocked() {
+		return
+	}
+
+	u.Blocked = u.Blocked.SetTrue()
+}
+
+func (u *User) Unblock() {
+	if u.IsBlocked() {
+		u.Blocked = u.Blocked.SetFalse()
+	}
+}
+
+func (u *User) IsSuperuser() bool {
+	return u.SuperUser.IsTrue()
 }
 
 // NewID generates a new ID for a User.
@@ -231,30 +257,6 @@ type (
 	Profile2 map[string]*string
 )
 
-type VerifiedFlag time.Time
-
-func (t VerifiedFlag) IsVerified() bool {
-	return time.Time(t) != time.Time{}
-}
-
-func (t VerifiedFlag) At() time.Time { return time.Time(t) }
-
-type BlockedFlag time.Time
-
-func (t BlockedFlag) IsBlocked() bool {
-	return time.Time(t) != time.Time{}
-}
-
-func (t BlockedFlag) At() time.Time { return time.Time(t) }
-
-type SuperUserFlag time.Time
-
-func (t SuperUserFlag) IsSuperuser() bool {
-	return time.Time(t) != time.Time{}
-}
-
-func (t SuperUserFlag) At() time.Time { return time.Time(t) }
-
 type (
 	VerificationToken string
 
@@ -290,4 +292,28 @@ type Session struct {
 	CreatedAt time.Time
 	ExpiresAt time.Time
 	Device    Device
+}
+
+type BoolFlag time.Time
+
+func (t BoolFlag) IsTrue() bool {
+	return time.Time(t) != time.Time{}
+}
+
+func (t BoolFlag) IsFalse() bool {
+	return !t.IsTrue()
+}
+
+func (t BoolFlag) At() time.Time { return time.Time(t) }
+
+func (t BoolFlag) SetTrue() BoolFlag {
+	if t.IsFalse() {
+		return BoolFlag(time.Now().UTC())
+	}
+
+	return t
+}
+
+func (t BoolFlag) SetFalse() BoolFlag {
+	return BoolFlag(time.Time{})
 }

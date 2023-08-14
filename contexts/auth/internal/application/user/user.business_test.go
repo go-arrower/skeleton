@@ -9,6 +9,125 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
+func TestUser_IsVerified(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		user     user.User
+		expected bool
+	}{
+		{
+			"empty time",
+			user.User{Verified: user.BoolFlag{}},
+			false,
+		},
+		{
+			"user",
+			user.User{Verified: user.BoolFlag(time.Now().UTC())},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, tt.user.IsVerified())
+		})
+	}
+}
+
+func TestUser_IsBlocked(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		user     user.User
+		expected bool
+	}{
+		{
+			"empty time",
+			user.User{Blocked: user.BoolFlag{}},
+			false,
+		},
+		{
+			"user",
+			user.User{Blocked: user.BoolFlag(time.Now().UTC())},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, tt.user.IsBlocked())
+		})
+	}
+}
+
+func TestUser_Block(t *testing.T) {
+	t.Parallel()
+
+	user := user.User{}
+	assert.False(t, user.IsBlocked())
+
+	user.Block()
+	assert.True(t, user.IsBlocked())
+
+	blockedAt := user.Blocked.At()
+	user.Block()
+
+	assert.Equal(t, blockedAt, user.Blocked.At(), "if user is blocked, new calls to block will not update the time")
+}
+
+func TestUser_Unblock(t *testing.T) {
+	t.Parallel()
+
+	user := user.User{}
+	assert.False(t, user.IsBlocked())
+
+	user.Unblock()
+	assert.False(t, user.IsBlocked(), "no change on already unblocked user")
+
+	user.Block()
+	user.Unblock()
+	assert.False(t, user.IsBlocked())
+}
+
+func TestUser_IsSuperuser(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		testName string
+		user     user.User
+		expected bool
+	}{
+		{
+			"empty time",
+			user.User{SuperUser: user.BoolFlag{}},
+			false,
+		},
+		{
+			"superuser",
+			user.User{SuperUser: user.BoolFlag(time.Now().UTC())},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.testName, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, tt.user.IsSuperuser())
+		})
+	}
+}
+
 func TestNewPasswordHash(t *testing.T) {
 	t.Parallel()
 
@@ -239,96 +358,6 @@ func TestNewBirthday(t *testing.T) {
 	}
 }
 
-func TestVerifiedFlag_IsVerified(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		testName string
-		verified user.VerifiedFlag
-		expected bool
-	}{
-		{
-			"empty time",
-			user.VerifiedFlag(time.Time{}),
-			false,
-		},
-		{
-			"verified",
-			user.VerifiedFlag(time.Now()),
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.testName, func(t *testing.T) {
-			t.Parallel()
-
-			assert.Equal(t, tt.expected, tt.verified.IsVerified())
-		})
-	}
-}
-
-func TestBlockedFlag_IsBlocked(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		testName string
-		blocked  user.BlockedFlag
-		expected bool
-	}{
-		{
-			"empty time",
-			user.BlockedFlag(time.Time{}),
-			false,
-		},
-		{
-			"blocked",
-			user.BlockedFlag(time.Now()),
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.testName, func(t *testing.T) {
-			t.Parallel()
-
-			assert.Equal(t, tt.expected, tt.blocked.IsBlocked())
-		})
-	}
-}
-
-func TestSuperUserFlag_IsSuperuser(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		testName  string
-		superuser user.SuperUserFlag
-		expected  bool
-	}{
-		{
-			"empty time",
-			user.SuperUserFlag(time.Time{}),
-			false,
-		},
-		{
-			"superuser",
-			user.SuperUserFlag(time.Now()),
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.testName, func(t *testing.T) {
-			t.Parallel()
-
-			assert.Equal(t, tt.expected, tt.superuser.IsSuperuser())
-		})
-	}
-}
-
 func TestDevice(t *testing.T) {
 	t.Parallel()
 
@@ -355,4 +384,64 @@ func TestDevice(t *testing.T) {
 			assert.Equal(t, tt.expectedOS, tt.device.OS())
 		})
 	}
+}
+
+func TestBoolFlag(t *testing.T) {
+	t.Parallel()
+
+	flag := user.BoolFlag{}
+	assert.False(t, flag.IsTrue())
+	assert.True(t, flag.IsFalse())
+	assert.Empty(t, flag.At())
+
+	flag = user.BoolFlag(time.Now().UTC())
+	assert.True(t, flag.IsTrue())
+	assert.False(t, flag.IsFalse())
+	assert.NotEmpty(t, flag.At())
+}
+
+func TestBoolFlag_SetTrue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("set true", func(t *testing.T) {
+		t.Parallel()
+
+		flag := user.BoolFlag{}
+		assert.False(t, flag.IsTrue())
+
+		flag = flag.SetTrue()
+		assert.True(t, flag.IsTrue())
+	})
+
+	t.Run("if flag was true, time does not change", func(t *testing.T) {
+		t.Parallel()
+
+		flag := user.BoolFlag{}
+		assert.False(t, flag.IsTrue())
+
+		flag = flag.SetTrue()
+		assert.True(t, flag.IsTrue())
+		trueAt := flag.At()
+
+		flag = flag.SetTrue()
+		assert.True(t, flag.IsTrue())
+		assert.Equal(t, trueAt, flag.At(), "second call does not change the time")
+	})
+}
+
+func TestBoolFlag_SetFalse(t *testing.T) {
+	t.Parallel()
+
+	t.Run("set false", func(t *testing.T) {
+		t.Parallel()
+
+		flag := user.BoolFlag(time.Now().UTC())
+		assert.True(t, flag.IsTrue())
+
+		flag = flag.SetFalse()
+		assert.True(t, flag.IsFalse())
+
+		flag = flag.SetFalse()
+		assert.True(t, flag.IsFalse(), "subsequent calls stay false")
+	})
 }

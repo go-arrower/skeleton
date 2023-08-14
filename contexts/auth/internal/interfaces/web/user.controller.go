@@ -116,7 +116,7 @@ func (uc UserController) Login() func(echo.Context) error {
 		}
 		sess.Values[auth.SessKeyLoggedIn] = true
 		sess.Values[auth.SessKeyUserID] = string(response.User.ID)
-		sess.Values[auth.SessKeyIsSuperuser] = response.User.SuperUser.IsSuperuser()
+		sess.Values[auth.SessKeyIsSuperuser] = response.User.IsSuperuser()
 
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {

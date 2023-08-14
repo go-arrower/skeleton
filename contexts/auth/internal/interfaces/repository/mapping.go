@@ -46,18 +46,16 @@ func userFromModel(dbUser models.AuthUser, sessions []models.AuthSession) user.U
 		Login:             user.Login(dbUser.Login),
 		PasswordHash:      user.PasswordHash(dbUser.PasswordHash),
 		RegisteredAt:      dbUser.CreatedAt.Time,
-		FirstName:         dbUser.FirstName,
-		LastName:          dbUser.LastName,
-		Name:              dbUser.Name,
+		Name:              user.NewName(dbUser.FirstName, dbUser.LastName, dbUser.Name),
 		Birthday:          user.Birthday{}, // todo
 		Locale:            user.Locale{},   // todo
 		TimeZone:          user.TimeZone(dbUser.TimeZone),
 		ProfilePictureURL: user.URL(dbUser.PictureUrl),
 		Profile:           user.Profile{},
 		Profile2:          prof, // todo
-		Verified:          user.VerifiedFlag(dbUser.VerifiedAt.Time),
-		Blocked:           user.BlockedFlag(dbUser.BlockedAt.Time),
-		SuperUser:         user.SuperUserFlag(dbUser.SuperUserAt.Time),
+		Verified:          user.BoolFlag(dbUser.VerifiedAt.Time),
+		Blocked:           user.BoolFlag(dbUser.BlockedAt.Time),
+		SuperUser:         user.BoolFlag(dbUser.SuperUserAt.Time),
 		Sessions:          sessionsFromModel(sessions),
 	}
 }

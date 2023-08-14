@@ -58,7 +58,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if !usr.Verified.IsVerified() {
+		if !usr.IsVerified() {
 			logger.Log(ctx, alog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
@@ -67,7 +67,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if usr.Blocked.IsBlocked() {
+		if usr.IsBlocked() {
 			logger.Log(ctx, alog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
