@@ -64,10 +64,20 @@ INSERT INTO auth.user(id, created_at, login, password_hash, first_name, last_nam
                       picture_url, profile, verified_at, blocked_at, super_user_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 ON CONFLICT (id) DO UPDATE SET (login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
-                                picture_url, profile, verified_at, blocked_at, super_user_at) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                                picture_url, profile, verified_at, blocked_at,
+                                super_user_at) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING *;
 
 -- DeleteUser :exec
 DELETE
 FROM auth.user
 WHERE id = $1;
+
+-- name: CreateVerificationToken :exec
+INSERT INTO auth.user_verification(token, user_id, valid_until_utc)
+VALUES ($1, $2, $3);
+
+-- name: VerificationTokenByToken :one
+SELECT *
+FROM auth.user_verification
+WHERE token = $1;

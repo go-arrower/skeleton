@@ -38,6 +38,14 @@ type AuthUser struct {
 	SuperUserAt  pgtype.Timestamptz
 }
 
+type AuthUserVerification struct {
+	Token         uuid.UUID
+	UserID        uuid.UUID
+	ValidUntilUtc pgtype.Timestamptz
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
 type GueJob struct {
 	JobID      string
 	Priority   int16

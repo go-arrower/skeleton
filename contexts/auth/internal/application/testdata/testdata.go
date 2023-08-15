@@ -17,6 +17,7 @@ const (
 )
 
 const (
-	UserIDZero        = user.ID("00000000-0000-0000-0000-000000000000")
-	UserBlockedUserID = user.ID("00000000-0000-0000-0000-000000000002")
+	UserIDZero            = user.ID("00000000-0000-0000-0000-000000000000")
+	UserNotVerifiedUserID = user.ID("00000000-0000-0000-0000-000000000001")
+	UserBlockedUserID     = user.ID("00000000-0000-0000-0000-000000000002")
 )

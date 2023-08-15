@@ -257,15 +257,6 @@ type (
 	Profile2 map[string]*string
 )
 
-type (
-	VerificationToken string
-
-	Registered struct { //nolint:govet // fieldalignment less important than grouping of fields.
-		ID         ID
-		RecordedAt time.Time
-	}
-)
-
 func NewDevice(userAgent string) Device {
 	return Device{userAgent: userAgent}
 }
