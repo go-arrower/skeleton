@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"github.com/go-arrower/arrower/mw"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
@@ -17,6 +20,11 @@ const contextName = "auth"
 type AuthContext struct {
 	settingsController web.SettingsController
 	userController     web.UserController
+
+	logger        *slog.Logger
+	traceProvider trace.TracerProvider
+	meterProvider metric.MeterProvider
+	queries       *models.Queries
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
@@ -67,6 +75,10 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	authContext := AuthContext{
 		settingsController: web.SettingsController{Queries: queries},
 		userController:     userController,
+		logger:             logger,
+		traceProvider:      di.TraceProvider,
+		meterProvider:      di.MeterProvider,
+		queries:            queries,
 	}
 
 	authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))

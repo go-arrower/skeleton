@@ -1,7 +1,20 @@
 package init
 
-import "github.com/go-arrower/arrower/jobs"
+import (
+	"github.com/go-arrower/arrower/jobs"
+	"github.com/go-arrower/arrower/mw"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+)
 
 // registerJobs initialises all jobs to be run by this Context.
 func (c *AuthContext) registerJobs(queue jobs.Queue) {
+	_ = queue.RegisterJobFunc(mw.TracedU(c.traceProvider,
+		mw.MetricU(c.meterProvider,
+			mw.LoggedU(c.logger,
+				application.SendNewUserVerificationEmail(c.logger, c.queries),
+			),
+		),
+	))
+
 }

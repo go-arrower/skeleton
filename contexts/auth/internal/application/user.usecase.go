@@ -127,7 +127,7 @@ type (
 		User user.User
 	}
 
-	SendNewUserVerificationEmail struct {
+	NewUserVerificationEmail struct {
 		UserID     user.ID
 		OccurredAt time.Time
 		IP         string
@@ -172,7 +172,7 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)
 		}
 
-		err = queue.Enqueue(ctx, SendNewUserVerificationEmail{
+		err = queue.Enqueue(ctx, NewUserVerificationEmail{
 			UserID:     user.ID(usr.ID.String()),
 			OccurredAt: time.Now().UTC(),
 			IP:         in.IP,
@@ -197,6 +197,36 @@ func RegisterUser(
 			ID:    user.ID(usr.ID.String()),
 			Login: user.Login(usr.Login),
 		}}, nil
+	}
+}
+
+func SendNewUserVerificationEmail(
+	logger alog.Logger,
+	queries *models.Queries,
+) func(context.Context, NewUserVerificationEmail) error {
+	return func(ctx context.Context, in NewUserVerificationEmail) error {
+		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		if err != nil {
+			return fmt.Errorf("could not get user: %w", err)
+		}
+
+		verify := NewVerificationService(queries)
+
+		token, err := verify.NewVerificationToken(ctx, usr)
+		if err != nil {
+			return fmt.Errorf("could not generate verification token: %w", err)
+		}
+
+		// later: instead of logging this => send it to an email output port
+		logger.InfoCtx(ctx, "send verification email to user",
+			slog.String("token", token.Token().String()),
+			slog.String("device", in.Device.Name()+" "+in.Device.OS()),
+			slog.String("ip", in.IP),
+			slog.String("time", in.OccurredAt.String()),
+			slog.String("email", string(usr.Login)),
+		)
+
+		return nil
 	}
 }
 

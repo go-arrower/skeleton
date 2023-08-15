@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
@@ -240,12 +241,34 @@ func TestRegisterUser(t *testing.T) {
 		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
 		assert.NotEmpty(t, sessions[1].UserID)
 
-		queue.Assert(t).Queued(application.SendNewUserVerificationEmail{}, 1)
-		job := queue.GetFirstOf(application.SendNewUserVerificationEmail{}).(application.SendNewUserVerificationEmail)
+		queue.Assert(t).Queued(application.NewUserVerificationEmail{}, 1)
+		job := queue.GetFirstOf(application.NewUserVerificationEmail{}).(application.NewUserVerificationEmail)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
 		assert.Equal(t, testdata.IP, job.IP)
 		assert.Equal(t, user.NewDevice(testdata.UserAgent), job.Device)
+	})
+}
+
+func TestSendNewUserVerificationEmail(t *testing.T) {
+	t.Parallel()
+
+	t.Run("send new verification email", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		cmd := application.SendNewUserVerificationEmail(alog.NewDevelopment(), queries)
+		err := cmd(ctx, application.NewUserVerificationEmail{
+			UserID:     testdata.UserNotVerifiedUserID,
+			OccurredAt: time.Now().UTC(),
+			IP:         testdata.IP,
+			Device:     user.NewDevice(testdata.UserAgent),
+		})
+		assert.NoError(t, err)
+
+		// later: assert the email has been sent via the email interface
 	})
 }
 
