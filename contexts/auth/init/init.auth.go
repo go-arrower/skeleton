@@ -71,6 +71,15 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			),
 		),
 	)
+	userController.CmdVerifyUser = mw.TracedU(di.TraceProvider,
+		mw.MetricU(di.MeterProvider,
+			mw.LoggedU(logger,
+				mw.ValidateU(nil,
+					application.VerifyUser(queries),
+				),
+			),
+		),
+	)
 
 	authContext := AuthContext{
 		settingsController: web.SettingsController{Queries: queries},

@@ -231,6 +231,31 @@ func SendNewUserVerificationEmail(
 }
 
 type (
+	VerifyUserRequest struct {
+		Token  uuid.UUID `validate:"required"`
+		UserID user.ID   `validate:"required"`
+	}
+)
+
+func VerifyUser(queries *models.Queries) func(context.Context, VerifyUserRequest) error {
+	return func(ctx context.Context, in VerifyUserRequest) error {
+		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		if err != nil {
+			return fmt.Errorf("could not get user: %w", err)
+		}
+
+		verify := NewVerificationService(queries)
+
+		err = verify.Verify(ctx, &usr, in.Token)
+		if err != nil {
+			return fmt.Errorf("could not verify user: %w", err)
+		}
+
+		return nil
+	}
+}
+
+type (
 	ShowUserRequest struct {
 		UserID user.ID
 	}

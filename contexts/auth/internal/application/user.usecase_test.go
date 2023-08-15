@@ -272,6 +272,32 @@ func TestSendNewUserVerificationEmail(t *testing.T) {
 	})
 }
 
+func TestVerifyUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify user", func(t *testing.T) {
+		t.Parallel()
+
+		// setup
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		queries := models.New(pg)
+
+		usr, _ := repository.GetUserByID(ctx, queries, testdata.UserNotVerifiedUserID)
+		verify := application.NewVerificationService(queries)
+		token, _ := verify.NewVerificationToken(ctx, usr)
+
+		// action
+		err := application.VerifyUser(queries)(ctx, application.VerifyUserRequest{
+			Token:  token.Token(),
+			UserID: testdata.UserNotVerifiedUserID,
+		})
+		assert.NoError(t, err)
+
+		usr, _ = repository.GetUserByID(ctx, queries, testdata.UserNotVerifiedUserID)
+		assert.True(t, usr.IsVerified())
+	})
+}
+
 func TestShowUser(t *testing.T) {
 	t.Parallel()
 

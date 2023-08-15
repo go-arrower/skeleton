@@ -13,6 +13,7 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) {
 	router.GET("/logout", c.userController.Logout()).Name = auth.RouteLogout // todo make POST to prevent CSRF
 	router.GET("/register", c.userController.Create())
 	router.POST("/register", c.userController.Register())
+	router.GET("/:userID/verify/:token", c.userController.Verify()).Name = auth.RouteVerifyUser
 
 	router.GET("/profile", nil, auth.EnsureUserIsLoggedInMiddleware)
 }

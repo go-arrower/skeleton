@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -38,6 +39,7 @@ type UserController struct {
 	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
 	CmdShowUserUser func(context.Context, application.ShowUserRequest) (application.ShowUserResponse, error)
+	CmdVerifyUser   func(context.Context, application.VerifyUserRequest) error
 
 	knownDeviceKeyPairs []securecookie.Codec
 }
@@ -290,6 +292,28 @@ func (uc UserController) Register() func(echo.Context) error {
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
+	}
+}
+
+func (uc UserController) Verify() func(echo.Context) error {
+	return func(c echo.Context) error {
+		userID := c.Param("userID")
+		t := c.Param("token")
+
+		token, err := uuid.Parse(t)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		err = uc.CmdVerifyUser(c.Request().Context(), application.VerifyUserRequest{
+			Token:  token,
+			UserID: user.ID(userID),
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/")
 	}
 }
 

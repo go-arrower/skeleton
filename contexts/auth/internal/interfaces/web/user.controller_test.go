@@ -9,12 +9,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
 )
 
@@ -384,11 +387,44 @@ func TestUserController_Register(t *testing.T) {
 	})
 }
 
+func TestUserController_Verify(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify token", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		echoRouter := newTestRouter()
+		c := echoRouter.NewContext(req, rec)
+		c.SetParamNames("userID", "token")
+		c.SetParamValues(string(userID), validToken.String())
+
+		if assert.NoError(t, web.UserController{
+			CmdVerifyUser: func(ctx context.Context, in application.VerifyUserRequest) error {
+				assert.Equal(t, validToken, in.Token)
+				assert.Equal(t, userID, in.UserID)
+
+				return nil
+			},
+		}.Verify()(c)) {
+			assert.Equal(t, http.StatusSeeOther, rec.Code)
+			assert.Equal(t, "/", rec.Header().Get(echo.HeaderLocation))
+		}
+	})
+}
+
 // --- --- --- test data --- --- ---
 
 var errUCFailed = errors.New("use case error")
 
-const secret = "secret"
+const (
+	secret = "secret"
+	userID = user.ID("00000000-0000-0000-0000-000000000000")
+)
+
+var validToken = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
 type emptyRenderer struct{}
 

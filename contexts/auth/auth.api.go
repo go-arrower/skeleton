@@ -26,10 +26,10 @@ const (
 )
 
 const (
-	RouteLogin       = "auth.login"
-	RouteLogout      = "auth.logout"
-	RouteVerifyEmail = ""
-	RouteResetPW     = ""
+	RouteLogin      = "auth.login"
+	RouteLogout     = "auth.logout"
+	RouteVerifyUser = "auth.verify_user"
+	RouteResetPW    = ""
 )
 
 type User struct { //nolint:govet // fieldalignment less important than grouping of fields.
