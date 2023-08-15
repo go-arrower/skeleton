@@ -83,6 +83,21 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 }
 
 func SaveUser(ctx context.Context, queries *models.Queries, user user.User) error {
+	verifiedAt := pgtype.Timestamptz{Time: user.Verified.At(), Valid: true, InfinityModifier: pgtype.Finite}
+	if user.Verified.At() == (time.Time{}) {
+		verifiedAt = pgtype.Timestamptz{}
+	}
+
+	blockedAt := pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true, InfinityModifier: pgtype.Finite}
+	if user.Blocked.At() == (time.Time{}) {
+		blockedAt = pgtype.Timestamptz{}
+	}
+
+	superUserAt := pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true, InfinityModifier: pgtype.Finite}
+	if user.SuperUser.At() == (time.Time{}) {
+		superUserAt = pgtype.Timestamptz{}
+	}
+
 	_, err := queries.UpsertUser(ctx, models.UpsertUserParams{
 		ID: uuid.MustParse(string(user.ID)),
 		// only required for insert, otherwise the time will not be updated.
@@ -97,9 +112,9 @@ func SaveUser(ctx context.Context, queries *models.Queries, user user.User) erro
 		TimeZone:     string(user.TimeZone),
 		PictureUrl:   string(user.ProfilePictureURL),
 		Profile:      map[string]*string{}, // todo
-		VerifiedAt:   pgtype.Timestamptz{Time: user.Verified.At(), Valid: true, InfinityModifier: pgtype.Finite},
-		BlockedAt:    pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true, InfinityModifier: pgtype.Finite},
-		SuperUserAt:  pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true, InfinityModifier: pgtype.Finite},
+		VerifiedAt:   verifiedAt,
+		BlockedAt:    blockedAt,
+		SuperUserAt:  superUserAt,
 	})
 	if err != nil {
 		return fmt.Errorf("could not upsert user: %w", err)
