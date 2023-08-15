@@ -62,7 +62,7 @@ type VerificationService struct {
 func (s *VerificationService) NewVerificationToken(ctx context.Context, user user.User) (VerificationToken, error) {
 	token := VerificationToken{
 		token:      uuid.New(),
-		validUntil: time.Now().Add(s.validTime).UTC(),
+		validUntil: time.Now().UTC().Add(s.validTime),
 		userID:     user.ID,
 	}
 

@@ -50,7 +50,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
 		usr, err := repository.GetUserByLogin(ctx, queries, in.LoginEmail)
 		if err != nil {
-			logger.Log(ctx, alog.LevelInfo, "login failed",
+			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
 			)
@@ -59,7 +59,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 		}
 
 		if !usr.IsVerified() {
-			logger.Log(ctx, alog.LevelInfo, "login failed",
+			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
 			)
@@ -68,7 +68,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 		}
 
 		if usr.IsBlocked() {
-			logger.Log(ctx, alog.LevelInfo, "login failed",
+			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
 			)
@@ -77,7 +77,7 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 		}
 
 		if !usr.PasswordHash.Matches(in.Password) {
-			logger.Log(ctx, alog.LevelInfo, "login failed",
+			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),
 			)
@@ -143,7 +143,7 @@ func RegisterUser(
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
 		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil {
-			logger.Log(ctx, alog.LevelInfo, "register new user failed",
+			logger.Log(ctx, slog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
 				slog.String("ip", in.IP),
 			)
@@ -153,7 +153,7 @@ func RegisterUser(
 
 		pwHash, err := user.NewStrongPasswordHash(in.Password)
 		if err != nil {
-			logger.Log(ctx, alog.LevelInfo, "register new user failed",
+			logger.Log(ctx, slog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
 				slog.String("ip", in.IP),
 			)
@@ -162,11 +162,11 @@ func RegisterUser(
 		}
 
 		usr, err := queries.CreateUser(ctx, models.CreateUserParams{
-			ID:           uuid.MustParse(string(user.NewID())),
-			Login:        in.RegisterEmail,
-			PasswordHash: string(pwHash),
-			VerifiedAt:   pgtype.Timestamptz{}, //nolint:exhaustruct
-			BlockedAt:    pgtype.Timestamptz{}, //nolint:exhaustruct
+			ID:            uuid.MustParse(string(user.NewID())),
+			Login:         in.RegisterEmail,
+			PasswordHash:  string(pwHash),
+			VerifiedAtUtc: pgtype.Timestamptz{}, //nolint:exhaustruct
+			BlockedAtUtc:  pgtype.Timestamptz{}, //nolint:exhaustruct
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)

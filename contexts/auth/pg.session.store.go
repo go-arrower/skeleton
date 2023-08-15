@@ -136,7 +136,7 @@ func (ss *PGSessionStore) save(ctx context.Context, session *sessions.Session) e
 	err = ss.queries.UpsertSessionData(ctx, models.UpsertSessionDataParams{
 		Key:  []byte(session.ID),
 		Data: []byte(encoded),
-		ExpiresAt: pgtype.Timestamptz{
+		ExpiresAtUtc: pgtype.Timestamptz{
 			Time:             time.Now().Add(time.Second * time.Duration(session.Options.MaxAge)),
 			Valid:            true,
 			InfinityModifier: pgtype.Finite,

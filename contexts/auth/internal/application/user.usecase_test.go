@@ -232,8 +232,8 @@ func TestRegisterUser(t *testing.T) {
 
 		dbUser, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
 		assert.NoError(t, err)
-		assert.Empty(t, dbUser.VerifiedAt)
-		assert.Empty(t, dbUser.BlockedAt)
+		assert.Empty(t, dbUser.VerifiedAtUtc)
+		assert.Empty(t, dbUser.BlockedAtUtc)
 
 		// assert session got updated with device info
 		sessions, _ := queries.AllSessions(ctx)

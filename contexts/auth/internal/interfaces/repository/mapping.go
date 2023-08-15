@@ -49,16 +49,16 @@ func userFromModel(dbUser models.AuthUser, sessions []models.AuthSession) user.U
 		Login:             user.Login(dbUser.Login),
 		PasswordHash:      user.PasswordHash(dbUser.PasswordHash),
 		RegisteredAt:      dbUser.CreatedAt.Time,
-		Name:              user.NewName(dbUser.FirstName, dbUser.LastName, dbUser.Name),
+		Name:              user.NewName(dbUser.NameFirstname, dbUser.NameLastname, dbUser.NameDisplayname),
 		Birthday:          user.Birthday{}, // todo
 		Locale:            user.Locale{},   // todo
 		TimeZone:          user.TimeZone(dbUser.TimeZone),
 		ProfilePictureURL: user.URL(dbUser.PictureUrl),
 		Profile:           user.Profile{},
 		Profile2:          prof, // todo
-		Verified:          user.BoolFlag(dbUser.VerifiedAt.Time),
-		Blocked:           user.BoolFlag(dbUser.BlockedAt.Time),
-		SuperUser:         user.BoolFlag(dbUser.SuperUserAt.Time),
+		Verified:          user.BoolFlag(dbUser.VerifiedAtUtc.Time),
+		Blocked:           user.BoolFlag(dbUser.BlockedAtUtc.Time),
+		SuperUser:         user.BoolFlag(dbUser.SuperuserAtUtc.Time),
 		Sessions:          sessionsFromModel(sessions),
 	}
 }
@@ -74,7 +74,7 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 		sessions[i] = user.Session{
 			ID:        string(sess[i].Key),
 			CreatedAt: sess[i].CreatedAt.Time,
-			ExpiresAt: sess[i].ExpiresAt.Time,
+			ExpiresAt: sess[i].ExpiresAtUtc.Time,
 			Device:    user.NewDevice(sess[i].UserAgent),
 		}
 	}
@@ -101,20 +101,20 @@ func SaveUser(ctx context.Context, queries *models.Queries, user user.User) erro
 	_, err := queries.UpsertUser(ctx, models.UpsertUserParams{
 		ID: uuid.MustParse(string(user.ID)),
 		// only required for insert, otherwise the time will not be updated.
-		CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true, InfinityModifier: pgtype.Finite},
-		Login:        string(user.Login),
-		PasswordHash: string(user.PasswordHash),
-		FirstName:    user.Name.FirstName(),
-		LastName:     user.Name.LastName(),
-		Name:         user.Name.DisplayName(),
-		Birthday:     pgtype.Date{}, // todo
-		Locale:       language.Tag(user.Locale).String(),
-		TimeZone:     string(user.TimeZone),
-		PictureUrl:   string(user.ProfilePictureURL),
-		Profile:      map[string]*string{}, // todo
-		VerifiedAt:   verifiedAt,
-		BlockedAt:    blockedAt,
-		SuperUserAt:  superUserAt,
+		CreatedAt:       pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true, InfinityModifier: pgtype.Finite},
+		Login:           string(user.Login),
+		PasswordHash:    string(user.PasswordHash),
+		NameFirstname:   user.Name.FirstName(),
+		NameLastname:    user.Name.LastName(),
+		NameDisplayname: user.Name.DisplayName(),
+		Birthday:        pgtype.Date{}, // todo
+		Locale:          language.Tag(user.Locale).String(),
+		TimeZone:        string(user.TimeZone),
+		PictureUrl:      string(user.ProfilePictureURL),
+		Profile:         map[string]*string{}, // todo
+		VerifiedAtUtc:   verifiedAt,
+		BlockedAtUtc:    blockedAt,
+		SuperuserAtUtc:  superUserAt,
 	})
 	if err != nil {
 		return fmt.Errorf("could not upsert user: %w", err)

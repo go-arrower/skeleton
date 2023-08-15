@@ -24,9 +24,9 @@ FROM auth.session
 WHERE key = $1;
 
 -- name: UpsertSessionData :exec
-INSERT INTO auth.session (key, data, expires_at)
+INSERT INTO auth.session (key, data, expires_at_utc)
 VALUES ($1, $2, $3)
-ON CONFLICT (key) DO UPDATE SET (data, expires_at) = ($2, $3);
+ON CONFLICT (key) DO UPDATE SET (data, expires_at_utc) = ($2, $3);
 
 -- name: UpsertNewSession :exec
 INSERT INTO auth.session (key, user_id, user_agent)
@@ -55,17 +55,17 @@ FROM auth.user
 WHERE login = $1;
 
 -- name: CreateUser :one
-INSERT INTO auth.user (id, login, password_hash, verified_at, blocked_at)
+INSERT INTO auth.user (id, login, password_hash, verified_at_utc, blocked_at_utc)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: UpsertUser :one
-INSERT INTO auth.user(id, created_at, login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
-                      picture_url, profile, verified_at, blocked_at, super_user_at)
+INSERT INTO auth.user(id, created_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+                      picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-ON CONFLICT (id) DO UPDATE SET (login, password_hash, first_name, last_name, name, birthday, locale, time_zone,
-                                picture_url, profile, verified_at, blocked_at,
-                                super_user_at) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+ON CONFLICT (id) DO UPDATE SET (login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+                                picture_url, profile, verified_at_utc, blocked_at_utc,
+                                superuser_at_utc) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING *;
 
 -- DeleteUser :exec

@@ -10,32 +10,32 @@ import (
 )
 
 type AuthSession struct {
-	Key       []byte
-	Data      []byte
-	ExpiresAt pgtype.Timestamptz
-	UserID    uuid.NullUUID
-	UserAgent string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	Key          []byte
+	Data         []byte
+	ExpiresAtUtc pgtype.Timestamptz
+	UserID       uuid.NullUUID
+	UserAgent    string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }
 
 type AuthUser struct {
-	ID           uuid.UUID
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	Login        string
-	PasswordHash string
-	FirstName    string
-	LastName     string
-	Name         string
-	Birthday     pgtype.Date
-	Locale       string
-	TimeZone     string
-	PictureUrl   string
-	Profile      pgtype.Hstore
-	VerifiedAt   pgtype.Timestamptz
-	BlockedAt    pgtype.Timestamptz
-	SuperUserAt  pgtype.Timestamptz
+	ID              uuid.UUID
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	Login           string
+	PasswordHash    string
+	NameFirstname   string
+	NameLastname    string
+	NameDisplayname string
+	Birthday        pgtype.Date
+	Locale          string
+	TimeZone        string
+	PictureUrl      string
+	Profile         pgtype.Hstore
+	VerifiedAtUtc   pgtype.Timestamptz
+	BlockedAtUtc    pgtype.Timestamptz
+	SuperuserAtUtc  pgtype.Timestamptz
 }
 
 type AuthUserVerification struct {
