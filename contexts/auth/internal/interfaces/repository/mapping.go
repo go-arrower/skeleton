@@ -19,7 +19,7 @@ func GetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail str
 		return user.User{}, fmt.Errorf("%w", err)
 	}
 
-	return userFromModel(dbUser, nil), nil
+	return userFromModelWithSession(dbUser, nil), nil
 }
 
 func GetUserByID(ctx context.Context, queries *models.Queries, userID user.ID) (user.User, error) {
@@ -33,10 +33,34 @@ func GetUserByID(ctx context.Context, queries *models.Queries, userID user.ID) (
 		return user.User{}, fmt.Errorf("%w", err)
 	}
 
-	return userFromModel(dbUser, sess), nil
+	return userFromModelWithSession(dbUser, sess), nil
 }
 
-func userFromModel(dbUser models.AuthUser, sessions []models.AuthSession) user.User {
+func usersFromModel(ctx context.Context, queries *models.Queries, dbUsers []models.AuthUser) ([]user.User, error) {
+	users := make([]user.User, len(dbUsers))
+
+	for i, u := range dbUsers {
+		user, err := userFromModel(ctx, queries, u)
+		if err != nil {
+			return nil, err
+		}
+
+		users[i] = user
+	}
+
+	return users, nil
+}
+
+func userFromModel(ctx context.Context, queries *models.Queries, dbUser models.AuthUser) (user.User, error) {
+	sess, err := queries.FindSessionsByUserID(ctx, uuid.NullUUID{UUID: dbUser.ID, Valid: true})
+	if err != nil {
+		return user.User{}, fmt.Errorf("could not get sessions for user: %s: %v", dbUser.ID.String(), err)
+	}
+
+	return userFromModelWithSession(dbUser, sess), nil
+}
+
+func userFromModelWithSession(dbUser models.AuthUser, sessions []models.AuthSession) user.User {
 	prof := make(map[string]*string)
 
 	profile := dbUser.Profile.Scan(&prof)
@@ -83,6 +107,15 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 }
 
 func SaveUser(ctx context.Context, queries *models.Queries, user user.User) error {
+	_, err := queries.UpsertUser(ctx, userToModel(user))
+	if err != nil {
+		return fmt.Errorf("could not upsert user: %v", err)
+	}
+
+	return nil
+}
+
+func userToModel(user user.User) models.UpsertUserParams {
 	verifiedAt := pgtype.Timestamptz{Time: user.Verified.At(), Valid: true, InfinityModifier: pgtype.Finite}
 	if user.Verified.At() == (time.Time{}) {
 		verifiedAt = pgtype.Timestamptz{}
@@ -98,7 +131,7 @@ func SaveUser(ctx context.Context, queries *models.Queries, user user.User) erro
 		superUserAt = pgtype.Timestamptz{}
 	}
 
-	_, err := queries.UpsertUser(ctx, models.UpsertUserParams{
+	return models.UpsertUserParams{
 		ID: uuid.MustParse(string(user.ID)),
 		// only required for insert, otherwise the time will not be updated.
 		CreatedAt:       pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true, InfinityModifier: pgtype.Finite},
@@ -115,10 +148,5 @@ func SaveUser(ctx context.Context, queries *models.Queries, user user.User) erro
 		VerifiedAtUtc:   verifiedAt,
 		BlockedAtUtc:    blockedAt,
 		SuperuserAtUtc:  superUserAt,
-	})
-	if err != nil {
-		return fmt.Errorf("could not upsert user: %w", err)
 	}
-
-	return nil
 }

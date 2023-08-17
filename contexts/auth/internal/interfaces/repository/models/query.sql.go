@@ -97,8 +97,64 @@ func (q *Queries) AllUsers(ctx context.Context) ([]AuthUser, error) {
 	return items, nil
 }
 
+const allUsersByIDs = `-- name: AllUsersByIDs :many
+SELECT id, created_at, updated_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone, picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc
+FROM auth.user
+WHERE id = ANY ($1::uuid[])
+`
+
+func (q *Queries) AllUsersByIDs(ctx context.Context, dollar_1 []uuid.UUID) ([]AuthUser, error) {
+	rows, err := q.db.Query(ctx, allUsersByIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuthUser
+	for rows.Next() {
+		var i AuthUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Login,
+			&i.PasswordHash,
+			&i.NameFirstname,
+			&i.NameLastname,
+			&i.NameDisplayname,
+			&i.Birthday,
+			&i.Locale,
+			&i.TimeZone,
+			&i.PictureUrl,
+			&i.Profile,
+			&i.VerifiedAtUtc,
+			&i.BlockedAtUtc,
+			&i.SuperuserAtUtc,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*)
+FROM auth.user
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO auth.user (id, login, password_hash, verified_at_utc, blocked_at_utc)
+INSERT
+INTO auth.user (id, login, password_hash, verified_at_utc, blocked_at_utc)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, created_at, updated_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone, picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc
 `
@@ -157,6 +213,16 @@ func (q *Queries) CreateVerificationToken(ctx context.Context, arg CreateVerific
 	return err
 }
 
+const deleteAllUsers = `-- name: DeleteAllUsers :exec
+DELETE
+FROM auth.user
+`
+
+func (q *Queries) DeleteAllUsers(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteAllUsers)
+	return err
+}
+
 const deleteSessionByKey = `-- name: DeleteSessionByKey :exec
 DELETE
 FROM auth.session
@@ -165,6 +231,17 @@ WHERE key = $1
 
 func (q *Queries) DeleteSessionByKey(ctx context.Context, key []byte) error {
 	_, err := q.db.Exec(ctx, deleteSessionByKey, key)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE
+FROM auth.user
+WHERE id = ANY ($1::uuid[])
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, dollar_1 []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUser, dollar_1)
 	return err
 }
 
@@ -311,10 +388,12 @@ func (q *Queries) UpsertSessionData(ctx context.Context, arg UpsertSessionDataPa
 }
 
 const upsertUser = `-- name: UpsertUser :one
-INSERT INTO auth.user(id, created_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+INSERT INTO auth.user(id, created_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday,
+                      locale, time_zone,
                       picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-ON CONFLICT (id) DO UPDATE SET (login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+ON CONFLICT (id) DO UPDATE SET (login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale,
+                                time_zone,
                                 picture_url, profile, verified_at_utc, blocked_at_utc,
                                 superuser_at_utc) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id, created_at, updated_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone, picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc
@@ -376,6 +455,28 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (AuthUse
 		&i.SuperuserAtUtc,
 	)
 	return i, err
+}
+
+const userExistsByID = `-- name: UserExistsByID :one
+SELECT EXISTS(SELECT 1 FROM auth.user WHERE id = $1) AS "exists"
+`
+
+func (q *Queries) UserExistsByID(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, userExistsByID, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const userExistsByLogin = `-- name: UserExistsByLogin :one
+SELECT EXISTS(SELECT 1 FROM auth.user WHERE login = $1) AS "exists"
+`
+
+func (q *Queries) UserExistsByLogin(ctx context.Context, login string) (bool, error) {
+	row := q.db.QueryRow(ctx, userExistsByLogin, login)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const verificationTokenByToken = `-- name: VerificationTokenByToken :one

@@ -38,7 +38,7 @@ type User struct { //nolint:govet // fieldalignment less important than grouping
 
 	FirstName         string
 	LastName          string
-	Name              string // DisplayName
+	DisplayName       string
 	Birthday          string // make struct to prevent issues with tz or define format? // TYPES OR PLAIN?
 	Locale            string
 	TimeZone          string

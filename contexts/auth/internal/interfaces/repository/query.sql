@@ -44,6 +44,11 @@ SELECT *
 FROM auth.user
 ORDER BY login;
 
+-- name: AllUsersByIDs :many
+SELECT *
+FROM auth.user
+WHERE id = ANY ($1::uuid[]);
+
 -- name: FindUserByID :one
 SELECT *
 FROM auth.user
@@ -54,24 +59,41 @@ SELECT *
 FROM auth.user
 WHERE login = $1;
 
+-- name: UserExistsByID :one
+SELECT EXISTS(SELECT 1 FROM auth.user WHERE id = $1) AS "exists";
+
+-- name: UserExistsByLogin :one
+SELECT EXISTS(SELECT 1 FROM auth.user WHERE login = $1) AS "exists";
+
+-- name: CountUsers :one
+SELECT COUNT(*)
+FROM auth.user;
+
 -- name: CreateUser :one
-INSERT INTO auth.user (id, login, password_hash, verified_at_utc, blocked_at_utc)
+INSERT
+INTO auth.user (id, login, password_hash, verified_at_utc, blocked_at_utc)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: UpsertUser :one
-INSERT INTO auth.user(id, created_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+INSERT INTO auth.user(id, created_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday,
+                      locale, time_zone,
                       picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-ON CONFLICT (id) DO UPDATE SET (login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone,
+ON CONFLICT (id) DO UPDATE SET (login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale,
+                                time_zone,
                                 picture_url, profile, verified_at_utc, blocked_at_utc,
                                 superuser_at_utc) = ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING *;
 
--- DeleteUser :exec
+-- name: DeleteUser :exec
 DELETE
 FROM auth.user
-WHERE id = $1;
+WHERE id = ANY ($1::uuid[]);
+
+-- name: DeleteAllUsers :exec
+DELETE
+FROM auth.user;
 
 -- name: CreateVerificationToken :exec
 INSERT INTO auth.user_verification(token, user_id, valid_until_utc)

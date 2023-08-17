@@ -12,6 +12,8 @@ static-check: ## Run static code checks
 .PHONY: generate
 generate: ## Generate all code to run the service
 	go generate ./...
+	@# the experimental flag is required for pgx compatible code, see: https://docs.sqlc.dev/en/stable/guides/using-go-and-pgx.html?highlight=experimental#getting-started
+	sqlc generate --experimental
 
 .PHONY: test
 test: static-check generate test-unit test-integration ## Run all tests
@@ -33,6 +35,7 @@ test-integration:
 .PHONY:dev-tools
 dev-tools: ## Initialise this machine with development dependencies
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b $(go env GOPATH)/bin v1.50.1
+	go install github.com/kyleconroy/sqlc/cmd/sqlc@latest
 
 .PHONY: dev-upgrade
 dev-upgrade:

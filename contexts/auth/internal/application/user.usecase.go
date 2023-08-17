@@ -142,7 +142,7 @@ func RegisterUser(
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
-		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil {
+		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil { // todo repo: existsByLogin
 			logger.Log(ctx, slog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
 				slog.String("ip", in.IP),
