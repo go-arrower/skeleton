@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
+
 	"github.com/go-arrower/arrower/mw"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -41,6 +43,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = tracer
 
 	queries := models.New(di.DB)
+	repo, _ := repository.NewPostgresRepository(di.DB)
 
 	userController := web.NewUserController([]byte("secret"))
 	userController.Queries = queries
@@ -48,7 +51,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.LoginUser(di.Logger, queries, di.ArrowerQueue),
+					application.LoginUser(di.Logger, repo, di.ArrowerQueue),
 				),
 			),
 		),

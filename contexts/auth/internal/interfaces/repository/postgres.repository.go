@@ -117,9 +117,9 @@ func (repo *PostgresRepository) Save(ctx context.Context, usr user.User) error {
 		return fmt.Errorf("missing ID: %w", user.ErrPersistenceFailed)
 	}
 
-	_, err := repo.db.ConnOrTX(ctx).UpsertUser(ctx, userToModel(usr))
+	err := repo.saveUser(ctx, usr)
 	if err != nil {
-		return fmt.Errorf("%w: could not save user: %s: %w", user.ErrPersistenceFailed, usr.ID, err)
+		return err
 	}
 
 	return nil
@@ -131,9 +131,30 @@ func (repo *PostgresRepository) SaveAll(ctx context.Context, users []user.User) 
 			return fmt.Errorf("missing ID: %w", user.ErrPersistenceFailed)
 		}
 
-		_, err := repo.db.ConnOrTX(ctx).UpsertUser(ctx, userToModel(usr))
+		err := repo.saveUser(ctx, usr)
 		if err != nil {
-			return fmt.Errorf("%w: could not save user: %s: %w", user.ErrPersistenceFailed, usr.ID, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+// saveUser takes the user.User entity and persist it together with its user.Sessions.
+func (repo *PostgresRepository) saveUser(ctx context.Context, usr user.User) error {
+	_, err := repo.db.ConnOrTX(ctx).UpsertUser(ctx, userToModel(usr))
+	if err != nil {
+		return fmt.Errorf("%w: could not save user: %s: %w", user.ErrPersistenceFailed, usr.ID, err)
+	}
+
+	for _, sess := range usr.Sessions {
+		err = repo.db.ConnOrTX(ctx).UpsertNewSession(ctx, models.UpsertNewSessionParams{
+			Key:       []byte(sess.ID),
+			UserID:    uuid.NullUUID{UUID: uuid.MustParse(string(usr.ID)), Valid: true},
+			UserAgent: sess.Device.UserAgent(),
+		})
+		if err != nil {
+			return fmt.Errorf("%w: could not save session: %s user: %s: %w", user.ErrPersistenceFailed, sess.ID, usr.ID, err)
 		}
 	}
 

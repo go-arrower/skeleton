@@ -46,9 +46,9 @@ type (
 	}
 )
 
-func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+func LoginUser(logger alog.Logger, repo user.Repository, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		usr, err := repository.GetUserByLogin(ctx, queries, in.LoginEmail)
+		usr, err := repo.FindByLogin(ctx, user.Login(in.LoginEmail))
 		if err != nil {
 			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
@@ -85,16 +85,20 @@ func LoginUser(logger alog.Logger, queries *models.Queries, queue jobs.Enqueuer)
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		// The session is not persisted until the end of the controller.
+		// The session is not valid until the end of the controller.
 		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		err = queries.UpsertNewSession(ctx, models.UpsertNewSessionParams{
-			Key:       []byte(in.SessionKey),
-			UserID:    uuid.NullUUID{UUID: uuid.MustParse(string(usr.ID)), Valid: true},
-			UserAgent: in.UserAgent,
+		usr.Sessions = append(usr.Sessions, user.Session{
+			ID:        in.SessionKey,
+			Device:    user.NewDevice(in.UserAgent),
+			CreatedAt: time.Now().UTC(),
+			// ExpiresAt: // will be set & updated via the session store
 		})
+
+		err = repo.Save(ctx, usr)
 		if err != nil {
-			return LoginUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
+			return LoginUserResponse{}, fmt.Errorf("could not update user session: %w", err)
 		}
+		// FIXME: add a method to user or a domain service, that ensures session is not added, if one with same ID already exists
 
 		if in.IsNewDevice {
 			err = queue.Enqueue(ctx, SendConfirmationNewDeviceLoggedIn{

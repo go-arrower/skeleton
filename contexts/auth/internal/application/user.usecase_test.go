@@ -5,7 +5,6 @@ package application_test
 import (
 	"bytes"
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -27,39 +26,23 @@ var (
 	pgHandler *postgres.Handler
 )
 
-func TestMain(m *testing.M) {
-	handler, cleanup := tests.GetDBConnectionForIntegrationTesting(ctx)
-	pgHandler = handler
-
-	//
-	// Run tests
-	code := m.Run()
-
-	//
-	// Cleanup
-	_ = handler.Shutdown(ctx)
-	_ = cleanup()
-
-	os.Exit(code)
-}
-
 func TestLoginUser(t *testing.T) {
 	t.Parallel()
 
 	t.Run("password does not match", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, testdata.User0)
 
 		buf := bytes.Buffer{}
 		logger := alog.NewTest(&buf)
 		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.LoginUser(logger, queries, nil)
+		cmd := application.LoginUser(logger, repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: testdata.ValidUserLogin,
+			LoginEmail: testdata.User0Login,
 			Password:   "wrong-password",
 		})
 		assert.Error(t, err)
@@ -72,10 +55,10 @@ func TestLoginUser(t *testing.T) {
 	t.Run("login fails - user not verified", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, testdata.UserNotVerified)
 
-		cmd := application.LoginUser(alog.NewTest(nil), queries, nil)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.NotVerifiedUserLogin,
@@ -88,10 +71,10 @@ func TestLoginUser(t *testing.T) {
 	t.Run("login fails - user blocked", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, testdata.UserBlocked)
 
-		cmd := application.LoginUser(alog.NewTest(nil), queries, nil)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.BlockedUserLogin,
@@ -104,11 +87,11 @@ func TestLoginUser(t *testing.T) {
 	t.Run("login succeeds", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, testdata.User0)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(alog.NewTest(nil), queries, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
 
 		res, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: testdata.ValidUserLogin,
@@ -122,11 +105,10 @@ func TestLoginUser(t *testing.T) {
 		assert.Equal(t, user.Login(testdata.ValidUserLogin), res.User.Login)
 		assert.NotEmpty(t, testdata.ValidUserLogin, res.User.ID)
 
-		// assert session got updated with device info
-		sessions, _ := queries.AllSessions(ctx)
-		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
-		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
-		assert.NotEmpty(t, sessions[1].UserID)
+		// assert session got updated with device info // todo IF repo gets methods to retrieve sessions directly: use them instead
+		usr, _ := repo.FindByID(ctx, testdata.User0.ID)
+		assert.Len(t, usr.Sessions, 1)
+		assert.Equal(t, user.NewDevice(testdata.UserAgent), usr.Sessions[0].Device)
 
 		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 0)
 	})
@@ -134,11 +116,11 @@ func TestLoginUser(t *testing.T) {
 	t.Run("unknown device - send email about login to user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, testdata.User0)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(alog.NewTest(nil), queries, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail:  testdata.ValidUserLogin,

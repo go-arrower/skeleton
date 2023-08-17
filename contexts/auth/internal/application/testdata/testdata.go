@@ -17,7 +17,29 @@ const (
 )
 
 const (
+	User0Login            = "0@test.com"
 	UserIDZero            = user.ID("00000000-0000-0000-0000-000000000000")
 	UserNotVerifiedUserID = user.ID("00000000-0000-0000-0000-000000000001")
 	UserBlockedUserID     = user.ID("00000000-0000-0000-0000-000000000002")
+)
+
+var (
+	User0 = user.User{
+		ID:           UserIDZero,
+		Login:        User0Login,
+		PasswordHash: user.PasswordHash(StrongPasswordHash),
+		Verified:     user.BoolFlag{}.SetTrue(),
+	}
+	UserNotVerified = user.User{
+		ID:           UserIDZero,
+		Login:        User0Login,
+		PasswordHash: user.PasswordHash(StrongPasswordHash),
+		Verified:     user.BoolFlag{}.SetFalse(),
+	}
+	UserBlocked = user.User{
+		ID:           UserIDZero,
+		Login:        User0Login,
+		PasswordHash: user.PasswordHash(StrongPasswordHash),
+		Blocked:      user.BoolFlag{}.SetTrue(),
+	}
 )

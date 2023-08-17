@@ -6,6 +6,9 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
@@ -218,11 +221,24 @@ func TestPostgresRepository_Save(t *testing.T) {
 		pg := tests.PrepareTestDatabase(pgHandler).PGx
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		err := repo.Save(ctx, user.User{ID: testdata.UserIDNew})
+		err := repo.Save(ctx, user.User{
+			ID: testdata.UserIDNew,
+			Sessions: []user.Session{
+				{
+					ID:        "some-new-session-key",
+					Device:    user.NewDevice(testdata.UserAgent),
+					CreatedAt: time.Now().UTC(),
+				},
+			},
+		})
 		assert.NoError(t, err)
 
 		c, _ := repo.Count(ctx)
 		assert.Equal(t, 4, c)
+
+		queries := models.New(pg)
+		sessions, _ := queries.AllSessions(ctx)
+		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
 	})
 
 	t.Run("save existing user", func(t *testing.T) {
@@ -242,7 +258,7 @@ func TestPostgresRepository_Save(t *testing.T) {
 		assert.NotEmpty(t, usr.Name)
 	})
 
-	t.Run("save new user", func(t *testing.T) {
+	t.Run("save empty user", func(t *testing.T) {
 		t.Parallel()
 
 		pg := tests.PrepareTestDatabase(pgHandler).PGx

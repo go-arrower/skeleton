@@ -12,6 +12,9 @@ const (
 
 	ValidLogin = user.Login("0@test.com")
 	NotExLogin = user.Login("invalid-login")
+
+	SessionKey = "session-key"
+	UserAgent  = "arrower/1"
 )
 
 var (

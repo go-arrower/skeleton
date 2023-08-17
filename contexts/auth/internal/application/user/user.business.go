@@ -278,6 +278,10 @@ func (d Device) OS() string {
 	return fmt.Sprintf("%s v%s", ua.OS, ua.OSVersion)
 }
 
+func (d Device) UserAgent() string {
+	return d.userAgent
+}
+
 type Session struct {
 	ID        string
 	CreatedAt time.Time
