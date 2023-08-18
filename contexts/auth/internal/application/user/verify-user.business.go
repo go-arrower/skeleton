@@ -19,6 +19,7 @@ func NewVerificationToken(token uuid.UUID, userID ID, validUntilUTC time.Time) V
 	}
 }
 
+// VerificationToken is a token a User receives (via email) and uses to verify his Login.
 type VerificationToken struct {
 	validUntil time.Time
 	userID     ID
@@ -37,12 +38,16 @@ func (t VerificationToken) ValidUntilUTC() time.Time {
 	return t.validUntil
 }
 
+func (t VerificationToken) isValid() bool {
+	return !time.Now().UTC().After(t.validUntil)
+}
+
 type VerificationOpt func(vs *VerificationService)
 
-// WithValidTime overwrites the time a VerificationToken is valid.
-func WithValidTime(validTime time.Duration) VerificationOpt {
+// WithValidFor overwrites the time a VerificationToken is valid.
+func WithValidFor(validTime time.Duration) VerificationOpt {
 	return func(vs *VerificationService) {
-		vs.validTime = validTime
+		vs.validFor = validTime
 	}
 }
 
@@ -50,8 +55,8 @@ func NewVerificationService(repo Repository, opts ...VerificationOpt) *Verificat
 	const oneWeek = time.Hour * 24 * 7 // default time a token is valid.
 
 	verificationService := &VerificationService{
-		repo:      repo,
-		validTime: oneWeek,
+		repo:     repo,
+		validFor: oneWeek,
 	}
 
 	for _, opt := range opts {
@@ -62,15 +67,15 @@ func NewVerificationService(repo Repository, opts ...VerificationOpt) *Verificat
 }
 
 type VerificationService struct {
-	repo      Repository
-	validTime time.Duration
+	repo     Repository
+	validFor time.Duration
 }
 
-// todo add docs and rename more descriptive.
+// NewVerificationToken creates a new VerificationToken and persists it.
 func (s *VerificationService) NewVerificationToken(ctx context.Context, user User) (VerificationToken, error) {
 	token := VerificationToken{
 		token:      uuid.New(),
-		validUntil: time.Now().UTC().Add(s.validTime),
+		validUntil: time.Now().UTC().Add(s.validFor),
 		userID:     user.ID,
 	}
 
@@ -82,17 +87,18 @@ func (s *VerificationService) NewVerificationToken(ctx context.Context, user Use
 	return token, nil
 }
 
+// Verify verifies a User with the given Token. If it is valid, the user is updated and persisted.
 func (s *VerificationService) Verify(ctx context.Context, usr *User, rawToken uuid.UUID) error {
 	token, err := s.repo.VerificationTokenByToken(ctx, rawToken)
 	if err != nil {
-		return fmt.Errorf("%w: could not fetch verification token: %v", ErrVerificationFailed, err)
+		return fmt.Errorf("%w: could not fetch verification token: %w", ErrVerificationFailed, err)
 	}
 
 	if token.UserID() != usr.ID {
 		return ErrVerificationFailed
 	}
 
-	if time.Now().UTC().After(token.ValidUntilUTC()) {
+	if !token.isValid() {
 		return ErrVerificationFailed
 	}
 
@@ -100,7 +106,7 @@ func (s *VerificationService) Verify(ctx context.Context, usr *User, rawToken uu
 
 	err = s.repo.Save(ctx, *usr)
 	if err != nil {
-		return fmt.Errorf("could not save user: %w", err)
+		return fmt.Errorf("%w: could not save user: %w", ErrVerificationFailed, err)
 	}
 
 	return nil

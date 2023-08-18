@@ -415,7 +415,7 @@ func TestUserController_Verify(t *testing.T) {
 	})
 }
 
-// --- --- --- test data --- --- ---
+// --- --- --- TEST DATA --- --- ---
 
 var errUCFailed = errors.New("use case error")
 
