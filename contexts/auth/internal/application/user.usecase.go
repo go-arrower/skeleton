@@ -43,7 +43,13 @@ type (
 	}
 )
 
-func LoginUser(logger alog.Logger, repo user.Repository, queue jobs.Enqueuer) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+func LoginUser(
+	logger alog.Logger,
+	repo user.Repository,
+	queue jobs.Enqueuer,
+) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+	authenticator := user.NewAuthenticationService()
+
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
 		usr, err := repo.FindByLogin(ctx, user.Login(in.LoginEmail))
 		if err != nil {
@@ -55,25 +61,7 @@ func LoginUser(logger alog.Logger, repo user.Repository, queue jobs.Enqueuer) fu
 			return LoginUserResponse{}, ErrLoginFailed
 		}
 
-		if !usr.IsVerified() {
-			logger.Log(ctx, slog.LevelInfo, "login failed",
-				slog.String("email", in.LoginEmail),
-				slog.String("ip", in.IP),
-			)
-
-			return LoginUserResponse{}, ErrLoginFailed
-		}
-
-		if usr.IsBlocked() {
-			logger.Log(ctx, slog.LevelInfo, "login failed",
-				slog.String("email", in.LoginEmail),
-				slog.String("ip", in.IP),
-			)
-
-			return LoginUserResponse{}, ErrLoginFailed
-		}
-
-		if !usr.PasswordHash.Matches(in.Password) {
+		if !authenticator.Authenticate(ctx, usr, in.Password) {
 			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
 				slog.String("ip", in.IP),

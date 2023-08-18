@@ -17,7 +17,7 @@ import (
 func TestLoginUser(t *testing.T) {
 	t.Parallel()
 
-	t.Run("password does not match", func(t *testing.T) {
+	t.Run("authentication fails", func(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
@@ -38,38 +38,6 @@ func TestLoginUser(t *testing.T) {
 
 		// assert failed attempt is logged, e.g. for monitoring or fail2ban etc.
 		assert.Contains(t, buf.String(), "login failed")
-	})
-
-	t.Run("login fails - user not verified", func(t *testing.T) {
-		t.Parallel()
-
-		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, userNotVerified)
-
-		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
-
-		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: notVerifiedUserLogin,
-			Password:   strongPassword,
-		})
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, application.ErrLoginFailed)
-	})
-
-	t.Run("login fails - user blocked", func(t *testing.T) {
-		t.Parallel()
-
-		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, userBlocked)
-
-		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
-
-		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: blockedUserLogin,
-			Password:   strongPassword,
-		})
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, application.ErrLoginFailed)
 	})
 
 	t.Run("login succeeds", func(t *testing.T) {
