@@ -12,7 +12,7 @@ func (c *AuthContext) registerJobs(queue jobs.Queue) {
 	_ = queue.RegisterJobFunc(mw.TracedU(c.traceProvider,
 		mw.MetricU(c.meterProvider,
 			mw.LoggedU(c.logger,
-				application.SendNewUserVerificationEmail(c.logger, c.queries),
+				application.SendNewUserVerificationEmail(c.logger, c.repo),
 			),
 		),
 	))

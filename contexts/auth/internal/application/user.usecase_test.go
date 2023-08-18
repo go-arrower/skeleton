@@ -1,29 +1,17 @@
-//go:build integration
-
 package application_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 	"time"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
-	"github.com/go-arrower/arrower/postgres"
-	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/testdata"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-)
-
-var (
-	ctx       = context.Background()
-	pgHandler *postgres.Handler
 )
 
 func TestLoginUser(t *testing.T) {
@@ -33,7 +21,7 @@ func TestLoginUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, testdata.User0)
+		_ = repo.Save(ctx, userVerified)
 
 		buf := bytes.Buffer{}
 		logger := alog.NewTest(&buf)
@@ -42,7 +30,7 @@ func TestLoginUser(t *testing.T) {
 		cmd := application.LoginUser(logger, repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: testdata.User0Login,
+			LoginEmail: user0Login,
 			Password:   "wrong-password",
 		})
 		assert.Error(t, err)
@@ -56,13 +44,13 @@ func TestLoginUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, testdata.UserNotVerified)
+		_ = repo.Save(ctx, userNotVerified)
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: testdata.NotVerifiedUserLogin,
-			Password:   testdata.StrongPassword,
+			LoginEmail: notVerifiedUserLogin,
+			Password:   strongPassword,
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
@@ -72,13 +60,13 @@ func TestLoginUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, testdata.UserBlocked)
+		_ = repo.Save(ctx, userBlocked)
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, nil)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: testdata.BlockedUserLogin,
-			Password:   testdata.StrongPassword,
+			LoginEmail: blockedUserLogin,
+			Password:   strongPassword,
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrLoginFailed)
@@ -88,27 +76,27 @@ func TestLoginUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, testdata.User0)
+		_ = repo.Save(ctx, userVerified)
 		queue := jobs.NewInMemoryJobs()
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
 
 		res, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail: testdata.ValidUserLogin,
-			Password:   testdata.StrongPassword,
-			UserAgent:  testdata.UserAgent,
+			LoginEmail: validUserLogin,
+			Password:   strongPassword,
+			UserAgent:  userAgent,
 			SessionKey: "new-session-key",
 		})
 
 		// assert return values
 		assert.NoError(t, err)
-		assert.Equal(t, user.Login(testdata.ValidUserLogin), res.User.Login)
-		assert.NotEmpty(t, testdata.ValidUserLogin, res.User.ID)
+		assert.Equal(t, user.Login(validUserLogin), res.User.Login)
+		assert.NotEmpty(t, validUserLogin, res.User.ID)
 
 		// assert session got updated with device info // todo IF repo gets methods to retrieve sessions directly: use them instead
-		usr, _ := repo.FindByID(ctx, testdata.User0.ID)
-		assert.Len(t, usr.Sessions, 1)
-		assert.Equal(t, user.NewDevice(testdata.UserAgent), usr.Sessions[0].Device)
+		usr, _ := repo.FindByID(ctx, userVerified.ID)
+		assert.Len(t, usr.Sessions, 2)
+		assert.Equal(t, user.NewDevice(userAgent), usr.Sessions[1].Device)
 
 		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 0)
 	})
@@ -117,16 +105,16 @@ func TestLoginUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		_ = repo.Save(ctx, testdata.User0)
+		_ = repo.Save(ctx, userVerified)
 		queue := jobs.NewInMemoryJobs()
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
 
 		_, err := cmd(ctx, application.LoginUserRequest{
-			LoginEmail:  testdata.ValidUserLogin,
-			Password:    testdata.StrongPassword,
-			UserAgent:   testdata.UserAgent,
-			IP:          testdata.IP,
+			LoginEmail:  validUserLogin,
+			Password:    strongPassword,
+			UserAgent:   userAgent,
+			IP:          ip,
 			SessionKey:  "new-session-key",
 			IsNewDevice: true,
 		})
@@ -137,8 +125,8 @@ func TestLoginUser(t *testing.T) {
 		job := queue.GetFirstOf(application.SendConfirmationNewDeviceLoggedIn{}).(application.SendConfirmationNewDeviceLoggedIn)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
-		assert.Equal(t, testdata.IP, job.IP)
-		assert.Equal(t, user.NewDevice(testdata.UserAgent), job.Device)
+		assert.Equal(t, ip, job.IP)
+		assert.Equal(t, user.NewDevice(userAgent), job.Device)
 	})
 }
 
@@ -148,16 +136,16 @@ func TestRegisterUser(t *testing.T) {
 	t.Run("login already in use", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		_ = repo.Save(ctx, userVerified)
 
 		buf := bytes.Buffer{}
 		logger := alog.NewTest(&buf)
 		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.RegisterUser(logger, queries, nil)
+		cmd := application.RegisterUser(logger, repo, nil)
 
-		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.ValidUserLogin})
+		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: user0Login})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, application.ErrUserAlreadyExists)
 
@@ -168,9 +156,8 @@ func TestRegisterUser(t *testing.T) {
 	t.Run("password weak", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
-		cmd := application.RegisterUser(alog.NewTest(nil), queries, nil)
+		repo := repository.NewMemoryRepository()
+		cmd := application.RegisterUser(alog.NewTest(nil), repo, nil)
 
 		tests := []struct {
 			testName string
@@ -187,7 +174,10 @@ func TestRegisterUser(t *testing.T) {
 			t.Run(tt.testName, func(t *testing.T) {
 				t.Parallel()
 
-				_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: testdata.NewUserLogin, Password: tt.password})
+				_, err := cmd(ctx, application.RegisterUserRequest{
+					RegisterEmail: newUserLogin,
+					Password:      tt.password,
+				})
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, user.ErrPasswordTooWeak)
 			})
@@ -197,38 +187,36 @@ func TestRegisterUser(t *testing.T) {
 	t.Run("register new user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.RegisterUser(alog.NewTest(nil), queries, queue)
+		cmd := application.RegisterUser(alog.NewTest(nil), repo, queue)
 
 		usr, err := cmd(ctx, application.RegisterUserRequest{
-			RegisterEmail: testdata.NewUserLogin,
-			Password:      testdata.StrongPassword,
-			UserAgent:     testdata.UserAgent,
-			IP:            testdata.IP,
+			RegisterEmail: newUserLogin,
+			Password:      strongPassword,
+			UserAgent:     userAgent,
+			IP:            ip,
 		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, usr.User.ID)
 
-		dbUser, err := queries.FindUserByLogin(ctx, testdata.NewUserLogin)
+		dbUser, err := repo.FindByLogin(ctx, newUserLogin)
 		assert.NoError(t, err)
-		assert.Empty(t, dbUser.VerifiedAtUtc)
-		assert.Empty(t, dbUser.BlockedAtUtc)
+		assert.Empty(t, dbUser.Verified)
+		assert.Empty(t, dbUser.Blocked)
 
 		// assert session got updated with device info
-		sessions, _ := queries.AllSessions(ctx)
-		assert.Len(t, sessions, 1+1) // 1 session is already created via _common.yaml fixtures
-		assert.Equal(t, testdata.UserAgent, sessions[1].UserAgent)
-		assert.NotEmpty(t, sessions[1].UserID)
+		dbUser, _ = repo.FindByID(ctx, usr.User.ID)
+		assert.Len(t, dbUser.Sessions, 1)
+		assert.Equal(t, user.NewDevice(userAgent), dbUser.Sessions[0].Device)
 
 		queue.Assert(t).Queued(application.NewUserVerificationEmail{}, 1)
 		job := queue.GetFirstOf(application.NewUserVerificationEmail{}).(application.NewUserVerificationEmail)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
-		assert.Equal(t, testdata.IP, job.IP)
-		assert.Equal(t, user.NewDevice(testdata.UserAgent), job.Device)
+		assert.Equal(t, ip, job.IP)
+		assert.Equal(t, user.NewDevice(userAgent), job.Device)
 	})
 }
 
@@ -238,15 +226,15 @@ func TestSendNewUserVerificationEmail(t *testing.T) {
 	t.Run("send new verification email", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		repo.Save(ctx, userNotVerified)
 
-		cmd := application.SendNewUserVerificationEmail(alog.NewDevelopment(), queries)
+		cmd := application.SendNewUserVerificationEmail(alog.NewTest(nil), repo)
 		err := cmd(ctx, application.NewUserVerificationEmail{
-			UserID:     testdata.UserNotVerifiedUserID,
+			UserID:     userNotVerifiedUserID,
 			OccurredAt: time.Now().UTC(),
-			IP:         testdata.IP,
-			Device:     user.NewDevice(testdata.UserAgent),
+			IP:         ip,
+			Device:     user.NewDevice(userAgent),
 		})
 		assert.NoError(t, err)
 
@@ -261,21 +249,21 @@ func TestVerifyUser(t *testing.T) {
 		t.Parallel()
 
 		// setup
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		repo.Save(ctx, userNotVerified)
 
-		usr, _ := repository.GetUserByID(ctx, queries, testdata.UserNotVerifiedUserID)
-		verify := application.NewVerificationService(queries)
+		usr, _ := repo.FindByID(ctx, userNotVerifiedUserID)
+		verify := user.NewVerificationService(repo)
 		token, _ := verify.NewVerificationToken(ctx, usr)
 
 		// action
-		err := application.VerifyUser(queries)(ctx, application.VerifyUserRequest{
+		err := application.VerifyUser(repo)(ctx, application.VerifyUserRequest{
 			Token:  token.Token(),
-			UserID: testdata.UserNotVerifiedUserID,
+			UserID: userNotVerifiedUserID,
 		})
 		assert.NoError(t, err)
 
-		usr, _ = repository.GetUserByID(ctx, queries, testdata.UserNotVerifiedUserID)
+		usr, _ = repo.FindByID(ctx, userNotVerifiedUserID)
 		assert.True(t, usr.IsVerified())
 	})
 }
@@ -286,10 +274,9 @@ func TestShowUser(t *testing.T) {
 	t.Run("invalid userID", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
 
-		cmd := application.ShowUser(queries)
+		cmd := application.ShowUser(repo)
 		res, err := cmd(ctx, application.ShowUserRequest{})
 		assert.Error(t, err)
 		assert.Empty(t, res)
@@ -298,17 +285,17 @@ func TestShowUser(t *testing.T) {
 	t.Run("show user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		repo.Save(ctx, userVerified)
 
-		cmd := application.ShowUser(queries)
+		cmd := application.ShowUser(repo)
 		res, err := cmd(ctx, application.ShowUserRequest{
-			UserID: testdata.UserIDZero,
+			UserID: userIDZero,
 		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, res)
 
-		assert.Equal(t, testdata.UserIDZero, res.User.ID)
+		assert.Equal(t, userIDZero, res.User.ID)
 		assert.Len(t, res.User.Sessions, 1)
 	})
 }
@@ -319,15 +306,15 @@ func TestBlockUser(t *testing.T) {
 	t.Run("block user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		repo.Save(ctx, userVerified)
 
-		cmd := application.BlockUser(queries)
-		_, err := cmd(ctx, application.BlockUserRequest{UserID: testdata.UserIDZero})
+		cmd := application.BlockUser(repo)
+		_, err := cmd(ctx, application.BlockUserRequest{UserID: userIDZero})
 		assert.NoError(t, err)
 
 		// verify
-		usr, err := repository.GetUserByID(ctx, queries, testdata.UserIDZero)
+		usr, err := repo.FindByID(ctx, userIDZero)
 		assert.NoError(t, err)
 		assert.True(t, usr.IsBlocked())
 	})
@@ -339,15 +326,15 @@ func TestUnblockUser(t *testing.T) {
 	t.Run("unblock user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
-		queries := models.New(pg)
+		repo := repository.NewMemoryRepository()
+		repo.Save(ctx, userBlocked)
 
-		cmd := application.UnblockUser(queries)
-		_, err := cmd(ctx, application.BlockUserRequest{UserID: testdata.UserBlockedUserID})
+		cmd := application.UnblockUser(repo)
+		_, err := cmd(ctx, application.BlockUserRequest{UserID: userBlockedUserID})
 		assert.NoError(t, err)
 
 		// verify
-		usr, err := repository.GetUserByID(ctx, queries, testdata.UserIDZero)
+		usr, err := repo.FindByID(ctx, userBlockedUserID)
 		assert.NoError(t, err)
 		assert.True(t, !usr.IsBlocked())
 	})

@@ -391,8 +391,8 @@ func TestBoolFlag(t *testing.T) {
 	t.Parallel()
 
 	flag := user.BoolFlag{}
-	assert.False(t, flag.IsTrue())
-	assert.True(t, flag.IsFalse())
+	assert.False(t, flag.IsTrue(), "empty flag is not true")
+	assert.True(t, flag.IsFalse(), "empty flag is false")
 	assert.Empty(t, flag.At())
 
 	flag = user.BoolFlag(time.Now().UTC())

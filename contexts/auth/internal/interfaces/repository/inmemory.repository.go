@@ -6,19 +6,23 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		users: make(map[user.ID]user.User),
-		mu:    sync.Mutex{},
+		users:  make(map[user.ID]user.User),
+		tokens: make(map[uuid.UUID]user.VerificationToken),
+		mu:     sync.Mutex{},
 	}
 }
 
 type MemoryRepository struct {
-	users map[user.ID]user.User
-	mu    sync.Mutex
+	users  map[user.ID]user.User
+	tokens map[uuid.UUID]user.VerificationToken
+	mu     sync.Mutex
 }
 
 func (repo *MemoryRepository) All(ctx context.Context) ([]user.User, error) {
@@ -197,6 +201,35 @@ func (repo *MemoryRepository) DeleteAll(ctx context.Context) error {
 	repo.users = make(map[user.ID]user.User)
 
 	return nil
+}
+
+func (repo *MemoryRepository) CreateVerificationToken(
+	ctx context.Context,
+	token user.VerificationToken,
+) error {
+	if token.Token().String() == "" {
+		return fmt.Errorf("missing ID: %w", user.ErrPersistenceFailed)
+	}
+
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	repo.tokens[token.Token()] = token
+
+	return nil
+}
+
+func (repo *MemoryRepository) VerificationTokenByToken(
+	ctx context.Context,
+	tokenID uuid.UUID,
+) (user.VerificationToken, error) {
+	for _, t := range repo.tokens {
+		if t.Token() == tokenID {
+			return t, nil
+		}
+	}
+
+	return user.VerificationToken{}, user.ErrNotFound
 }
 
 var _ user.Repository = (*MemoryRepository)(nil)

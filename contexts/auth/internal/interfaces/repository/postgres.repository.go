@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -219,6 +220,38 @@ func (repo *PostgresRepository) DeleteAll(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (repo *PostgresRepository) CreateVerificationToken(
+	ctx context.Context,
+	token user.VerificationToken,
+) error {
+	err := repo.db.ConnOrTX(ctx).CreateVerificationToken(ctx, models.CreateVerificationTokenParams{
+		Token:         token.Token(),
+		UserID:        uuid.MustParse(string(token.UserID())),
+		ValidUntilUtc: pgtype.Timestamptz{Time: token.ValidUntilUTC(), Valid: true, InfinityModifier: pgtype.Finite},
+	})
+	if err != nil {
+		return fmt.Errorf("%w: could not save new verification token: %v", user.ErrPersistenceFailed, err)
+	}
+
+	return nil
+}
+
+func (repo *PostgresRepository) VerificationTokenByToken(
+	ctx context.Context,
+	tokenID uuid.UUID,
+) (user.VerificationToken, error) {
+	token, err := repo.db.Conn(ctx).VerificationTokenByToken(ctx, tokenID)
+	if err != nil {
+		return user.VerificationToken{}, fmt.Errorf("%w: could not get verification token: %v", user.ErrNotFound, err)
+	}
+
+	return user.NewVerificationToken(
+		token.Token,
+		user.ID(token.UserID.String()),
+		token.ValidUntilUtc.Time,
+	), nil
 }
 
 var _ user.Repository = (*PostgresRepository)(nil)

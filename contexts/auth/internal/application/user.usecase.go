@@ -9,12 +9,9 @@ import (
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 var (
@@ -98,7 +95,7 @@ func LoginUser(logger alog.Logger, repo user.Repository, queue jobs.Enqueuer) fu
 		if err != nil {
 			return LoginUserResponse{}, fmt.Errorf("could not update user session: %w", err)
 		}
-		// FIXME: add a method to user or a domain service, that ensures session is not added, if one with same ID already exists
+		// FIXME: add a method to user or a domain service, that ensures session is not added, if one with same ID already exists.
 
 		if in.IsNewDevice {
 			err = queue.Enqueue(ctx, SendConfirmationNewDeviceLoggedIn{
@@ -142,11 +139,16 @@ type (
 
 func RegisterUser(
 	logger alog.Logger,
-	queries *models.Queries,
+	repo user.Repository,
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
-		if _, err := queries.FindUserByLogin(ctx, in.RegisterEmail); err == nil { // todo repo: existsByLogin
+		ex, err := repo.ExistsByLogin(ctx, user.Login(in.RegisterEmail))
+		if err != nil && !errors.Is(err, user.ErrNotFound) {
+			return RegisterUserResponse{}, fmt.Errorf("could not check if user exists: %w", err)
+		}
+
+		if ex {
 			logger.Log(ctx, slog.LevelInfo, "register new user failed",
 				slog.String("email", in.RegisterEmail),
 				slog.String("ip", in.IP),
@@ -165,19 +167,31 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("%w", err)
 		}
 
-		usr, err := queries.CreateUser(ctx, models.CreateUserParams{
-			ID:            uuid.MustParse(string(user.NewID())),
-			Login:         in.RegisterEmail,
-			PasswordHash:  string(pwHash),
-			VerifiedAtUtc: pgtype.Timestamptz{}, //nolint:exhaustruct
-			BlockedAtUtc:  pgtype.Timestamptz{}, //nolint:exhaustruct
+		usr := user.User{
+			ID:           user.NewID(),
+			Login:        user.Login(in.RegisterEmail),
+			PasswordHash: pwHash,
+			Verified:     user.BoolFlag{}.SetFalse(),
+			Blocked:      user.BoolFlag{}.SetFalse(),
+			SuperUser:    user.BoolFlag{}.SetFalse(),
+		}
+
+		// The session is not valid until the end of the controller.
+		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
+		usr.Sessions = append(usr.Sessions, user.Session{
+			ID:        in.SessionKey,
+			Device:    user.NewDevice(in.UserAgent),
+			CreatedAt: time.Now().UTC(),
+			// ExpiresAt: // will be set & updated via the session store
 		})
+
+		err = repo.Save(ctx, usr)
 		if err != nil {
-			return RegisterUserResponse{}, fmt.Errorf("could not create user: %w", err)
+			return RegisterUserResponse{}, fmt.Errorf("could not save new user: %w", err)
 		}
 
 		err = queue.Enqueue(ctx, NewUserVerificationEmail{
-			UserID:     user.ID(usr.ID.String()),
+			UserID:     usr.ID,
 			OccurredAt: time.Now().UTC(),
 			IP:         in.IP,
 			Device:     user.NewDevice(in.UserAgent),
@@ -186,35 +200,25 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("could not queue job to send verification email: %w", err)
 		}
 
-		// The session is not persisted until the end of the controller.
-		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		err = queries.UpsertNewSession(ctx, models.UpsertNewSessionParams{
-			Key:       []byte(in.SessionKey),
-			UserID:    uuid.NullUUID{UUID: usr.ID, Valid: true},
-			UserAgent: in.UserAgent,
-		})
-		if err != nil {
-			return RegisterUserResponse{}, fmt.Errorf("could not update session with user agent: %w", err)
-		}
-
+		// todo return a short "UserDescriptor" or something instead of a partial user.
 		return RegisterUserResponse{User: user.User{ //nolint:exhaustruct // at this point the user has not more information.
-			ID:    user.ID(usr.ID.String()),
-			Login: user.Login(usr.Login),
+			ID:    usr.ID,
+			Login: usr.Login,
 		}}, nil
 	}
 }
 
 func SendNewUserVerificationEmail(
 	logger alog.Logger,
-	queries *models.Queries,
+	repo user.Repository,
 ) func(context.Context, NewUserVerificationEmail) error {
 	return func(ctx context.Context, in NewUserVerificationEmail) error {
-		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return fmt.Errorf("could not get user: %w", err)
 		}
 
-		verify := NewVerificationService(queries)
+		verify := user.NewVerificationService(repo)
 
 		token, err := verify.NewVerificationToken(ctx, usr)
 		if err != nil {
@@ -236,19 +240,19 @@ func SendNewUserVerificationEmail(
 
 type (
 	VerifyUserRequest struct {
-		Token  uuid.UUID `validate:"required"`
 		UserID user.ID   `validate:"required"`
+		Token  uuid.UUID `validate:"required"`
 	}
 )
 
-func VerifyUser(queries *models.Queries) func(context.Context, VerifyUserRequest) error {
+func VerifyUser(repo user.Repository) func(context.Context, VerifyUserRequest) error {
 	return func(ctx context.Context, in VerifyUserRequest) error {
-		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return fmt.Errorf("could not get user: %w", err)
 		}
 
-		verify := NewVerificationService(queries)
+		verify := user.NewVerificationService(repo)
 
 		err = verify.Verify(ctx, &usr, in.Token)
 		if err != nil {
@@ -268,13 +272,13 @@ type (
 	}
 )
 
-func ShowUser(queries *models.Queries) func(context.Context, ShowUserRequest) (ShowUserResponse, error) {
+func ShowUser(repo user.Repository) func(context.Context, ShowUserRequest) (ShowUserResponse, error) {
 	return func(ctx context.Context, in ShowUserRequest) (ShowUserResponse, error) {
 		if in.UserID == "" {
 			return ShowUserResponse{}, ErrInvalidInput
 		}
 
-		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return ShowUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
@@ -290,16 +294,16 @@ type (
 	BlockUserResponse struct{}
 )
 
-func BlockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+func BlockUser(repo user.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
-		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
 
 		usr.Block()
 
-		err = repository.SaveUser(ctx, queries, usr)
+		err = repo.Save(ctx, usr)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
@@ -308,16 +312,16 @@ func BlockUser(queries *models.Queries) func(context.Context, BlockUserRequest) 
 	}
 }
 
-func UnblockUser(queries *models.Queries) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+func UnblockUser(repo user.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
-		usr, err := repository.GetUserByID(ctx, queries, in.UserID)
+		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
 
 		usr.Unblock()
 
-		err = repository.SaveUser(ctx, queries, usr)
+		err = repo.Save(ctx, usr)
 		if err != nil {
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}

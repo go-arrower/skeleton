@@ -3,6 +3,8 @@ package user
 import (
 	"context"
 	"errors"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -10,6 +12,7 @@ var (
 	ErrPersistenceFailed = errors.New("persistence operation failed")
 )
 
+// todo name all parameters, to make it better documented ???
 type Repository interface {
 	All(context.Context) ([]User, error)
 	AllByIDs(context.Context, []ID) ([]User, error)
@@ -28,4 +31,8 @@ type Repository interface {
 	DeleteByID(context.Context, ID) error
 	DeleteByIDs(context.Context, []ID) error
 	DeleteAll(context.Context) error
+
+	// todo investigate if this is good or token should have its own repo or whatever the heck an aggregate is
+	CreateVerificationToken(context.Context, VerificationToken) error
+	VerificationTokenByToken(context.Context, uuid.UUID) (VerificationToken, error)
 }

@@ -1,4 +1,4 @@
-package application
+package user
 
 import (
 	"context"
@@ -7,18 +7,21 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
 var ErrVerificationFailed = errors.New("verification failed")
 
+func NewVerificationToken(token uuid.UUID, userID ID, validUntilUTC time.Time) VerificationToken {
+	return VerificationToken{
+		validUntil: validUntilUTC,
+		userID:     userID,
+		token:      token,
+	}
+}
+
 type VerificationToken struct {
 	validUntil time.Time
-	userID     user.ID
+	userID     ID
 	token      uuid.UUID
 }
 
@@ -26,8 +29,12 @@ func (t VerificationToken) Token() uuid.UUID {
 	return t.token
 }
 
-func (t VerificationToken) UserID() user.ID {
+func (t VerificationToken) UserID() ID {
 	return t.userID
+}
+
+func (t VerificationToken) ValidUntilUTC() time.Time {
+	return t.validUntil
 }
 
 type VerificationOpt func(vs *VerificationService)
@@ -39,11 +46,11 @@ func WithValidTime(validTime time.Duration) VerificationOpt {
 	}
 }
 
-func NewVerificationService(queries *models.Queries, opts ...VerificationOpt) *VerificationService {
-	const oneWeek = time.Hour * 24 * 7 // valid for one week
+func NewVerificationService(repo Repository, opts ...VerificationOpt) *VerificationService {
+	const oneWeek = time.Hour * 24 * 7 // default time a token is valid.
 
 	verificationService := &VerificationService{
-		queries:   queries,
+		repo:      repo,
 		validTime: oneWeek,
 	}
 
@@ -55,22 +62,19 @@ func NewVerificationService(queries *models.Queries, opts ...VerificationOpt) *V
 }
 
 type VerificationService struct {
-	queries   *models.Queries
+	repo      Repository
 	validTime time.Duration
 }
 
-func (s *VerificationService) NewVerificationToken(ctx context.Context, user user.User) (VerificationToken, error) {
+// todo add docs and rename more descriptive.
+func (s *VerificationService) NewVerificationToken(ctx context.Context, user User) (VerificationToken, error) {
 	token := VerificationToken{
 		token:      uuid.New(),
 		validUntil: time.Now().UTC().Add(s.validTime),
 		userID:     user.ID,
 	}
 
-	err := s.queries.CreateVerificationToken(ctx, models.CreateVerificationTokenParams{
-		Token:         token.token,
-		UserID:        uuid.MustParse(string(token.userID)),
-		ValidUntilUtc: pgtype.Timestamptz{Time: token.validUntil, Valid: true, InfinityModifier: pgtype.Finite},
-	})
+	err := s.repo.CreateVerificationToken(ctx, token)
 	if err != nil {
 		return VerificationToken{}, fmt.Errorf("could not save new verification token: %w", err)
 	}
@@ -78,23 +82,23 @@ func (s *VerificationService) NewVerificationToken(ctx context.Context, user use
 	return token, nil
 }
 
-func (s *VerificationService) Verify(ctx context.Context, usr *user.User, rawToken uuid.UUID) error {
-	token, err := s.queries.VerificationTokenByToken(ctx, rawToken)
+func (s *VerificationService) Verify(ctx context.Context, usr *User, rawToken uuid.UUID) error {
+	token, err := s.repo.VerificationTokenByToken(ctx, rawToken)
 	if err != nil {
 		return fmt.Errorf("%w: could not fetch verification token: %v", ErrVerificationFailed, err)
 	}
 
-	if user.ID(token.UserID.String()) != usr.ID {
+	if token.UserID() != usr.ID {
 		return ErrVerificationFailed
 	}
 
-	if time.Now().UTC().After(token.ValidUntilUtc.Time) {
+	if time.Now().UTC().After(token.ValidUntilUTC()) {
 		return ErrVerificationFailed
 	}
 
 	usr.Verified = usr.Verified.SetTrue()
 
-	err = repository.SaveUser(ctx, s.queries, *usr)
+	err = s.repo.Save(ctx, *usr)
 	if err != nil {
 		return fmt.Errorf("could not save user: %w", err)
 	}

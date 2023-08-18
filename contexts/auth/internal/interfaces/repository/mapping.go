@@ -13,29 +13,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 )
 
-func GetUserByLogin(ctx context.Context, queries *models.Queries, loginEmail string) (user.User, error) {
-	dbUser, err := queries.FindUserByLogin(ctx, loginEmail)
-	if err != nil {
-		return user.User{}, fmt.Errorf("%w", err)
-	}
-
-	return userFromModelWithSession(dbUser, nil), nil
-}
-
-func GetUserByID(ctx context.Context, queries *models.Queries, userID user.ID) (user.User, error) {
-	dbUser, err := queries.FindUserByID(ctx, uuid.MustParse(string(userID)))
-	if err != nil {
-		return user.User{}, fmt.Errorf("%w", err)
-	}
-
-	sess, err := queries.FindSessionsByUserID(ctx, uuid.NullUUID{UUID: uuid.MustParse(string(userID)), Valid: true})
-	if err != nil {
-		return user.User{}, fmt.Errorf("%w", err)
-	}
-
-	return userFromModelWithSession(dbUser, sess), nil
-}
-
 func usersFromModel(ctx context.Context, queries *models.Queries, dbUsers []models.AuthUser) ([]user.User, error) {
 	users := make([]user.User, len(dbUsers))
 
@@ -54,7 +31,8 @@ func usersFromModel(ctx context.Context, queries *models.Queries, dbUsers []mode
 func userFromModel(ctx context.Context, queries *models.Queries, dbUser models.AuthUser) (user.User, error) {
 	sess, err := queries.FindSessionsByUserID(ctx, uuid.NullUUID{UUID: dbUser.ID, Valid: true})
 	if err != nil {
-		return user.User{}, fmt.Errorf("could not get sessions for user: %s: %v", dbUser.ID.String(), err)
+		return user.User{},
+			fmt.Errorf("%w: could not get sessions for user: %s: %v", user.ErrNotFound, dbUser.ID.String(), err)
 	}
 
 	return userFromModelWithSession(dbUser, sess), nil
@@ -106,29 +84,20 @@ func sessionsFromModel(sess []models.AuthSession) []user.Session {
 	return sessions
 }
 
-func SaveUser(ctx context.Context, queries *models.Queries, user user.User) error {
-	_, err := queries.UpsertUser(ctx, userToModel(user))
-	if err != nil {
-		return fmt.Errorf("could not upsert user: %v", err)
-	}
-
-	return nil
-}
-
 func userToModel(user user.User) models.UpsertUserParams {
 	verifiedAt := pgtype.Timestamptz{Time: user.Verified.At(), Valid: true, InfinityModifier: pgtype.Finite}
 	if user.Verified.At() == (time.Time{}) {
-		verifiedAt = pgtype.Timestamptz{}
+		verifiedAt = pgtype.Timestamptz{} //nolint:exhaustruct
 	}
 
 	blockedAt := pgtype.Timestamptz{Time: user.Blocked.At(), Valid: true, InfinityModifier: pgtype.Finite}
 	if user.Blocked.At() == (time.Time{}) {
-		blockedAt = pgtype.Timestamptz{}
+		blockedAt = pgtype.Timestamptz{} //nolint:exhaustruct
 	}
 
 	superUserAt := pgtype.Timestamptz{Time: user.SuperUser.At(), Valid: true, InfinityModifier: pgtype.Finite}
 	if user.SuperUser.At() == (time.Time{}) {
-		superUserAt = pgtype.Timestamptz{}
+		superUserAt = pgtype.Timestamptz{} //nolint:exhaustruct
 	}
 
 	return models.UpsertUserParams{

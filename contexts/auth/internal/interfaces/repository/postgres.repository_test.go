@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/testdata"
 )
 
@@ -373,5 +372,23 @@ func TestPostgresRepository_DeleteAll(t *testing.T) {
 
 		c, _ := repo.Count(ctx)
 		assert.Equal(t, 0, c)
+	})
+}
+
+func TestPostgresRepository_CreateVerificationToken(t *testing.T) {
+	t.Parallel()
+
+	t.Run("create new token", func(t *testing.T) {
+		t.Parallel()
+
+		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		repo, _ := repository.NewPostgresRepository(pg)
+
+		err := repo.CreateVerificationToken(ctx, testdata.ValidToken)
+		assert.NoError(t, err)
+
+		tok, err := repo.VerificationTokenByToken(ctx, testdata.ValidToken.Token())
+		assert.NoError(t, err)
+		assert.Equal(t, testdata.ValidToken.Token(), tok.Token())
 	})
 }

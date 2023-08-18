@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 
 	"github.com/go-arrower/arrower/mw"
@@ -27,6 +29,7 @@ type AuthContext struct {
 	traceProvider trace.TracerProvider
 	meterProvider metric.MeterProvider
 	queries       *models.Queries
+	repo          user.Repository
 }
 
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
@@ -60,7 +63,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.RegisterUser(di.Logger, queries, di.ArrowerQueue),
+					application.RegisterUser(di.Logger, repo, di.ArrowerQueue),
 				),
 			),
 		),
@@ -69,7 +72,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.ShowUser(queries),
+					application.ShowUser(repo),
 				),
 			),
 		),
@@ -78,7 +81,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.MetricU(di.MeterProvider,
 			mw.LoggedU(logger,
 				mw.ValidateU(nil,
-					application.VerifyUser(queries),
+					application.VerifyUser(repo),
 				),
 			),
 		),
@@ -91,6 +94,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		traceProvider:      di.TraceProvider,
 		meterProvider:      di.MeterProvider,
 		queries:            queries,
+		repo:               repo,
 	}
 
 	authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))

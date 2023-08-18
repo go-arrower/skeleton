@@ -1,6 +1,12 @@
 package testdata
 
-import "github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+import (
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+)
 
 const (
 	UserIDZero = user.ID("00000000-0000-0000-0000-000000000000")
@@ -22,4 +28,10 @@ var (
 		ID:    UserIDZero,
 		Login: "0@test.com",
 	}
+
+	ValidToken = user.NewVerificationToken(
+		uuid.New(),
+		UserIDZero,
+		time.Now().UTC().Add(time.Hour),
+	)
 )
