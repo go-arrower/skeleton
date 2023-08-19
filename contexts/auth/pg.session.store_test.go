@@ -57,7 +57,7 @@ func TestNewPGSessionStore(t *testing.T) {
 	t.Run("create succeeds", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 
 		ss, err := auth.NewPGSessionStore(pg, keyPairs)
 		assert.NoError(t, err)
@@ -71,7 +71,7 @@ func TestNewPGSessionStore(t *testing.T) {
 func TestPGSessionStore_New(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	pg := tests.PrepareTestDatabase(pgHandler)
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestPGSessionStore_New(t *testing.T) {
 func TestPGSessionStore_Save(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	pg := tests.PrepareTestDatabase(pgHandler)
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
@@ -146,7 +146,7 @@ func TestPGSessionStore_Save(t *testing.T) {
 func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	pg := tests.PrepareTestDatabase(pgHandler)
 	echoRouter := newTestRouter(pg)
 
 	var cookie *http.Cookie // the cookie to use over all requests

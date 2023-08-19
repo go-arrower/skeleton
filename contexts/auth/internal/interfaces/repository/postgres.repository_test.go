@@ -49,7 +49,7 @@ func TestNewPostgresRepository(t *testing.T) {
 func TestPostgresRepository_All(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	pg := tests.PrepareTestDatabase(pgHandler)
 	repo, _ := repository.NewPostgresRepository(pg)
 
 	all, err := repo.All(ctx)
@@ -64,7 +64,7 @@ func TestPostgresRepository_AllByIDs(t *testing.T) {
 	t.Run("valid ids", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		all, err := repo.AllByIDs(ctx, nil)
@@ -80,7 +80,7 @@ func TestPostgresRepository_AllByIDs(t *testing.T) {
 	t.Run("invalid ids", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.AllByIDs(ctx, []user.ID{"invalid-id"})
@@ -94,7 +94,7 @@ func TestPostgresRepository_FindByID(t *testing.T) {
 	t.Run("valid user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		u, err := repo.FindByID(ctx, testdata.UserIDOne)
@@ -105,7 +105,7 @@ func TestPostgresRepository_FindByID(t *testing.T) {
 	t.Run("invalid user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.FindByID(ctx, testdata.UserIDNotValid)
@@ -119,7 +119,7 @@ func TestPostgresRepository_FindByLogin(t *testing.T) {
 	t.Run("valid user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		u, err := repo.FindByLogin(ctx, testdata.ValidLogin)
@@ -130,7 +130,7 @@ func TestPostgresRepository_FindByLogin(t *testing.T) {
 	t.Run("invalid user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.FindByLogin(ctx, testdata.NotExLogin)
@@ -144,7 +144,7 @@ func TestPostgresRepository_ExistsByID(t *testing.T) {
 	t.Run("user exists", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		ex, err := repo.ExistsByID(ctx, testdata.UserIDZero)
@@ -155,7 +155,7 @@ func TestPostgresRepository_ExistsByID(t *testing.T) {
 	t.Run("user does not exist", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		ex, err := repo.ExistsByID(ctx, testdata.UserIDNotExists)
@@ -166,7 +166,7 @@ func TestPostgresRepository_ExistsByID(t *testing.T) {
 	t.Run("invalid user id", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.ExistsByID(ctx, testdata.UserIDNotValid)
@@ -180,7 +180,7 @@ func TestPostgresRepository_ExistsByLogin(t *testing.T) {
 	t.Run("user exists", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		ex, err := repo.ExistsByLogin(ctx, testdata.ValidLogin)
@@ -191,7 +191,7 @@ func TestPostgresRepository_ExistsByLogin(t *testing.T) {
 	t.Run("user does not exist", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		ex, err := repo.ExistsByLogin(ctx, testdata.NotExLogin)
@@ -203,7 +203,7 @@ func TestPostgresRepository_ExistsByLogin(t *testing.T) {
 func TestPostgresRepository_Count(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler).PGx
+	pg := tests.PrepareTestDatabase(pgHandler)
 	repo, _ := repository.NewPostgresRepository(pg)
 
 	c, err := repo.Count(ctx)
@@ -217,7 +217,7 @@ func TestPostgresRepository_Save(t *testing.T) {
 	t.Run("save new user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.Save(ctx, user.User{
@@ -243,7 +243,7 @@ func TestPostgresRepository_Save(t *testing.T) {
 	t.Run("save existing user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		usr, _ := repo.FindByID(ctx, testdata.UserIDZero)
@@ -260,7 +260,7 @@ func TestPostgresRepository_Save(t *testing.T) {
 	t.Run("save empty user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.Save(ctx, user.User{})
@@ -274,7 +274,7 @@ func TestPostgresRepository_SaveAll(t *testing.T) {
 	t.Run("save multiple", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		newUser := user.User{ID: testdata.UserIDNew}
@@ -300,7 +300,7 @@ func TestPostgresRepository_Delete(t *testing.T) {
 	t.Run("delete user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.Delete(ctx, testdata.UserZero)
@@ -317,7 +317,7 @@ func TestPostgresRepository_DeleteByID(t *testing.T) {
 	t.Run("delete user", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.DeleteByID(ctx, testdata.UserIDZero)
@@ -330,7 +330,7 @@ func TestPostgresRepository_DeleteByID(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.DeleteByID(ctx, testdata.UserIDNotValid)
@@ -344,7 +344,7 @@ func TestPostgresRepository_DeleteByIDs(t *testing.T) {
 	t.Run("delete users", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.DeleteByIDs(ctx, []user.ID{
@@ -364,7 +364,7 @@ func TestPostgresRepository_DeleteAll(t *testing.T) {
 	t.Run("delete all users", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.DeleteAll(ctx)
@@ -381,7 +381,7 @@ func TestPostgresRepository_CreateVerificationToken(t *testing.T) {
 	t.Run("create new token", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler).PGx
+		pg := tests.PrepareTestDatabase(pgHandler)
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.CreateVerificationToken(ctx, testdata.ValidToken)
