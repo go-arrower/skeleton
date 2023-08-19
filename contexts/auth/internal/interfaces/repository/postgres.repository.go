@@ -31,12 +31,12 @@ type PostgresRepository struct {
 }
 
 func (repo *PostgresRepository) All(ctx context.Context) ([]user.User, error) {
-	dbUser, err := repo.db.Conn(ctx).AllUsers(ctx)
+	dbUser, err := repo.db.Conn().AllUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", user.ErrNotFound, err)
 	}
 
-	return usersFromModel(ctx, repo.db.Conn(ctx), dbUser)
+	return usersFromModel(ctx, repo.db.Conn(), dbUser)
 }
 
 func (repo *PostgresRepository) AllByIDs(ctx context.Context, ids []user.ID) ([]user.User, error) {
@@ -50,12 +50,12 @@ func (repo *PostgresRepository) AllByIDs(ctx context.Context, ids []user.ID) ([]
 		}
 	}
 
-	dbUser, err := repo.db.Conn(ctx).AllUsersByIDs(ctx, dbIDs)
+	dbUser, err := repo.db.Conn().AllUsersByIDs(ctx, dbIDs)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", user.ErrNotFound, err)
 	}
 
-	return usersFromModel(ctx, repo.db.Conn(ctx), dbUser)
+	return usersFromModel(ctx, repo.db.Conn(), dbUser)
 }
 
 func (repo *PostgresRepository) FindByID(ctx context.Context, id user.ID) (user.User, error) {
@@ -64,21 +64,21 @@ func (repo *PostgresRepository) FindByID(ctx context.Context, id user.ID) (user.
 		return user.User{}, fmt.Errorf("%w: could not parse as uuid: %s: %w", user.ErrNotFound, id, err)
 	}
 
-	dbUser, err := repo.db.Conn(ctx).FindUserByID(ctx, dbID)
+	dbUser, err := repo.db.Conn().FindUserByID(ctx, dbID)
 	if err != nil {
 		return user.User{}, fmt.Errorf("%w: could not find user by id: %s : %w", user.ErrNotFound, dbID, err)
 	}
 
-	return userFromModel(ctx, repo.db.Conn(ctx), dbUser)
+	return userFromModel(ctx, repo.db.Conn(), dbUser)
 }
 
 func (repo *PostgresRepository) FindByLogin(ctx context.Context, login user.Login) (user.User, error) {
-	dbUser, err := repo.db.Conn(ctx).FindUserByLogin(ctx, string(login))
+	dbUser, err := repo.db.Conn().FindUserByLogin(ctx, string(login))
 	if err != nil {
 		return user.User{}, fmt.Errorf("%w: could not find user by login: %s : %w", user.ErrNotFound, login, err)
 	}
 
-	return userFromModel(ctx, repo.db.Conn(ctx), dbUser)
+	return userFromModel(ctx, repo.db.Conn(), dbUser)
 }
 
 func (repo *PostgresRepository) ExistsByID(ctx context.Context, id user.ID) (bool, error) {
@@ -87,7 +87,7 @@ func (repo *PostgresRepository) ExistsByID(ctx context.Context, id user.ID) (boo
 		return false, fmt.Errorf("%w: could not parse as uuid: %s: %w", user.ErrNotFound, id, err)
 	}
 
-	ex, err := repo.db.Conn(ctx).UserExistsByID(ctx, dbID)
+	ex, err := repo.db.Conn().UserExistsByID(ctx, dbID)
 	if err != nil {
 		return false, fmt.Errorf("%w: %w", user.ErrNotFound, err)
 	}
@@ -96,7 +96,7 @@ func (repo *PostgresRepository) ExistsByID(ctx context.Context, id user.ID) (boo
 }
 
 func (repo *PostgresRepository) ExistsByLogin(ctx context.Context, login user.Login) (bool, error) {
-	ex, err := repo.db.Conn(ctx).UserExistsByLogin(ctx, string(login))
+	ex, err := repo.db.Conn().UserExistsByLogin(ctx, string(login))
 	if err != nil {
 		return false, fmt.Errorf("%w: %w", user.ErrNotFound, err)
 	}
@@ -105,7 +105,7 @@ func (repo *PostgresRepository) ExistsByLogin(ctx context.Context, login user.Lo
 }
 
 func (repo *PostgresRepository) Count(ctx context.Context) (int, error) {
-	c, err := repo.db.Conn(ctx).CountUsers(ctx)
+	c, err := repo.db.Conn().CountUsers(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("%w: could not count users: %w", user.ErrNotFound, err)
 	}
@@ -242,7 +242,7 @@ func (repo *PostgresRepository) VerificationTokenByToken(
 	ctx context.Context,
 	tokenID uuid.UUID,
 ) (user.VerificationToken, error) {
-	token, err := repo.db.Conn(ctx).VerificationTokenByToken(ctx, tokenID)
+	token, err := repo.db.Conn().VerificationTokenByToken(ctx, tokenID)
 	if err != nil {
 		return user.VerificationToken{}, fmt.Errorf("%w: could not get verification token: %v", user.ErrNotFound, err)
 	}
