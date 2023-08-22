@@ -2,6 +2,7 @@ package application_test
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -54,5 +55,13 @@ var (
 		Login:        user0Login,
 		PasswordHash: user.PasswordHash(strongPasswordHash),
 		Blocked:      user.BoolFlag{}.SetTrue(),
+	}
+
+	resolvedIP = user.ResolvedIP{
+		IP:          net.ParseIP(ip),
+		Country:     "-",
+		CountryCode: "-",
+		Region:      "-",
+		City:        "-",
 	}
 )

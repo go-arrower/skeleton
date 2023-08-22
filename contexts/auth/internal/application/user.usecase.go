@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/infrastructure"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
@@ -37,7 +39,7 @@ type (
 	SendConfirmationNewDeviceLoggedIn struct {
 		UserID     user.ID
 		OccurredAt time.Time
-		IP         string
+		IP         user.ResolvedIP
 		Device     user.Device
 		// Ip Location
 	}
@@ -48,6 +50,7 @@ func LoginUser(
 	repo user.Repository,
 	queue jobs.Enqueuer,
 ) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
+	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
 	authenticator := user.NewAuthenticationService()
 
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
@@ -86,10 +89,15 @@ func LoginUser(
 		// FIXME: add a method to user or a domain service, that ensures session is not added, if one with same ID already exists.
 
 		if in.IsNewDevice {
+			resolved, err := ip.ResolveIP(in.IP)
+			if err != nil {
+				return LoginUserResponse{}, fmt.Errorf("could not resolve ip address: %w", err)
+			}
+
 			err = queue.Enqueue(ctx, SendConfirmationNewDeviceLoggedIn{
 				UserID:     usr.ID,
 				OccurredAt: time.Now().UTC(),
-				IP:         in.IP,
+				IP:         resolved,
 				Device:     user.NewDevice(in.UserAgent),
 			})
 			if err != nil {
@@ -119,9 +127,8 @@ type (
 	NewUserVerificationEmail struct {
 		UserID     user.ID
 		OccurredAt time.Time
-		IP         string
+		IP         user.ResolvedIP
 		Device     user.Device
-		// Ip Location
 	}
 )
 
@@ -130,6 +137,8 @@ func RegisterUser(
 	repo user.Repository,
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
+	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
+
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
 		ex, err := repo.ExistsByLogin(ctx, user.Login(in.RegisterEmail))
 		if err != nil && !errors.Is(err, user.ErrNotFound) {
@@ -178,10 +187,15 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("could not save new user: %w", err)
 		}
 
+		resolved, err := ip.ResolveIP(in.IP)
+		if err != nil {
+			return RegisterUserResponse{}, fmt.Errorf("could not resolve ip address: %w", err)
+		}
+
 		err = queue.Enqueue(ctx, NewUserVerificationEmail{
 			UserID:     usr.ID,
 			OccurredAt: time.Now().UTC(),
-			IP:         in.IP,
+			IP:         resolved,
 			Device:     user.NewDevice(in.UserAgent),
 		})
 		if err != nil {
@@ -217,7 +231,7 @@ func SendNewUserVerificationEmail(
 		logger.InfoCtx(ctx, "send verification email to user",
 			slog.String("token", token.Token().String()),
 			slog.String("device", in.Device.Name()+" "+in.Device.OS()),
-			slog.String("ip", in.IP),
+			slog.String("ip", in.IP.IP.String()),
 			slog.String("time", in.OccurredAt.String()),
 			slog.String("email", string(usr.Login)),
 		)

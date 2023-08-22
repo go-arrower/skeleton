@@ -93,7 +93,7 @@ func TestLoginUser(t *testing.T) {
 		job := queue.GetFirstOf(application.SendConfirmationNewDeviceLoggedIn{}).(application.SendConfirmationNewDeviceLoggedIn)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
-		assert.Equal(t, ip, job.IP)
+		assert.Equal(t, resolvedIP, job.IP)
 		assert.Equal(t, user.NewDevice(userAgent), job.Device)
 	})
 }
@@ -183,7 +183,7 @@ func TestRegisterUser(t *testing.T) {
 		job := queue.GetFirstOf(application.NewUserVerificationEmail{}).(application.NewUserVerificationEmail)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
-		assert.Equal(t, ip, job.IP)
+		assert.Equal(t, resolvedIP, job.IP)
 		assert.Equal(t, user.NewDevice(userAgent), job.Device)
 	})
 }
@@ -201,7 +201,7 @@ func TestSendNewUserVerificationEmail(t *testing.T) {
 		err := cmd(ctx, application.NewUserVerificationEmail{
 			UserID:     userNotVerifiedUserID,
 			OccurredAt: time.Now().UTC(),
-			IP:         ip,
+			IP:         resolvedIP,
 			Device:     user.NewDevice(userAgent),
 		})
 		assert.NoError(t, err)
