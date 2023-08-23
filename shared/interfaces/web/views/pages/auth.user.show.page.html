@@ -1,19 +1,19 @@
 <div>
-    <h1 class="text-4xl font-bold">Show User {{ .User.Name }}</h1>
+    <h1 class="text-4xl font-bold">Show User {{ .User.Name.DisplayName }}</h1>
 </div>
 
 <div>
     <div>
         <span>Firstname</span>
-        <span>{{ .User.FirstName }}</span>
+        <span>{{ .User.Name.FirstName }}</span>
     </div>
     <div>
         <span>Lastname</span>
-        <span>{{ .User.LastName }}</span>
+        <span>{{ .User.Name.LastName }}</span>
     </div>
     <div>
         <span>Name</span>
-        <span>{{ .User.Name }}</span>
+        <span>{{ .User.Name.DisplayName }}</span>
     </div>
     <div>
         <span>Login</span>
