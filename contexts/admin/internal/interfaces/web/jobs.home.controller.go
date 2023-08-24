@@ -24,7 +24,9 @@ func (cont JobsController) JobsHome() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.home", ListQueuesPage{Queues: res.QueueStats}) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.home", echo.Map{
+			"Queues": res.QueueStats,
+		})
 	}
 }
 
@@ -41,7 +43,11 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
-		return c.Render(http.StatusOK, "=>jobs.queue", page) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.queue", echo.Map{
+			"QueueName": page.QueueName,
+			"Jobs":      page.Jobs,
+			"Stats":     page.Stats,
+		})
 	}
 }
 
@@ -52,13 +58,15 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", presentWorkers(res.Pool)) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.workers", echo.Map{
+			"workers": presentWorkers(res.Pool),
+		})
 	}
 }
 
 func (cont JobsController) JobsSchedule() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>jobs.schedule", nil) //nolint:wrapcheck
+		return c.Render(http.StatusOK, "=>jobs.schedule", nil)
 	}
 }
 
@@ -82,7 +90,7 @@ func (cont JobsController) JobsScheduleNew() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", queue)) //nolint:wrapcheck
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", queue))
 	}
 }
 
@@ -210,7 +218,7 @@ func (cont JobsController) DeleteJob() func(c echo.Context) error {
 
 		_ = cont.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q)) //nolint:wrapcheck
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }
 
@@ -221,6 +229,6 @@ func (cont JobsController) RescheduleJob() func(c echo.Context) error {
 
 		_ = cont.Cmds.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q)) //nolint:wrapcheck
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }

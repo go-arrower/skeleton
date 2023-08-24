@@ -1,5 +1,9 @@
 run:
   build-tags:
+    - integration
+
+  skip-files:
+    - filesystem_store_test.go # the file is only intended to be used temporarily until the issue is fixed: https://github.com/gorilla/sessions/issues/267
 
 linters-settings:
   gci:
@@ -210,18 +214,40 @@ linters:
 
 issues:
   exclude-rules:
+    #
     # Exclude lll issues for long lines with go:generate
+    #
     - linters:
         - lll
       source: "^//go:generate "
 
+    #
+    # Exclude issues from test files
+    #
     - path: _test.go
       linters:
         - gochecknoglobals # Allow globals so testdata & integration helpers can be made available in a convenient way
         - funlen  # Allow test functions of any length
         - exhaustruct # Don't force complete struct initialisation to keep test cases simpler to read
+        - lll # Mostly because of lengthy msgAndArgs params in assertions
+        - forcetypeassert # Don't need to check in tests, simplifies e.g. the assertion of the jobs.queues.GetFirst() method
+        - errcheck # Makes the 'setup' step of test cases much easier to read, e.g. repo initialisation and following Save() operation are on the same column width
+    - path: _test.go # partly exclude false positives, but not all. Can not mix with complete exclusion above or "text" filter applies to all linters and e.g. doesn't catch funlen anymore
+      linters:
+        - govet
+      text: "fieldalignment" # Prefer easier readability to optimal memory layout for tests
 
+    #
+    # Allow patterns that are arrower specific
+    #
+    # echo required an error and the framework considers it alright to return the use case / application layer errors without the need to wrap them, as they are not from a third party
+    - linters:
+        - wrapcheck
+      text: "github.com/labstack/echo/v4.Context"
+
+    #
     # Allow patterns that are considered best practises for Corba CLI applications
+    #
     - path: cmd
       linters:
         - exhaustruct # Allow the command to not use all configurations options & hooks Cobra offers

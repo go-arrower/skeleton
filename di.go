@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-arrower/arrower/alog"
@@ -25,7 +23,10 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 	resource := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String("arrower.skeleton"),
-		attribute.String("arrower", "skeleton"), // NEEDS TO MATCH WITH THE LOGS LABEL (why? for the "Logs for this span" button in tempo?)
+
+		// NEEDS TO MATCH WITH THE LOGS LABEL (why? for the "Logs for this span" button in tempo?)
+		attribute.String("arrower", "skeleton"),
+
 		// like kubernetes pod name
 	)
 
@@ -43,7 +44,7 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 		metric.WithReader(exporter),
 	)
 
-	//otel.SetMeterProvider(meterProvider)
+	// otel.SetMeterProvider(meterProvider)
 
 	// example trace
 	traceExporter, err := otlptracegrpc.New(
@@ -61,32 +62,41 @@ func setupTelemetry(ctx context.Context) (*slog.Logger, *metric.MeterProvider, *
 		trace.WithSyncer(traceExporter), // dev
 		trace.WithResource(resource),
 		// set the sampling rate based on the parent span to 60%
-		//trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))), // prod
+		// trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))), // prod
 		trace.WithSampler(trace.AlwaysSample()), // dev
 	)
 
-	//otel.SetTracerProvider(traceProvider)
+	// otel.SetTracerProvider(traceProvider)
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
-	go serveMetrics()
+	go serveMetrics(ctx, logger)
 
 	return logger, meterProvider, traceProvider
 }
 
-func serveMetrics() {
-	log.Printf("serving metrics at localhost:2223/metrics")
+func serveMetrics(ctx context.Context, logger alog.Logger) {
+	const (
+		port = ":2223"
+		path = "/metrics"
+	)
 
-	//http.Handle("/metrics", promhttp.Handler())
-	http.Handle("/metrics", promhttp.HandlerFor(
+	logger.DebugCtx(ctx, "serving metrics",
+		slog.String("port", port),
+		slog.String("path", path),
+	)
+
+	// http.Handle("/metrics", promhttp.Handler())
+	http.Handle(path, promhttp.HandlerFor(
 		prometheus2.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true, // to enable Examplars in the export format
 		},
 	))
 
-	err := http.ListenAndServe(":2223", nil)
+	err := http.ListenAndServe(port, nil)
 	if err != nil {
-		fmt.Printf("error serving http: %v", err)
+		logger.DebugCtx(ctx, "error serving http", slog.String("err", err.Error()))
+
 		return
 	}
 }
