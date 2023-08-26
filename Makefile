@@ -41,8 +41,8 @@ dev-tools: ## Initialise this machine with development dependencies
 
 .PHONY: download-ip2location
 download-ip2location:
-	curl --output /tmp/IP.zip "https://www.ip2location.com/download/?token=DKvBu9UCpd43qpDZMiigUFLtR5HDGm1CVdlTMhF5Yw81UsAwNoBWjaoh1X6JvHyT&file=DB3LiteBINIPV6"
-	unzip /tmp/IP.zip
+	curl -L --output /tmp/IP.zip "https://www.ip2location.com/download/?token=DKvBu9UCpd43qpDZMiigUFLtR5HDGm1CVdlTMhF5Yw81UsAwNoBWjaoh1X6JvHyT&file=DB3LiteBINIPV6"
+	unzip -d /tmp /tmp/IP.zip
 	rm /tmp/LICENSE_LITE.TXT
 	rm /tmp/README_LITE.TXT
 	rm /tmp/IP.zip
