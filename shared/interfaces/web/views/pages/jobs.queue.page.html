@@ -1,10 +1,14 @@
-<div class="flex w-full justify-between">
-    <h1 class="text-4xl font-bold min-w-fit">Queue: {{ .QueueName }}</h1>
+<div hx-ext="multi-swap"
+     hx-get="/admin/jobs/{{ .QueueName }}"
+     hx-trigger="every 1s"
+     hx-swap="multi:#statistics,#jobs">
+    <div class="flex w-full justify-between">
+        <h1 class="text-4xl font-bold min-w-fit">Queue: {{ .QueueName }}</h1>
 
-    <div id="job_types" class="h-36 grow p-0 mx-4 my-0{{ if eq .Stats.PendingJobs 0}} invisible{{end}}"></div>
+        <div id="job_types" class="h-36 grow p-0 mx-4 my-0{{ if eq .Stats.PendingJobs 0}} invisible{{end}}"></div>
 
-    <table class="grow">
-        <thead class="bg-gray-100">
+        <table class="grow">
+            <thead class="bg-gray-100">
             <tr>
                 <th scope="col" class="p-1 border border-slate-300">Pending</th>
                 <th scope="col" class="p-1 border border-slate-300">Workers</th>
@@ -13,8 +17,8 @@
                 <th scope="col" class="p-1 border border-slate-300">Average time per Job</th>
                 <th scope="col" class="p-1 border border-slate-300">Estimate until empty</th>
             </tr>
-        </thead>
-        <tbody>
+            </thead>
+            <tbody id="statistics">
             <tr>
                 <td class="p-1">{{ .Stats.PendingJobs }}</td>
                 <td class="p-1">{{ .Stats.AvailableWorkers }}</td>
@@ -23,13 +27,13 @@
                 <td class="p-1">{{ .Stats.AverageTimePerJob }}</td>
                 <td class="p-1">{{ .Stats.EstimateUntilEmpty }}</td>
             </tr>
-        </tbody>
-    </table>
-</div>
+            </tbody>
+        </table>
+    </div>
 
 
-<table class="table-auto w-full mt-8">
-    <thead class="bg-gray-100">
+    <table class="table-auto w-full mt-8">
+        <thead class="bg-gray-100">
         <tr>
             <th scope="col" class="p-1 border border-slate-300 min-w-fit">ID</th>
             <th scope="col" class="p-1 border border-slate-300 min-w-fit">Type</th>
@@ -39,13 +43,14 @@
             <th scope="col" class="p-1 border border-slate-300 min-w-fit">Error Count</th>
             <th scope="col" class="p-1 border border-slate-300 min-w-fit">Actions</th>
         </tr>
-    </thead>
-    <tbody>
-    {{ range .Jobs }}
-        {{ template "job.component" . }}
-    {{ end }}
-    </tbody>
-</table>
+        </thead>
+        <tbody id="jobs">
+        {{ range .Jobs }}
+            {{ template "job.component" . }}
+        {{ end }}
+        </tbody>
+    </table>
+</div>
 
 
 <script type="text/javascript">
