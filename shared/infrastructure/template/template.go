@@ -311,7 +311,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			slog.String("page", page),
 		)
 
-		newTemplate, err := r.components.Clone()
+		newTemplate, err := r.components.Clone() // FIXME in prepare..() the page has already a clone of components=> might be unnecessary work
 		if err != nil {
 			return fmt.Errorf("%w: could not clone: %v", ErrRenderFailed, err)
 		}

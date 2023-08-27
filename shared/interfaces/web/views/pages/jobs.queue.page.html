@@ -1,3 +1,6 @@
+{{ define "admin.title" }}Jobs{{ end }}
+
+
 <div hx-ext="multi-swap"
      hx-get="/admin/jobs/{{ .QueueName }}"
      hx-trigger="every 1s"

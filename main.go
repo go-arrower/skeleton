@@ -111,6 +111,7 @@ func main() {
 
 	_ = authContext.Shutdown(ctx)
 	_ = queue.Shutdown(ctx)
+	_ = arrowerQueue.Shutdown(ctx)
 	_ = di.TraceProvider.Shutdown(ctx)
 	_ = di.MeterProvider.Shutdown(ctx)
 }
