@@ -9,7 +9,9 @@
     <span class="pl-1">Create new User</span>
 </a>
 
-<table class="table-auto border border-collapse mt-6 text-left">
+{{ template "fake-btn" }}
+
+<table id="users" class="table-auto border border-collapse mt-6 text-left">
     <thead class="bg-gray-100">
     <tr>
         <th scope="col" class="p-1 border border-slate-300">ID</th>
@@ -23,25 +25,15 @@
     </thead>
     <tbody>
     {{ range .users }}
-        <tr class="odd:bg-white even:bg-slate-50">
-            <td class="p-1">
-                <a href="/admin/auth/users/{{ .ID.Value }}">
-                    {{ .ID.Value }}
-                </a>
-            </td>
-            <td class="p-1">{{ .CreatedAt }}</td>
-            <td class="p-1">{{ .Login }}</td>
-            <td class="p-1"></td>
-            <td class="p-1"></td>
-            <td class="p-1">{{ .Profile.Value }}</td>
-            <td class="p-1">
-                <a href="/admin/auth/as_user/{{ .ID.Value }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                    </svg>
-                </a>
-            </td>
+        {{ template "user.component" . }}
+    {{ else }}
+        <tr>
+            <td colspan="7">No Users</td>
         </tr>
     {{ end }}
     </tbody>
 </table>
+
+{{ define "fake-btn" }}
+    <button hx-post="/auth/test" hx-swap="beforeend" hx-target="#users">Fake Add</button>
+{{ end }}

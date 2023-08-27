@@ -136,6 +136,11 @@ func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 			c.Error(err)
 		}
 
+		// skip htmx requests, as the code is already present on the page from a previous load
+		if c.Request().Header.Get("HX-Request") == "true" {
+			return nil
+		}
+
 		if strings.Contains(c.Response().Header().Get("Content-Type"), "text/html") {
 			_, _ = c.Response().Write([]byte(hotReloadJSCode))
 		}
