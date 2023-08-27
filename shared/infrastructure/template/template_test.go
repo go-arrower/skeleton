@@ -208,7 +208,7 @@ func TestRenderer_Render(t *testing.T) {
 		err = renderer.Render(buf, "c0.component", nil, testdata.EmptyEchoContext())
 		assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), testdata.C0Content)
+		assert.Equal(t, testdata.C0Content, buf.String())
 	})
 
 	t.Run("access layout that does not exist", func(t *testing.T) {

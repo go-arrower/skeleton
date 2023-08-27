@@ -119,7 +119,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 
 		name := componentName(c)
 
-		componentTemplates, err = componentTemplates.New(name).Parse(file)
+		_, err = componentTemplates.New(name).Parse(file)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err)
 		}
@@ -207,8 +207,8 @@ func templateNames(templates *template.Template) []string {
 	n := len(templates.Templates())
 	var names = make([]string, n)
 
-	for i := 0; i < n; i++ {
-		names[i] = templates.Templates()[i].Name()
+	for i, t := range templates.Templates() {
+		names[i] = t.Name()
 	}
 
 	return names
@@ -292,6 +292,15 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.components = componentTemplates
 		r.templates = pageTemplates
 	}
+
+	//if strings.HasSuffix(cleanedName, ".component") {
+	//	err := r.components.ExecuteTemplate(w, cleanedName, data)
+	//	if err != nil {
+	//		return fmt.Errorf("%w: could not execute component template: %v", ErrRenderFailed, err)
+	//	}
+	//
+	//	return nil
+	//}
 
 	templ, found := r.templates[cleanedName]
 	if !found || r.hotReload {
