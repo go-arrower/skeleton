@@ -25,10 +25,10 @@
             <tr>
                 <td class="p-1">{{ .Stats.PendingJobs }}</td>
                 <td class="p-1">{{ .Stats.AvailableWorkers }}</td>
-                <td class="p-1">{{ .Stats.FailedJobs }}</td>
-                <td class="p-1">{{ .Stats.PendingJobsErrorRate }}%</td>
+                <td class="p-1">{{ if ne 0 .Stats.PendingJobs }}{{ .Stats.FailedJobs }}{{ end }}</td>
+                <td class="p-1">{{ if ne 0 .Stats.PendingJobs }}{{ .Stats.PendingJobsErrorRate }}%{{ end }}</td>
                 <td class="p-1">{{ .Stats.AverageTimePerJob }}</td>
-                <td class="p-1">{{ .Stats.EstimateUntilEmpty }}</td>
+                <td class="p-1">{{ if ne 0 .Stats.PendingJobs }}{{ .Stats.EstimateUntilEmpty }}{{ end }}</td>
             </tr>
             </tbody>
         </table>
@@ -50,6 +50,12 @@
         <tbody id="jobs">
         {{ range .Jobs }}
             {{ template "job.component" . }}
+        {{ else }}
+            <tr>
+                <td colspan="7" class="text-center">
+                    No Jobs pending.
+                </td>
+            </tr>
         {{ end }}
         </tbody>
     </table>
