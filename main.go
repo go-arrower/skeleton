@@ -70,9 +70,12 @@ func main() {
 	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
 	di.AdminRouter.Use(auth.EnsureUserIsSuperuserMiddleware)
 
-	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx)
+	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
+		jobs.WithPoolName("random-pool-name"),
+	)
 	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
 		jobs.WithQueue("arrower"),
+		jobs.WithPoolName("random-pool-name"),
 	)
 	di.DefaultQueue = queue
 	di.ArrowerQueue = arrowerQueue
