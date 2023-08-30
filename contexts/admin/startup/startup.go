@@ -107,6 +107,7 @@ func Init(logger *slog.Logger, traceProvider trace.TracerProvider, meterProvider
 		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
 		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
 		jobs.GET("/workers", cont.JobsWorkers())
+		jobs.GET("/settings", cont.JobsSettings())
 		jobs.GET("/schedule", cont.JobsSchedule())
 		jobs.POST("/schedule", cont.JobsScheduleNew())
 	}

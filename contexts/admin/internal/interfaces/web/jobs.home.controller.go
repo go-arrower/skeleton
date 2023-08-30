@@ -64,6 +64,12 @@ func (cont JobsController) JobsWorkers() func(c echo.Context) error {
 	}
 }
 
+func (cont JobsController) JobsSettings() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>jobs.settings", nil)
+	}
+}
+
 func (cont JobsController) JobsSchedule() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		return c.Render(http.StatusOK, "=>jobs.schedule", nil)

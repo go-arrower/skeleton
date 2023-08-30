@@ -1,9 +1,5 @@
-{{ define "admin.title" }}Jobs{{ end }}
+{{ define "admin.title" }}Active Worker Pools{{ end }}
 
-
-<div>
-    <h1 class="text-4xl font-bold">Active Worker Pools</h1>
-</div>
 
 <table hx-get="/admin/jobs/workers"
        hx-trigger="every 10s"
@@ -11,7 +7,7 @@
        hx-swap="outerHTML"
        hx-select="tbody"
        hx-disinherit="hx-target hx-swap hx-select"
-       class="table-auto border border-collapse mt-6 text-left">
+       class="table-auto border border-collapse text-left">
     <thead class="bg-gray-100">
     <tr>
         <th scope="col" class="p-1 border border-slate-300">Instance name</th>

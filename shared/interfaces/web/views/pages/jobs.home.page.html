@@ -1,15 +1,13 @@
-{{ define "admin.title" }}Jobs{{ end }}
+{{ define "admin.title" }}
+    {{ if eq 1 (len .Queues) }}
+        1 Queue
+    {{ else }}
+        {{ len .Queues }} Queues
+    {{ end }}
+{{ end }}
 
 
 <div id="statistics" class="flex w-full justify-between">
-    <h1 class="text-4xl font-bold">
-        {{ if eq 1 (len .Queues) }}
-            1 Queue
-        {{ else }}
-            {{ len .Queues }} Queues
-        {{ end }}
-    </h1>
-
     <div id="queues" class="h-36 grow p-0 m-0"></div>
     <div id="processed" class="h-36 grow p-0 m-0"></div>
 </div>

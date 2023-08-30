@@ -86,17 +86,8 @@
 
 {{/*    TODO rename Context-Layout in some way to make the language clearer */}}
     {{ block "layout" . }}
-        <div class="w-full flex flex-col flex-wrap sm:flex-row sm:flex-nowrap">
-            <div class="basis-2/12 w-full grow-0 bg-green-200 p-2"><!-- 3-col layout --></div>
-            <header class="w-full grow bg-green-200 py-4">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900">{{ block "admin.title" . }}Admin Dashboard{{end}}</h1>
-            </header>
-            <div class="basis-1/12 w-full grow-0 p-2 bg-green-200"><!-- 3-col layout --></div>
-        </div>
-
-
         <div class="w-full flex flex-col flex-wrap sm:flex-row sm:flex-nowrap bg-green-200">
-            <div class="basis-2/12 w-full grow-0 px-4">
+            <div class="basis-2/12 w-full grow-0 px-4 mt-8">
                 <div class="bg-green-200"></div>
                 <nav class="m-0 p-0">
                     <a href="/" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 rounded">
@@ -106,7 +97,7 @@
                         <span class="pl-1">Home</span>
                     </a>
 
-                    <hr class="border-2 rounded border-green-300" />
+                    <hr class="border-2 rounded border-green-300 w-3/4" />
 
                     <span class="text-gray-500 flex px-3 py-2 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -118,7 +109,7 @@
                     <a href="/admin/auth/users" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Users</a>
                     <a href="/admin/auth/settings" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Settings</a>
 
-                    <hr class="border-2 rounded border-green-300" />
+                    <hr class="border-2 rounded border-green-300 w-3/4" />
 
                     <span class="text-gray-500 flex px-3 py-2 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -129,16 +120,22 @@
 
                     <a href="/admin/jobs" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Queues</a>
                     <a href="/admin/jobs/workers" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Workers</a>
-                    <a href="/admin/jobs/schedule" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Schedule Jobs</a>
+                    <a href="/admin/jobs/settings" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded">Settings</a>
+                    <a href="/admin/jobs/schedule" class="text-gray-500 flex hover:bg-green-300 hover:text-green-600 px-3 py-2 pl-10 rounded"><i>Schedule Jobs</i></a>
                 </nav>
             </div>
-            <div class="w-full grow bg-white p-6 rounded-t-lg rounded-l-lg">
-                <main class="bg-white">
-                        {{block "content" .}}
-                            Fallback, if "content" is not defined elsewhere
-                        {{end}}
-                </main>
-        </div>
+            <div class="w-full">
+                <header class="w-full grow bg-green-200 py-4">
+                    <h1 class="text-4xl font-bold tracking-tight text-gray-900">{{ block "admin.title" . }}Admin Dashboard{{end}}</h1>
+                </header>
+                <div class="w-full grow bg-white p-6 rounded-t-lg rounded-l-lg">
+                    <main class="bg-white">
+                            {{block "content" .}}
+                                Fallback, if "content" is not defined elsewhere
+                            {{end}}
+                    </main>
+                </div>
+            </div>
             <div class="basis-1/12 w-full shrink grow-0"><!-- 3-col layout -->
                 <div class="bg-green-200 h-16"></div>
             </div>

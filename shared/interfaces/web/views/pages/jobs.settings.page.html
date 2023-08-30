@@ -1,0 +1,126 @@
+{{ define "admin.title" }}Job Settings{{ end }}
+
+<!-- FF needs autocomplete="off" for checked to work, see: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/Input/checkbox, https://stackoverflow.com/questions/5985839/bug-with-firefox-disabled-attribute-of-input-not-resetting-when-refreshing  -->
+<form autocomplete="off">
+    <fieldset>
+        <legend>Automatically scheduled</legend>
+
+        <div class="flex ml-4 p-1">
+            <label class="relative inline-flex items-center mb-4 cursor-pointer">
+                <input type="checkbox" value="" class="sr-only peer" checked/>
+                <span class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></span>
+                <span class="ml-3">Prune Workers older than</span>
+            </label>
+            <label class="">
+                <input type="number" value="2"/>
+                Minutes
+            </label>
+        </div>
+
+        <div class="flex ml-4 p-1">
+            <label class="relative inline-flex items-center mb-4 cursor-pointer">
+                <input type="checkbox" value="" class="sr-only peer"/>
+                <span class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></span>
+                <span class="ml-3">Prune history larger than</span>
+            </label>
+            <label class="">
+                <input type="number" value="1000000"/>
+                Jobs
+            </label>
+        </div>
+
+        <div class="flex ml-4 p-1">
+            <label class="relative inline-flex items-center mb-4 cursor-pointer">
+                <input type="checkbox" value="" class="sr-only peer"/>
+                <span class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></span>
+                <span class="ml-3">Prune history older than</span>
+            </label>
+            <label class="">
+                <input type="number" value="30"/>
+                Days
+            </label>
+        </div>
+
+        <div class="flex ml-4 p-1">
+            <label class="relative inline-flex items-center mb-4 cursor-pointer">
+                <input type="checkbox" value="" class="sr-only peer" checked/>
+                <span class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></span>
+                <span class="ml-3">Prune queue larger than</span>
+            </label>
+            <label class="">
+                <input type="number" value="1"/>
+                GB
+            </label>
+        </div>
+
+    </fieldset>
+</form>
+
+<br/>
+<hr/>
+<br/>
+<ul>
+    <li class="flex">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+             class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+        </svg>
+        Offload Job history to S3 (backup) <!-- needs S3 settings => pull from global config -->
+    </li>
+    <li class="flex">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+             class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+        </svg>
+        Postgres VACUUM the job tables
+    </li>
+    <br/>
+    <div class="text-red-500">DANGER ZONE
+        <li class="flex">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+            </svg>
+            Delete Jobs older than x Days
+        </li>
+        <li class="flex">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+            </svg>
+            Delete all jobs with more than x errors
+        </li>
+        <li class="flex">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+            </svg>
+            Delete all job payloads
+        </li>
+        <li class="flex">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+            </svg>
+            Delete complete Job history
+        </li>
+        Q: should this be per queue? in the queue UI?
+        <br/>
+        <br/>
+
+        <li class="flex">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
+            </svg>
+            Delete old workers
+        </li>
+    </div>
+</ul>
