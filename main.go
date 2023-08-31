@@ -31,8 +31,8 @@ func main() {
 	di := &infrastructure.Container{Config: &infrastructure.Config{ApplicationName: "arrower skeleton"}}
 
 	di.Logger, di.MeterProvider, di.TraceProvider = setupTelemetry(ctx)
-	// alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 	alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
+	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
@@ -70,10 +70,10 @@ func main() {
 	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
 	di.AdminRouter.Use(auth.EnsureUserIsSuperuserMiddleware)
 
-	queue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
+	queue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
 		jobs.WithPoolName("random-pool-name"),
 	)
-	arrowerQueue, _ := jobs.NewGueJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
+	arrowerQueue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
 		jobs.WithQueue("arrower"),
 		jobs.WithPoolName("random-pool-name"),
 	)
