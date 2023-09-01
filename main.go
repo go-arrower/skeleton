@@ -32,7 +32,7 @@ func main() {
 
 	di.Logger, di.MeterProvider, di.TraceProvider = setupTelemetry(ctx)
 	alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
-	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	// alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
