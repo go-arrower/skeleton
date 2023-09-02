@@ -9,7 +9,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
@@ -24,22 +23,17 @@ import (
 
 var (
 	ctx       = context.Background()
-	pgHandler *postgres.Handler
+	pgHandler *tests.PostgresDocker
 )
 
 func TestMain(m *testing.M) {
-	handler, cleanup := tests.GetDBConnectionForIntegrationTesting(ctx)
-	pgHandler = handler
+	pgHandler = tests.NewPostgresDockerForIntegrationTesting()
 
 	//
 	// Run tests
 	code := m.Run()
 
-	//
-	// Cleanup
-	_ = handler.Shutdown(ctx)
-	_ = cleanup()
-
+	pgHandler.Cleanup()
 	os.Exit(code)
 }
 
@@ -57,7 +51,7 @@ func TestNewPGSessionStore(t *testing.T) {
 	t.Run("create succeeds", func(t *testing.T) {
 		t.Parallel()
 
-		pg := tests.PrepareTestDatabase(pgHandler)
+		pg := pgHandler.NewTestDatabase()
 
 		ss, err := auth.NewPGSessionStore(pg, keyPairs)
 		assert.NoError(t, err)
@@ -71,7 +65,7 @@ func TestNewPGSessionStore(t *testing.T) {
 func TestPGSessionStore_New(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler)
+	pg := pgHandler.NewTestDatabase()
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
@@ -118,7 +112,7 @@ func TestPGSessionStore_New(t *testing.T) {
 func TestPGSessionStore_Save(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler)
+	pg := pgHandler.NewTestDatabase()
 	ss, _ := auth.NewPGSessionStore(pg, keyPairs)
 
 	t.Run("save session with max age 0", func(t *testing.T) {
@@ -146,7 +140,7 @@ func TestPGSessionStore_Save(t *testing.T) {
 func TestNewPGSessionStore_HTTPRequest(t *testing.T) {
 	t.Parallel()
 
-	pg := tests.PrepareTestDatabase(pgHandler)
+	pg := pgHandler.NewTestDatabase()
 	echoRouter := newTestRouter(pg)
 
 	var cookie *http.Cookie // the cookie to use over all requests
