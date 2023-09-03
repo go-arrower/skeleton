@@ -32,8 +32,7 @@ type User struct { //nolint:govet // fieldalignment less important than grouping
 	TimeZone          TimeZone
 	ProfilePictureURL URL
 	// a helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
-	Profile  Profile  // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
-	Profile2 Profile2 // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
+	Profile Profile // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
 	// email, phone???
 
 	Verified  BoolFlag // todo make all flags private, so they can not be manipulated outside of the business logic
@@ -249,13 +248,7 @@ func NewURL(url string) (URL, error) { return "", nil }
 
 type URL string
 
-type (
-	ProfileKey   string
-	ProfileValue string
-
-	Profile  map[ProfileKey]ProfileValue
-	Profile2 map[string]*string
-)
+type Profile map[string]string
 
 func NewDevice(userAgent string) Device {
 	return Device{userAgent: userAgent}

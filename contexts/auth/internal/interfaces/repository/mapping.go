@@ -39,12 +39,10 @@ func userFromModel(ctx context.Context, queries *models.Queries, dbUser models.A
 }
 
 func userFromModelWithSession(dbUser models.AuthUser, sessions []models.AuthSession) user.User {
-	prof := make(map[string]*string)
-
-	profile := dbUser.Profile.Scan(&prof)
-	_ = profile
-	_ = prof
-	_ = dbUser.Profile.Value
+	profile := make(map[string]string)
+	for k, v := range dbUser.Profile {
+		profile[k] = *v
+	}
 
 	return user.User{
 		ID:                user.ID(dbUser.ID.String()),
@@ -56,8 +54,7 @@ func userFromModelWithSession(dbUser models.AuthUser, sessions []models.AuthSess
 		Locale:            user.Locale{},   // todo
 		TimeZone:          user.TimeZone(dbUser.TimeZone),
 		ProfilePictureURL: user.URL(dbUser.PictureUrl),
-		Profile:           user.Profile{},
-		Profile2:          prof, // todo
+		Profile:           profile,
 		Verified:          user.BoolFlag(dbUser.VerifiedAtUtc.Time),
 		Blocked:           user.BoolFlag(dbUser.BlockedAtUtc.Time),
 		SuperUser:         user.BoolFlag(dbUser.SuperuserAtUtc.Time),
