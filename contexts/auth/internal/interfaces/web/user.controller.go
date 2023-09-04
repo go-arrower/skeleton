@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
@@ -29,17 +31,24 @@ Proposal for naming conventions:
 	- delete
 */
 
-func NewUserController(secret []byte) UserController {
-	return UserController{knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret)} //nolint:exhaustruct
+func NewUserController(routes *echo.Group, secret []byte) UserController {
+	return UserController{
+		r:                   routes,
+		knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret),
+	} //nolint:exhaustruct
 }
 
 type UserController struct {
+	r *echo.Group
+
 	Queries *models.Queries
 
 	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
 	CmdShowUserUser func(context.Context, application.ShowUserRequest) (application.ShowUserResponse, error)
 	CmdVerifyUser   func(context.Context, application.VerifyUserRequest) error
+	CmdBlockUser    func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
+	CmdUnBlockUser  func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
 
 	knownDeviceKeyPairs []securecookie.Codec
 }
@@ -344,4 +353,36 @@ func (uc UserController) DestroySession(queries *models.Queries) func(echo.Conte
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users/"+userID)
 	}
+}
+
+func (uc UserController) BlockUser() {
+	uc.r.POST("/:userID/block", func(c echo.Context) error {
+		res, err := uc.CmdBlockUser(c.Request().Context(), application.BlockUserRequest{
+			UserID: user.ID(c.Param("userID")),
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Render(http.StatusOK, "user.blocked.component", models.AuthUser{
+			ID:           uuid.MustParse(string(res.UserID)),
+			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: true},
+		})
+	})
+}
+
+func (uc UserController) UnBlockUser() {
+	uc.r.POST("/:userID/unblock", func(c echo.Context) error {
+		res, err := uc.CmdUnBlockUser(c.Request().Context(), application.BlockUserRequest{
+			UserID: user.ID(c.Param("userID")),
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Render(http.StatusOK, "user.blocked.component", models.AuthUser{
+			ID:           uuid.MustParse(string(res.UserID)),
+			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: false},
+		})
+	})
 }

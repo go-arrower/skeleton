@@ -24,4 +24,7 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group, di localDI) {
 	router.POST("/users", c.userController.Register())
 	router.GET("/users/:userID", c.userController.Show())
 	router.GET("/users/:userID/sessions/:sessionKey", c.userController.DestroySession(di.queries))
+
+	c.userController.BlockUser()
+	c.userController.UnBlockUser()
 }

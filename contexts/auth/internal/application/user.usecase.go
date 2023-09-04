@@ -192,6 +192,7 @@ func RegisterUser(
 			return RegisterUserResponse{}, fmt.Errorf("could not resolve ip address: %w", err)
 		}
 
+		// !!! CONSIDER !!! if the email output port is async (outbox pattern) call it directly instead of a job
 		err = queue.Enqueue(ctx, NewUserVerificationEmail{
 			UserID:     usr.ID,
 			OccurredAt: time.Now().UTC(),
@@ -291,9 +292,12 @@ func ShowUser(repo user.Repository) func(context.Context, ShowUserRequest) (Show
 
 type (
 	BlockUserRequest struct {
-		UserID user.ID
+		UserID user.ID `validate:"required"`
 	}
-	BlockUserResponse struct{}
+	BlockUserResponse struct {
+		UserID  user.ID
+		Blocked user.BoolFlag
+	}
 )
 
 func BlockUser(repo user.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
@@ -310,7 +314,10 @@ func BlockUser(repo user.Repository) func(context.Context, BlockUserRequest) (Bl
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
 
-		return BlockUserResponse{}, nil
+		return BlockUserResponse{
+			UserID:  usr.ID,
+			Blocked: usr.Blocked,
+		}, nil
 	}
 }
 
@@ -328,6 +335,9 @@ func UnblockUser(repo user.Repository) func(context.Context, BlockUserRequest) (
 			return BlockUserResponse{}, fmt.Errorf("could not get user: %w", err)
 		}
 
-		return BlockUserResponse{}, nil
+		return BlockUserResponse{
+			UserID:  usr.ID,
+			Blocked: usr.Blocked,
+		}, nil
 	}
 }

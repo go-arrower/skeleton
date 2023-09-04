@@ -21,17 +21,6 @@ import (
 
 const contextName = "auth"
 
-type AuthContext struct {
-	settingsController web.SettingsController
-	userController     web.UserController
-
-	logger        *slog.Logger
-	traceProvider trace.TracerProvider
-	meterProvider metric.MeterProvider
-	queries       *models.Queries
-	repo          user.Repository
-}
-
 func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	// todo if di == nil => load and initialise all dependencies from config
 
@@ -47,8 +36,10 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	queries := models.New(di.DB)
 	repo, _ := repository.NewPostgresRepository(di.DB)
+	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
+	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
 
-	userController := web.NewUserController([]byte("secret"))
+	userController := web.NewUserController(webRoutes, []byte("secret"))
 	userController.Queries = queries
 	userController.CmdLoginUser = mw.Traced(di.TraceProvider,
 		mw.Metric(di.MeterProvider,
@@ -86,6 +77,24 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			),
 		),
 	)
+	userController.CmdBlockUser = mw.Traced(di.TraceProvider,
+		mw.Metric(di.MeterProvider,
+			mw.Logged(logger,
+				mw.Validate(nil,
+					application.BlockUser(repo),
+				),
+			),
+		),
+	)
+	userController.CmdUnBlockUser = mw.Traced(di.TraceProvider,
+		mw.Metric(di.MeterProvider,
+			mw.Logged(logger,
+				mw.Validate(nil,
+					application.UnblockUser(repo),
+				),
+			),
+		),
+	)
 
 	authContext := AuthContext{
 		settingsController: web.SettingsController{Queries: queries},
@@ -97,13 +106,24 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		repo:               repo,
 	}
 
-	authContext.registerWebRoutes(di.WebRouter.Group(fmt.Sprintf("/%s", contextName)))
+	authContext.registerWebRoutes(webRoutes)
 	authContext.registerAPIRoutes(di.APIRouter)
-	authContext.registerAdminRoutes(di.AdminRouter.Group(fmt.Sprintf("/%s", contextName)), localDI{queries: queries}) // todo only, if admin context is present
+	authContext.registerAdminRoutes(adminRouter, localDI{queries: queries}) // todo only, if admin context is present
 
 	authContext.registerJobs(di.ArrowerQueue)
 
 	return &authContext, nil
+}
+
+type AuthContext struct {
+	settingsController web.SettingsController
+	userController     web.UserController
+
+	logger        *slog.Logger
+	traceProvider trace.TracerProvider
+	meterProvider metric.MeterProvider
+	queries       *models.Queries
+	repo          user.Repository
 }
 
 func (c *AuthContext) Shutdown(ctx context.Context) error {
