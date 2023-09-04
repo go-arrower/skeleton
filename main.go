@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"golang.org/x/exp/slog"
 
-	"github.com/go-arrower/skeleton/contexts/admin/startup"
+	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth"
 	auth_init "github.com/go-arrower/skeleton/contexts/auth/init"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
@@ -107,7 +107,7 @@ func main() {
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = startup.Init(di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, di.AdminRouter, pg, queue)
+	_ = admin_init.Init(di, di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, di.AdminRouter, pg, queue)
 	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))

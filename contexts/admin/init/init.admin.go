@@ -1,7 +1,9 @@
-package startup
+package init
 
 import (
 	"net/http"
+
+	"github.com/go-arrower/skeleton/shared/infrastructure"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
@@ -16,9 +18,16 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 )
 
-func Init(logger *slog.Logger, traceProvider trace.TracerProvider, meterProvider metric.MeterProvider, e *echo.Group, pg *postgres.Handler, jq jobs.Queue) error {
+func Init(di *infrastructure.Container, logger *slog.Logger, traceProvider trace.TracerProvider, meterProvider metric.MeterProvider, e *echo.Group, pg *postgres.Handler, jq jobs.Queue) error {
 	e.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	e.GET("/routes", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>admin.routes", echo.Map{
+			"Flashes": nil,
+			"Routes":  di.WebRouter.Routes(),
+		})
 	})
 
 	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))

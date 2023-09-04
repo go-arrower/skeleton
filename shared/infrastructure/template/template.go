@@ -10,11 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/trace"
-
+	"github.com/Masterminds/sprig/v3"
 	"github.com/go-arrower/arrower/alog"
-
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
 )
 
@@ -109,7 +108,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 		return nil, nil, nil, nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
 	}
 
-	componentTemplates := template.New("<empty>")
+	componentTemplates := template.New("<empty>").Funcs(sprig.FuncMap())
 
 	for _, c := range components {
 		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
