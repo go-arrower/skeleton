@@ -107,7 +107,7 @@ func main() {
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_ = admin_init.Init(di, di.Logger.(*slog.Logger), di.TraceProvider, di.MeterProvider, di.AdminRouter, pg, queue)
+	_, _ = admin_init.NewAdminContext(di)
 	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))

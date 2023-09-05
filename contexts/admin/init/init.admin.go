@@ -1,101 +1,101 @@
 package init
 
 import (
+	"context"
 	"net/http"
+
+	"github.com/go-arrower/skeleton/contexts/admin"
 
 	"github.com/go-arrower/skeleton/shared/infrastructure"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
-	"github.com/go-arrower/arrower/postgres"
 	"github.com/labstack/echo/v4"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 )
 
-func Init(di *infrastructure.Container, logger *slog.Logger, traceProvider trace.TracerProvider, meterProvider metric.MeterProvider, e *echo.Group, pg *postgres.Handler, jq jobs.Queue) error {
-	e.GET("/", func(c echo.Context) error {
+func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
+	di.AdminRouter.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	})
 
-	e.GET("/routes", func(c echo.Context) error {
+	di.AdminRouter.GET("/routes", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "=>admin.routes", echo.Map{
 			"Flashes": nil,
 			"Routes":  di.WebRouter.Routes(),
 		})
 	})
 
-	repo := jobs.NewPostgresJobsRepository(models.New(pg.PGx))
+	repo := jobs.NewPostgresJobsRepository(models.New(di.DB))
 
 	container := application.JobsCommandContainer{
 		ListAllQueues: mw.Traced(
-			traceProvider, mw.Metric(
-				meterProvider, mw.Logged(
-					logger, application.ListAllQueues(repo),
+			di.TraceProvider, mw.Metric(
+				di.MeterProvider, mw.Logged(
+					di.Logger.(*slog.Logger), application.ListAllQueues(repo),
 				),
 			),
 		),
 		GetQueue: mw.Traced(
-			traceProvider, mw.Metric(
-				meterProvider, mw.Logged(
-					logger, application.GetQueue(repo),
+			di.TraceProvider, mw.Metric(
+				di.MeterProvider, mw.Logged(
+					di.Logger.(*slog.Logger), application.GetQueue(repo),
 				),
 			),
 		),
 		GetWorkers: mw.Traced(
-			traceProvider, mw.Metric(
-				meterProvider, mw.Logged(
-					logger, application.GetWorkers(repo),
+			di.TraceProvider, mw.Metric(
+				di.MeterProvider, mw.Logged(
+					di.Logger.(*slog.Logger), application.GetWorkers(repo),
 				),
 			),
 		),
 		ScheduleJobs: mw.TracedU(
-			traceProvider, mw.MetricU(
-				meterProvider, mw.LoggedU(
-					logger, application.ScheduleJobs(jq),
+			di.TraceProvider, mw.MetricU(
+				di.MeterProvider, mw.LoggedU(
+					di.Logger.(*slog.Logger), application.ScheduleJobs(di.DefaultQueue),
 				),
 			),
 		),
 		DeleteJob: mw.TracedU(
-			traceProvider, mw.MetricU(
-				meterProvider, mw.LoggedU(
-					logger, application.DeleteJob(repo),
+			di.TraceProvider, mw.MetricU(
+				di.MeterProvider, mw.LoggedU(
+					di.Logger.(*slog.Logger), application.DeleteJob(repo),
 				),
 			),
 		),
 		RescheduleJob: mw.TracedU(
-			traceProvider, mw.MetricU(
-				meterProvider, mw.LoggedU(
-					logger, application.RescheduleJob(repo),
+			di.TraceProvider, mw.MetricU(
+				di.MeterProvider, mw.LoggedU(
+					di.Logger.(*slog.Logger), application.RescheduleJob(repo),
 				),
 			),
 		),
 	}
 
-	_ = jq.RegisterJobFunc(
+	_ = di.DefaultQueue.RegisterJobFunc(
 		mw.TracedU(
-			traceProvider,
+			di.TraceProvider,
 			mw.MetricU(
-				meterProvider,
+				di.MeterProvider,
 				mw.LoggedU(
-					logger,
+					di.Logger.(*slog.Logger),
 					application.ProcessSomeJob(),
 				),
 			),
 		),
 	)
-	_ = jq.RegisterJobFunc(
+	_ = di.DefaultQueue.RegisterJobFunc(
 		mw.TracedU(
-			traceProvider,
+			di.TraceProvider,
 			mw.MetricU(
-				meterProvider,
+				di.MeterProvider,
 				mw.LoggedU(
-					logger,
+					di.Logger.(*slog.Logger),
 					application.ProcessLongRunningJob(),
 				),
 			),
@@ -104,12 +104,12 @@ func Init(di *infrastructure.Container, logger *slog.Logger, traceProvider trace
 
 	cont := web.JobsController{
 		Repo:   repo,
-		Logger: logger,
+		Logger: di.Logger.(*slog.Logger),
 		Cmds:   container,
 	}
 
 	{
-		jobs := e.Group("/jobs")
+		jobs := di.AdminRouter.Group("/jobs")
 		jobs.GET("", cont.JobsHome())
 		jobs.GET("/", cont.JobsHome())
 		jobs.GET("/:queue", cont.JobsQueue())
@@ -121,5 +121,15 @@ func Init(di *infrastructure.Container, logger *slog.Logger, traceProvider trace
 		jobs.POST("/schedule", cont.JobsScheduleNew())
 	}
 
+	return &AdminContext{}, nil
+}
+
+type AdminContext struct{}
+
+func (c *AdminContext) SettingsAPI(ctx context.Context) (admin.SettingsAPI, error) {
+	return application.NewMemorySettings(), nil
+}
+
+func (c *AdminContext) Shutdown(ctx context.Context) error {
 	return nil
 }
