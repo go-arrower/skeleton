@@ -53,8 +53,8 @@ func main() {
 	router.Debug = true // todo only in dev mode
 	router.Logger.SetOutput(io.Discard)
 	router.Validator = &CustomValidator{validator: validator.New()}
-	router.IPExtractor = echo.ExtractIPFromXFFHeader() // see: https://echo.labstack.com/docs/ip-address
-	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider)))
+	router.IPExtractor = echo.ExtractIPFromXFFHeader()                                                   // see: https://echo.labstack.com/docs/ip-address
+	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider))) // todo set servername
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
@@ -67,7 +67,7 @@ func main() {
 	// di.WebRouter.Use(middleware.CSRF())
 	di.WebRouter.Use(auth.EnrichCtxWithUserInfoMiddleware)
 
-	di.AdminRouter = di.WebRouter.Group("/admin") // todo add admin middleware
+	di.AdminRouter = di.WebRouter.Group("/admin")
 	di.AdminRouter.Use(auth.EnsureUserIsSuperuserMiddleware)
 
 	queue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,

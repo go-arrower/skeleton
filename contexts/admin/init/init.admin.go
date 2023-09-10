@@ -30,7 +30,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		})
 	})
 
-	repo := jobs.NewPostgresJobsRepository(models.New(di.DB))
+	repo := jobs.NewTracedJobsRepository(jobs.NewPostgresJobsRepository(models.New(di.DB)))
 
 	container := application.JobsCommandContainer{
 		ListAllQueues: mw.Traced(
