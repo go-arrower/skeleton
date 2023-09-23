@@ -24,16 +24,25 @@ type (
 	// - you have to ensure the type is correct
 	// - you have to serialise it
 	// OR just use the NewSettingsValue, which ensures this for you.
-	SettingValue string
+	SettingValue string // todo OR struct with Type and helpers to ensure only right values are returned
 
 	Setting struct {
 		Key   SettingKey
 		Value SettingValue
+		// todo default value && method: reset(ToDefault) OR part of the mentioned struct above BUT than it would return every time the DB is queried.. not required
 	}
 )
 
 // NewSettingsKey construct a SettingKey.
 func NewSettingsKey(context string, key string) SettingKey {
+	if context == "" && key == "" {
+		return ""
+	}
+
+	if context == "" {
+		context = "default"
+	}
+
 	return SettingKey(fmt.Sprintf("%s.%s", context, key))
 }
 
@@ -59,6 +68,7 @@ func (v SettingValue) Int64() int64 {
 	return int64(i)
 }
 
+// TODO
 // func (v SettingValue) Float64() float64       { return 0 }
 // func (v SettingValue) Map() map[string]string { return nil }
 // func (v SettingValue) Time() time.Time        { return time.Time{} }

@@ -37,6 +37,11 @@ func TestSettingKey_Context(t *testing.T) {
 			"some.key",
 			"context",
 		},
+		{
+			"",
+			"some_key",
+			"default",
+		},
 	}
 
 	for _, tt := range tests {
