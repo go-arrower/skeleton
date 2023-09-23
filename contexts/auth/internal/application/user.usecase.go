@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/infrastructure"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
-	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/infrastructure"
 )
 
 var (
@@ -229,7 +228,7 @@ func SendNewUserVerificationEmail(
 		}
 
 		// later: instead of logging this => send it to an email output port
-		logger.InfoCtx(ctx, "send verification email to user",
+		logger.InfoContext(ctx, "send verification email to user",
 			slog.String("token", token.Token().String()),
 			slog.String("device", in.Device.Name()+" "+in.Device.OS()),
 			slog.String("ip", in.IP.IP.String()),

@@ -1,8 +1,9 @@
 package web
 
 import (
+	"log/slog"
+
 	"github.com/go-arrower/arrower/jobs"
-	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )

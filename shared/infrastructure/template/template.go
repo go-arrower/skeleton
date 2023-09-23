@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/go-arrower/arrower/alog"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/exp/slog"
 )
 
 var (

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-arrower/arrower/alog"
@@ -14,7 +15,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 )
 
@@ -80,7 +80,7 @@ func serveMetrics(ctx context.Context, logger alog.Logger) {
 		path = "/metrics"
 	)
 
-	logger.DebugCtx(ctx, "serving metrics",
+	logger.DebugContext(ctx, "serving metrics",
 		slog.String("port", port),
 		slog.String("path", path),
 	)
@@ -95,7 +95,7 @@ func serveMetrics(ctx context.Context, logger alog.Logger) {
 
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
-		logger.DebugCtx(ctx, "error serving http", slog.String("err", err.Error()))
+		logger.DebugContext(ctx, "error serving http", slog.String("err", err.Error()))
 
 		return
 	}

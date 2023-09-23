@@ -3,17 +3,15 @@ package init
 import (
 	"context"
 	"fmt"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
+	"log/slog"
 
 	"github.com/go-arrower/arrower/mw"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/exp/slog"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
 	"github.com/go-arrower/skeleton/shared/infrastructure"

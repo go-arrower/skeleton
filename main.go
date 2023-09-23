@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"golang.org/x/exp/slog"
 
 	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth"

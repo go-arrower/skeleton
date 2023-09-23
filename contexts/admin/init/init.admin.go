@@ -2,20 +2,18 @@ package init
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
-
-	"github.com/go-arrower/skeleton/contexts/admin"
-
-	"github.com/go-arrower/skeleton/shared/infrastructure"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/exp/slog"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
+	"github.com/go-arrower/skeleton/shared/infrastructure"
 )
 
 func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
