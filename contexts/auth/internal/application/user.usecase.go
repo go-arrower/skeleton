@@ -119,7 +119,7 @@ type (
 		SessionKey string
 	}
 	RegisterUserResponse struct {
-		User user.User
+		User user.Descriptor
 	}
 
 	NewUserVerificationEmail struct {
@@ -182,10 +182,7 @@ func RegisterUser(
 		}
 
 		// todo return a short "UserDescriptor" or something instead of a partial user.
-		return RegisterUserResponse{User: user.User{ //nolint:exhaustruct // at this point the user has not more information.
-			ID:    usr.ID,
-			Login: usr.Login,
-		}}, nil
+		return RegisterUserResponse{User: usr.Descriptor()}, nil
 	}
 }
 

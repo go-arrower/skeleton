@@ -39,27 +39,42 @@ func NewUser(registerEmail string, password string) (User, error) {
 	}, nil
 }
 
-// User represents a user of the software, that can perform all the auth functionalities.
-type User struct { //nolint:govet // fieldalignment less important than grouping of fields.
-	ID           ID
-	Login        Login // UserName / email, or phone, or nickname, or whatever the developer wants to have as a login
-	PasswordHash PasswordHash
-	RegisteredAt time.Time
+type (
+	// User represents a user of the software, that can perform all the auth functionalities.
+	User struct { //nolint:govet // fieldalignment less important than grouping of fields.
+		ID           ID
+		Login        Login // UserName / email, or phone, or nickname, or whatever the developer wants to have as a login
+		PasswordHash PasswordHash
+		RegisteredAt time.Time
 
-	Name              Name
-	Birthday          Birthday
-	Locale            Locale
-	TimeZone          TimeZone
-	ProfilePictureURL URL
-	// a helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
-	Profile Profile // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
-	// email, phone???
+		Name              Name
+		Birthday          Birthday
+		Locale            Locale
+		TimeZone          TimeZone
+		ProfilePictureURL URL
+		// a helper for simple stuff, if you have a complicated profile => do it in your Context, as it's the better place
+		Profile Profile // limit the length of keys & values // { plan: 'silver', team_id: 'a111' }
+		// email, phone???
 
-	Verified  BoolFlag // todo make all flags private, so they can not be manipulated outside of the business logic
-	Blocked   BoolFlag
-	SuperUser BoolFlag
+		Verified  BoolFlag // todo make all flags private, so they can not be manipulated outside of the business logic
+		Blocked   BoolFlag
+		SuperUser BoolFlag
 
-	Sessions []Session
+		Sessions []Session
+	}
+
+	// Descriptor is a short representation of the User.
+	Descriptor struct {
+		ID    ID
+		Login Login
+	}
+)
+
+func (u *User) Descriptor() Descriptor {
+	return Descriptor{
+		ID:    u.ID,
+		Login: u.Login,
+	}
 }
 
 func (u *User) IsVerified() bool {
