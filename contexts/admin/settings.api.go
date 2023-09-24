@@ -2,10 +2,16 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+)
+
+var (
+	ErrNotFound       = errors.New("not found")
+	ErrInvalidSetting = errors.New("invalid setting")
 )
 
 type SettingsAPI interface {
@@ -13,28 +19,28 @@ type SettingsAPI interface {
 	Settings(ctx context.Context, settings ...SettingKey) ([]SettingValue, error)
 	SettingsByContext(ctx context.Context, context string) ([]SettingValue, error)
 
-	Create(ctx context.Context, setting Setting) error
+	Add(ctx context.Context, setting Setting) error
 }
 
 type (
 	SettingKey string
 
-	// SettingValue represents the actual value. Use NewSettingsValue.
+	// SettingValue represents the actual value. Use NewSettingValue.
 	// If you use one of the helper methods to cast the value to a different type:
 	// - you have to ensure the type is correct
 	// - you have to serialise it
-	// OR just use the NewSettingsValue, which ensures this for you.
+	// OR just use the NewSettingValue, which ensures this for you.
 	SettingValue string // todo OR struct with Type and helpers to ensure only right values are returned
 
 	Setting struct {
-		Key   SettingKey
-		Value SettingValue
-		// todo default value && method: reset(ToDefault) OR part of the mentioned struct above BUT than it would return every time the DB is queried.. not required
+		Key       SettingKey
+		Value     SettingValue
+		UIOptions Options
 	}
 )
 
-// NewSettingsKey construct a SettingKey.
-func NewSettingsKey(context string, key string) SettingKey {
+// NewSettingKey construct a SettingKey.
+func NewSettingKey(context string, key string) SettingKey {
 	if context == "" && key == "" {
 		return ""
 	}
@@ -74,9 +80,9 @@ func (v SettingValue) Int64() int64 {
 // func (v SettingValue) Time() time.Time        { return time.Time{} }
 // func (v SettingValue) JSON() json.RawMessage  { return nil }
 
-// NewSettingsValue returns a valid SettingValue for val.
+// NewSettingValue returns a valid SettingValue for val.
 // Use it in cases, when you can not convert to SettingValue yourself.
-func NewSettingsValue(val any) SettingValue { //nolint:gocyclo,cyclop // function is long but not complex
+func NewSettingValue(val any) SettingValue { //nolint:gocyclo,cyclop // function is long but not complex
 	r := reflect.TypeOf(val)
 
 	switch r.Kind() { //nolint:exhaustive // not all cases are valid
@@ -108,3 +114,31 @@ func NewSettingsValue(val any) SettingValue { //nolint:gocyclo,cyclop // functio
 		return ""
 	}
 }
+
+type Type int
+
+const (
+	Checkbox Type = iota
+)
+
+func (t Type) IsValid() bool {
+	switch t {
+	case Checkbox:
+		return true
+	}
+
+	return false
+}
+
+type Options struct {
+	Type         Type
+	Label        string
+	Info         string
+	Placeholder  string
+	DefaultValue SettingValue
+	ReadOnly     bool
+	Danger       bool
+	Validators   []SettingValidateFunc
+}
+
+type SettingValidateFunc func(s SettingValue) error

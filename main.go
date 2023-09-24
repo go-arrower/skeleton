@@ -107,7 +107,9 @@ func main() {
 	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
 	router.Renderer = r
 
-	_, _ = admin_init.NewAdminContext(di)
+	adminContext, _ := admin_init.NewAdminContext(di)
+	sAPI, _ := adminContext.SettingsAPI(ctx)
+	di.SettingsService = sAPI
 	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))

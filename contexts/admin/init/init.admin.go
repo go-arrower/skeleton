@@ -2,8 +2,11 @@ package init
 
 import (
 	"context"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
@@ -29,6 +32,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	})
 
 	repo := jobs.NewTracedJobsRepository(jobs.NewPostgresJobsRepository(models.New(di.DB)))
+	settingsRepo := repository.NewSettingsMemoryRepository()
 
 	container := application.JobsCommandContainer{
 		ListAllQueues: mw.Traced(
@@ -119,13 +123,23 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.POST("/schedule", cont.JobsScheduleNew())
 	}
 
-	return &AdminContext{}, nil
+	{
+		settingsCont := web.NewSettingsController(di.AdminRouter, settingsRepo)
+		settingsCont.List()
+		settingsCont.Update()
+	}
+
+	return &AdminContext{
+		settingsRepo: settingsRepo,
+	}, nil
 }
 
-type AdminContext struct{}
+type AdminContext struct {
+	settingsRepo domain.SettingRepository
+}
 
 func (c *AdminContext) SettingsAPI(ctx context.Context) (admin.SettingsAPI, error) {
-	return application.NewMemorySettings(), nil
+	return application.NewSettingsApp(c.settingsRepo), nil
 }
 
 func (c *AdminContext) Shutdown(ctx context.Context) error {

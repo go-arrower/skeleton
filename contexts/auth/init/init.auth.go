@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+
 	"github.com/go-arrower/arrower/mw"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -93,6 +95,33 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			),
 		),
 	)
+
+	{ // register default auth settings
+		di.SettingsService.Add(context.Background(), admin.Setting{
+			Key:   admin.NewSettingKey(contextName, "registration.registration_enabled"),
+			Value: admin.NewSettingValue(true),
+			UIOptions: admin.Options{
+				Type:         admin.Checkbox,
+				Label:        "Enable Registration",
+				Info:         "Allows new Users to register themselves",
+				DefaultValue: admin.NewSettingValue(true),
+				ReadOnly:     false,
+				Danger:       false,
+			},
+		})
+		di.SettingsService.Add(context.Background(), admin.Setting{
+			Key:   admin.NewSettingKey(contextName, "registration.login_enabled"),
+			Value: admin.NewSettingValue(true),
+			UIOptions: admin.Options{
+				Type:         admin.Checkbox,
+				Label:        "Enable Login",
+				Info:         "Allows Users to login to the application",
+				DefaultValue: admin.NewSettingValue(true),
+				ReadOnly:     false,
+				Danger:       false,
+			},
+		})
+	}
 
 	authContext := AuthContext{
 		settingsController: web.SettingsController{Queries: queries},

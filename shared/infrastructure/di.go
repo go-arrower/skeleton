@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +34,8 @@ type Container struct {
 	AdminRouter  *echo.Group
 
 	ArrowerQueue jobs.Queue
+
+	SettingsService admin.SettingsAPI
 }
 
 func (c *Container) EnsureAllDependenciesPresent() error {

@@ -49,7 +49,7 @@ func TestSettingKey_Context(t *testing.T) {
 		t.Run(fmt.Sprintf("%s->%s", tt.context, tt.key), func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expected, admin.NewSettingsKey(tt.context, tt.key).Context())
+			assert.Equal(t, tt.expected, admin.NewSettingKey(tt.context, tt.key).Context())
 		})
 	}
 }
@@ -60,7 +60,7 @@ func TestNewSettingsValue(t *testing.T) {
 	t.Run("string", func(t *testing.T) {
 		t.Parallel()
 
-		v := admin.NewSettingsValue("some")
+		v := admin.NewSettingValue("some")
 		assert.Equal(t, admin.SettingValue("some"), v)
 		assert.Equal(t, "some", v.String())
 	})
@@ -68,20 +68,22 @@ func TestNewSettingsValue(t *testing.T) {
 	t.Run("bool", func(t *testing.T) {
 		t.Parallel()
 
-		v := admin.NewSettingsValue(true)
+		v := admin.NewSettingValue(true)
 		assert.Equal(t, true, v.Bool())
+		assert.Equal(t, "true", v.String())
 	})
 
 	t.Run("int", func(t *testing.T) {
 		t.Parallel()
 
-		val := admin.NewSettingsValue(1337)
+		val := admin.NewSettingValue(1337)
 		assert.Equal(t, 1337, val.Int())
 
-		val = admin.NewSettingsValue(1337)
+		val = admin.NewSettingValue(1337)
 		assert.Equal(t, int64(1337), val.Int64())
 
-		val = admin.NewSettingsValue(int32(1337))
+		val = admin.NewSettingValue(int32(1337))
 		assert.Equal(t, 1337, val.Int())
+		assert.Equal(t, "1337", val.String())
 	})
 }
