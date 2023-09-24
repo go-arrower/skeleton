@@ -5,13 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/stretchr/testify/assert"
 
-	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
@@ -104,70 +101,26 @@ func TestLoginUser(t *testing.T) {
 func TestRegisterUser(t *testing.T) {
 	t.Parallel()
 
-	t.Run("register setting disabled", func(t *testing.T) {
-		t.Parallel()
-
-		settingsService := admin_init.NewMemorySettingsAPI()
-		settingsService.Add(ctx, admin.Setting{
-			Key:   admin.SettingRegistration,
-			Value: admin.NewSettingValue(false),
-		})
-
-		cmd := application.RegisterUser(alog.NewNoopLogger(), settingsService, nil, nil)
-
-		_, err := cmd(ctx, application.RegisterUserRequest{})
-		assert.ErrorIs(t, err, application.ErrRegistrationFailed)
-	})
-
 	t.Run("login already in use", func(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
 		_ = repo.Save(ctx, userVerified)
 
+		registrator := registrator(repo)
+
 		buf := bytes.Buffer{}
 		logger := alog.NewTest(&buf)
 		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.RegisterUser(logger, registrationEnabledService(), repo, nil)
+		cmd := application.RegisterUser(logger, repo, registrator, nil)
 
 		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: user0Login})
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, application.ErrUserAlreadyExists)
+		assert.ErrorIs(t, err, user.ErrUserAlreadyExists)
 
 		// assert failed attempt is logged, e.g. for monitoring or fail2ban etc.
 		assert.Contains(t, buf.String(), "register new user failed")
-	})
-
-	t.Run("password weak", func(t *testing.T) {
-		t.Parallel()
-
-		repo := repository.NewMemoryRepository()
-		cmd := application.RegisterUser(alog.NewTest(nil), registrationEnabledService(), repo, nil)
-
-		tests := []struct {
-			testName string
-			password string
-		}{
-			{
-				"weak pw",
-				"123",
-			},
-		}
-
-		for _, tt := range tests {
-			tt := tt
-			t.Run(tt.testName, func(t *testing.T) {
-				t.Parallel()
-
-				_, err := cmd(ctx, application.RegisterUserRequest{
-					RegisterEmail: newUserLogin,
-					Password:      tt.password,
-				})
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, user.ErrPasswordTooWeak)
-			})
-		}
 	})
 
 	t.Run("register new user", func(t *testing.T) {
@@ -175,8 +128,9 @@ func TestRegisterUser(t *testing.T) {
 
 		repo := repository.NewMemoryRepository()
 		queue := jobs.NewInMemoryJobs()
+		registrator := registrator(repo)
 
-		cmd := application.RegisterUser(alog.NewTest(nil), registrationEnabledService(), repo, queue)
+		cmd := application.RegisterUser(alog.NewNoopLogger(), repo, registrator, queue)
 
 		usr, err := cmd(ctx, application.RegisterUserRequest{
 			RegisterEmail: newUserLogin,

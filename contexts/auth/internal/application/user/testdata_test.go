@@ -8,7 +8,7 @@ import (
 
 var (
 	ctx                   = context.Background()
-	rawPassword           = "secret"
+	rawPassword           = "0Secret!"
 	strongPasswordHash, _ = user.NewPasswordHash(rawPassword)
 )
 
@@ -19,3 +19,18 @@ func newUser() user.User {
 		Verified: user.BoolFlag{}.SetFalse(),
 	}
 }
+
+// used by RegistrationService
+const (
+	userID    = user.ID("00000000-0000-0000-0000-000000000000")
+	userLogin = "0@test.com"
+)
+
+var (
+	userVerified = user.User{
+		ID:           userID,
+		Login:        userLogin,
+		PasswordHash: strongPasswordHash,
+		Verified:     user.BoolFlag{}.SetTrue(),
+	}
+)

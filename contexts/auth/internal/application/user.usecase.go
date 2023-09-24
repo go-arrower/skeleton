@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
@@ -18,10 +16,8 @@ import (
 )
 
 var (
-	ErrRegistrationFailed = errors.New("registration failed")
-	ErrUserAlreadyExists  = fmt.Errorf("%w: user already exists", ErrRegistrationFailed)
-	ErrLoginFailed        = errors.New("login failed")
-	ErrInvalidInput       = errors.New("invalid input")
+	ErrLoginFailed  = errors.New("login failed")
+	ErrInvalidInput = errors.New("invalid input")
 )
 
 type (
@@ -136,53 +132,23 @@ type (
 
 func RegisterUser(
 	logger alog.Logger,
-	settingsService admin.SettingsAPI,
 	repo user.Repository,
+	registrator *user.RegistrationService,
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
 
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
-		isRegistrationActive, err := settingsService.Setting(ctx, admin.SettingRegistration)
+		usr, err := registrator.RegisterNewUser(ctx, in.RegisterEmail, in.Password)
 		if err != nil {
-			return RegisterUserResponse{}, fmt.Errorf("could not load settings: %v", err)
-		}
-
-		if !isRegistrationActive.Bool() {
-			return RegisterUserResponse{}, fmt.Errorf("%w: registration is disabled", ErrRegistrationFailed)
-		}
-
-		ex, err := repo.ExistsByLogin(ctx, user.Login(in.RegisterEmail))
-		if err != nil && !errors.Is(err, user.ErrNotFound) {
-			return RegisterUserResponse{}, fmt.Errorf("could not check if user exists: %w", err)
-		}
-
-		if ex {
-			logger.Log(ctx, slog.LevelInfo, "register new user failed",
-				slog.String("email", in.RegisterEmail),
-				slog.String("ip", in.IP),
-			)
-
-			return RegisterUserResponse{}, ErrUserAlreadyExists
-		}
-
-		pwHash, err := user.NewStrongPasswordHash(in.Password)
-		if err != nil {
-			logger.Log(ctx, slog.LevelInfo, "register new user failed",
-				slog.String("email", in.RegisterEmail),
-				slog.String("ip", in.IP),
-			)
+			if errors.Is(err, user.ErrUserAlreadyExists) {
+				logger.Log(ctx, slog.LevelInfo, "register new user failed",
+					slog.String("email", in.RegisterEmail),
+					slog.String("ip", in.IP),
+				)
+			}
 
 			return RegisterUserResponse{}, fmt.Errorf("%w", err)
-		}
-
-		usr := user.User{
-			ID:           user.NewID(),
-			Login:        user.Login(in.RegisterEmail),
-			PasswordHash: pwHash,
-			Verified:     user.BoolFlag{}.SetFalse(),
-			Blocked:      user.BoolFlag{}.SetFalse(),
-			SuperUser:    user.BoolFlag{}.SetFalse(),
 		}
 
 		// The session is not valid until the end of the controller.

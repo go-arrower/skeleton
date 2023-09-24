@@ -15,9 +15,29 @@ import (
 )
 
 var (
-	ErrPasswordTooWeak = errors.New("password too weak")
-	ErrInvalidBirthday = errors.New("invalid birthday")
+	ErrInvalidUserDetails = errors.New("invalid user details")
+	ErrInvalidBirthday    = errors.New("invalid birthday")
 )
+
+func NewUser(registerEmail string, password string) (User, error) {
+	if registerEmail == "" {
+		return User{}, fmt.Errorf("%w: missing login", ErrInvalidUserDetails)
+	}
+
+	pwHash, err := NewStrongPasswordHash(password)
+	if err != nil {
+		return User{}, err
+	}
+
+	return User{
+		ID:           NewID(),
+		Login:        Login(registerEmail),
+		PasswordHash: pwHash,
+		Verified:     BoolFlag{}.SetFalse(),
+		Blocked:      BoolFlag{}.SetFalse(),
+		SuperUser:    BoolFlag{}.SetFalse(),
+	}, nil
+}
 
 // User represents a user of the software, that can perform all the auth functionalities.
 type User struct { //nolint:govet // fieldalignment less important than grouping of fields.
@@ -88,7 +108,7 @@ func NewPasswordHash(password string) (PasswordHash, error) {
 // NewStrongPasswordHash returns a PasswordHash or an error, if the password is too weak.
 func NewStrongPasswordHash(password string) (PasswordHash, error) {
 	if isWeakPassword(password) {
-		return "", ErrPasswordTooWeak
+		return "", fmt.Errorf("%w: password is too weak", ErrInvalidUserDetails)
 	}
 
 	return NewPasswordHash(password)

@@ -9,6 +9,56 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
+func TestNewUser(t *testing.T) {
+	t.Parallel()
+
+	// todo test that register email is a valid syntax? (already done by app, but do it anyway?
+
+	t.Run("missing user details", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			testName      string
+			registerEmail string
+			password      string
+		}{
+			{
+				"no register email",
+				"",
+				string(strongPasswordHash),
+			},
+			{
+				"weak pw",
+				"",
+				"123",
+			},
+		}
+
+		for _, tt := range tests {
+			tt := tt
+			t.Run(tt.testName, func(t *testing.T) {
+				t.Parallel()
+
+				usr, err := user.NewUser(tt.registerEmail, tt.password)
+				assert.ErrorIs(t, err, user.ErrInvalidUserDetails)
+				assert.Empty(t, usr)
+			})
+		}
+	})
+
+	t.Run("new user", func(t *testing.T) {
+		t.Parallel()
+
+		usr, err := user.NewUser(userLogin, rawPassword)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, usr.ID)
+		assert.Equal(t, userLogin, string(usr.Login))
+		assert.True(t, usr.Verified.IsFalse())
+		assert.True(t, usr.Blocked.IsFalse())
+		assert.True(t, usr.SuperUser.IsFalse())
+	})
+}
+
 func TestUser_IsVerified(t *testing.T) {
 	t.Parallel()
 
@@ -195,7 +245,7 @@ func TestNewStrongPasswordHash(t *testing.T) {
 
 			_, err := user.NewStrongPasswordHash(tt.password)
 			assert.Error(t, err)
-			assert.ErrorIs(t, err, user.ErrPasswordTooWeak)
+			assert.ErrorIs(t, err, user.ErrInvalidUserDetails)
 		})
 	}
 }
