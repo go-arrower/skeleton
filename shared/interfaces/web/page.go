@@ -47,12 +47,13 @@ func (p *DefaultPresenter) MapDefaultBasePage(ctx context.Context, title string,
 	showLoginBtn := isLoginActive.Bool() && !auth.IsLoggedIn(ctx)
 
 	basePage := MapBasePage{
-		"Title":               docTitle,
-		"Flashes":             nil,
-		"ShowRegistrationBtn": isRegisterActive.Bool() && !auth.IsLoggedIn(ctx),
-		"ShowLoginBtn":        showLoginBtn,
-		"ShowLogoutBtn":       auth.IsLoggedIn(ctx),
-		"ShowAdminBtn":        auth.IsSuperUser(ctx),
+		"Title":                    docTitle,
+		"Flashes":                  nil,
+		"ShowRegistrationBtn":      isRegisterActive.Bool() && !auth.IsLoggedIn(ctx),
+		"ShowLoginBtn":             showLoginBtn,
+		"ShowLogoutBtn":            auth.IsLoggedIn(ctx),
+		"ShowAdminBtn":             auth.IsSuperUser(ctx),
+		"ShowLoggedInAsUserBanner": auth.IsLoggedInAsOtherUser(ctx),
 	}
 
 	if len(keyVals) > 0 {

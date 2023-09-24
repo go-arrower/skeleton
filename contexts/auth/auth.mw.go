@@ -14,9 +14,10 @@ import (
 var ErrInvalidSessionValue = errors.New("invalid session value")
 
 const (
-	CtxAuthLoggedIn    arrower.CTXKey = "auth.pass"
-	CtxAuthUserID      arrower.CTXKey = "auth.user_id"
-	CtxAuthIsSuperuser arrower.CTXKey = "auth.superuser"
+	CtxAuthLoggedIn                  arrower.CTXKey = "auth.pass"
+	CtxAuthUserID                    arrower.CTXKey = "auth.user_id"
+	CtxAuthIsSuperuser               arrower.CTXKey = "auth.superuser"
+	CtxAuthIsSuperuserLoggedInAsUser arrower.CTXKey = "auth.superuser_logged_in_as_user"
 )
 
 const (
@@ -166,6 +167,12 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 		}
 
+		if sess.Values[SessIsSuperuserLoggedInAsUser] != nil {
+			if _, ok := sess.Values[SessIsSuperuserLoggedInAsUser].(bool); ok {
+				c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthIsSuperuserLoggedInAsUser, true)))
+			}
+		}
+
 		return next(c)
 	}
 }
@@ -188,6 +195,14 @@ func CurrentUserID(ctx context.Context) string {
 
 func IsSuperUser(ctx context.Context) bool {
 	if v, ok := ctx.Value(CtxAuthIsSuperuser).(bool); ok {
+		return v
+	}
+
+	return false
+}
+
+func IsLoggedInAsOtherUser(ctx context.Context) bool {
+	if v, ok := ctx.Value(CtxAuthIsSuperuserLoggedInAsUser).(bool); ok {
 		return v
 	}
 

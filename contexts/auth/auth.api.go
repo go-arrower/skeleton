@@ -62,10 +62,6 @@ func UserFromContext(ctx context.Context) User { // or just User()
 	return User{}
 }
 
-func IsLoggedInAsOtherUser(ctx context.Context) bool {
-	return false
-}
-
 // --- --- ---
 // methods are part of auth api and not static auth package:
 
