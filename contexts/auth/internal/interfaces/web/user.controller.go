@@ -5,19 +5,20 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 
+	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
+	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 /*
@@ -31,15 +32,21 @@ Proposal for naming conventions:
 	- delete
 */
 
-func NewUserController(routes *echo.Group, secret []byte) UserController {
+func NewUserController(routes *echo.Group, presenter *web.DefaultPresenter, secret []byte) UserController {
+	if presenter == nil {
+		presenter = web.NewDefaultPresenter(admin_init.NewMemorySettingsAPI())
+	}
+
 	return UserController{
 		r:                   routes,
+		p:                   presenter,
 		knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret),
 	} //nolint:exhaustruct
 }
 
 type UserController struct {
 	r *echo.Group
+	p *web.DefaultPresenter
 
 	Queries *models.Queries
 
@@ -101,10 +108,12 @@ func (uc UserController) Login() func(echo.Context) error {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			return c.Render(http.StatusOK, "auth=>auth.login", map[string]any{
+			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Login", map[string]any{
 				"Errors":     valErrs,
 				"LoginEmail": loginUser.LoginEmail,
 			})
+
+			return c.Render(http.StatusOK, "auth=>auth.login", page)
 		}
 
 		sess.AddFlash("Login successful")
@@ -219,9 +228,9 @@ func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
 		u, _ := uc.Queries.AllUsers(c.Request().Context())
 
-		return c.Render(http.StatusOK, "=>auth.users", echo.Map{
-			"users": u,
-		})
+		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{"users": u})
+
+		return c.Render(http.StatusOK, "=>auth.users", page)
 	}
 }
 
@@ -270,10 +279,12 @@ func (uc UserController) Register() func(echo.Context) error {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			return c.Render(http.StatusOK, "auth=>auth.user.create", map[string]any{
+			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Registrieren", map[string]any{
 				"Errors":        valErrs,
 				"RegisterEmail": newUser.RegisterEmail,
 			})
+
+			return c.Render(http.StatusOK, "auth=>auth.user.create", page)
 		}
 
 		sess.Options = &sessions.Options{
@@ -335,9 +346,11 @@ func (uc UserController) Show() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "=>auth.user.show", echo.Map{
+		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Nutzer Profil", echo.Map{
 			"User": res.User,
 		})
+
+		return c.Render(http.StatusOK, "=>auth.user.show", page)
 	}
 }
 

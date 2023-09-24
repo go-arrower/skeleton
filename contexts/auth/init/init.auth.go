@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
+
 	"github.com/go-arrower/skeleton/contexts/admin"
 
 	"github.com/go-arrower/arrower/mw"
@@ -39,7 +41,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
 	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
 
-	userController := web.NewUserController(webRoutes, []byte("secret"))
+	userController := web.NewUserController(webRoutes, web2.NewDefaultPresenter(di.SettingsService), []byte("secret"))
 	userController.Queries = queries
 	userController.CmdLoginUser = mw.Traced(di.TraceProvider,
 		mw.Metric(di.MeterProvider,
@@ -98,7 +100,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	{ // register default auth settings
 		di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.NewSettingKey(contextName, "registration.registration_enabled"),
+			Key:   admin.SettingRegistration,
 			Value: admin.NewSettingValue(true),
 			UIOptions: admin.Options{
 				Type:         admin.Checkbox,
@@ -110,7 +112,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			},
 		})
 		di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.NewSettingKey(contextName, "registration.login_enabled"),
+			Key:   admin.SettingLogin,
 			Value: admin.NewSettingValue(true),
 			UIOptions: admin.Options{
 				Type:         admin.Checkbox,
@@ -124,7 +126,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	}
 
 	authContext := AuthContext{
-		settingsController: web.SettingsController{Queries: queries},
+		settingsController: web.NewSettingsController(web2.NewDefaultPresenter(di.SettingsService), queries),
 		userController:     userController,
 		logger:             logger,
 		traceProvider:      di.TraceProvider,
@@ -143,7 +145,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 }
 
 type AuthContext struct {
-	settingsController web.SettingsController
+	settingsController *web.SettingsController
 	userController     web.UserController
 
 	logger        *slog.Logger

@@ -69,6 +69,10 @@ func (sc SettingsController) Update() {
 		key := c.FormValue("key")
 		val := c.FormValue(key)
 
+		if val == "on" { // the HTML default for checked checkboxes
+			val = "true"
+		}
+
 		s, err := sc.app.UpdateAndGet(c.Request().Context(), admin.SettingKey(key), admin.NewSettingValue(val))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())

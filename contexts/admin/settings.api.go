@@ -22,6 +22,13 @@ type SettingsAPI interface {
 	Add(ctx context.Context, setting Setting) error
 }
 
+const contextName = "auth"
+
+var (
+	SettingRegistration = NewSettingKey(contextName, "registration.registration_enabled")
+	SettingLogin        = NewSettingKey(contextName, "registration.login_enabled")
+)
+
 type (
 	SettingKey string
 

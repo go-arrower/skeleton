@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-arrower/skeleton/shared/interfaces/web"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
@@ -80,6 +82,16 @@ func main() {
 	di.DefaultQueue = queue
 	di.ArrowerQueue = arrowerQueue
 
+	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
+	router.Renderer = r
+
+	adminContext, _ := admin_init.NewAdminContext(di)
+	sAPI, _ := adminContext.SettingsAPI(ctx)
+	di.SettingsService = sAPI
+	authContext, _ := auth_init.NewAuthContext(di)
+
+	presenter := web.NewDefaultPresenter(sAPI)
+
 	router.GET("/", func(c echo.Context) error {
 		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
@@ -98,19 +110,18 @@ func main() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "=>home", echo.Map{
-			"Flashes": flashes,
-			"userID":  userID,
+		p, _ := presenter.MapDefaultBasePage(c.Request().Context(), "", map[string]interface{}{
+			"userID": userID,
 		})
+		p["Flashes"] = flashes
+		p["UserID"] = userID
+
+		return c.Render(http.StatusOK, "=>home", p)
+		//return c.Render(http.StatusOK, "=>home", echo.Map{
+		//	"Flashes": flashes,
+		//	"userID":  userID,
+		//})
 	})
-
-	r, _ := template.NewRenderer(di.Logger, di.TraceProvider, os.DirFS("shared/interfaces/web/views"), true)
-	router.Renderer = r
-
-	adminContext, _ := admin_init.NewAdminContext(di)
-	sAPI, _ := adminContext.SettingsAPI(ctx)
-	di.SettingsService = sAPI
-	authContext, _ := auth_init.NewAuthContext(di)
 
 	router.Logger.Fatal(router.Start(":8080"))
 

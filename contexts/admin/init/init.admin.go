@@ -2,9 +2,10 @@ package init
 
 import (
 	"context"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 
@@ -144,4 +145,8 @@ func (c *AdminContext) SettingsAPI(ctx context.Context) (admin.SettingsAPI, erro
 
 func (c *AdminContext) Shutdown(ctx context.Context) error {
 	return nil
+}
+
+func NewMemorySettingsAPI() admin.SettingsAPI {
+	return application.NewSettingsApp(repository.NewSettingsMemoryRepository())
 }
