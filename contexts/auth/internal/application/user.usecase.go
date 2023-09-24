@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
@@ -16,9 +18,10 @@ import (
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrLoginFailed       = errors.New("login failed")
-	ErrInvalidInput      = errors.New("invalid input")
+	ErrRegistrationFailed = errors.New("registration failed")
+	ErrUserAlreadyExists  = fmt.Errorf("%w: user already exists", ErrRegistrationFailed)
+	ErrLoginFailed        = errors.New("login failed")
+	ErrInvalidInput       = errors.New("invalid input")
 )
 
 type (
@@ -133,12 +136,22 @@ type (
 
 func RegisterUser(
 	logger alog.Logger,
+	settingsService admin.SettingsAPI,
 	repo user.Repository,
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
 	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
 
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
+		isRegistrationActive, err := settingsService.Setting(ctx, admin.SettingRegistration)
+		if err != nil {
+			return RegisterUserResponse{}, fmt.Errorf("could not load settings: %v", err)
+		}
+
+		if !isRegistrationActive.Bool() {
+			return RegisterUserResponse{}, fmt.Errorf("%w: registration is disabled", ErrRegistrationFailed)
+		}
+
 		ex, err := repo.ExistsByLogin(ctx, user.Login(in.RegisterEmail))
 		if err != nil && !errors.Is(err, user.ErrNotFound) {
 			return RegisterUserResponse{}, fmt.Errorf("could not check if user exists: %w", err)

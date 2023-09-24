@@ -5,6 +5,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
@@ -65,3 +68,13 @@ var (
 		City:        "-",
 	}
 )
+
+func registrationEnabledService() admin.SettingsAPI {
+	settingsService := admin_init.NewMemorySettingsAPI()
+	settingsService.Add(ctx, admin.Setting{
+		Key:   admin.SettingRegistration,
+		Value: admin.NewSettingValue(true),
+	})
+
+	return settingsService
+}

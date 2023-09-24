@@ -5,10 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/stretchr/testify/assert"
 
+	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
@@ -101,6 +104,21 @@ func TestLoginUser(t *testing.T) {
 func TestRegisterUser(t *testing.T) {
 	t.Parallel()
 
+	t.Run("register setting disabled", func(t *testing.T) {
+		t.Parallel()
+
+		settingsService := admin_init.NewMemorySettingsAPI()
+		settingsService.Add(ctx, admin.Setting{
+			Key:   admin.SettingRegistration,
+			Value: admin.NewSettingValue(false),
+		})
+
+		cmd := application.RegisterUser(alog.NewNoopLogger(), settingsService, nil, nil)
+
+		_, err := cmd(ctx, application.RegisterUserRequest{})
+		assert.ErrorIs(t, err, application.ErrRegistrationFailed)
+	})
+
 	t.Run("login already in use", func(t *testing.T) {
 		t.Parallel()
 
@@ -111,7 +129,7 @@ func TestRegisterUser(t *testing.T) {
 		logger := alog.NewTest(&buf)
 		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.RegisterUser(logger, repo, nil)
+		cmd := application.RegisterUser(logger, registrationEnabledService(), repo, nil)
 
 		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: user0Login})
 		assert.Error(t, err)
@@ -125,7 +143,7 @@ func TestRegisterUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		cmd := application.RegisterUser(alog.NewTest(nil), repo, nil)
+		cmd := application.RegisterUser(alog.NewTest(nil), registrationEnabledService(), repo, nil)
 
 		tests := []struct {
 			testName string
@@ -158,7 +176,7 @@ func TestRegisterUser(t *testing.T) {
 		repo := repository.NewMemoryRepository()
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.RegisterUser(alog.NewTest(nil), repo, queue)
+		cmd := application.RegisterUser(alog.NewTest(nil), registrationEnabledService(), repo, queue)
 
 		usr, err := cmd(ctx, application.RegisterUserRequest{
 			RegisterEmail: newUserLogin,
