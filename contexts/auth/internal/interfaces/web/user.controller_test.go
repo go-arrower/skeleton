@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"

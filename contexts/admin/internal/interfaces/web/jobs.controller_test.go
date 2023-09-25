@@ -33,7 +33,7 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		if assert.NoError(t, handler.JobsHome()(c)) {
+		if assert.NoError(t, handler.ListQueues()(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 		}
 	})
@@ -52,7 +52,7 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		assert.Error(t, handler.JobsHome()(c))
+		assert.Error(t, handler.ListQueues()(c))
 	})
 }
 
@@ -76,7 +76,7 @@ func TestJobsController_JobsQueue(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		if assert.NoError(t, handler.JobsQueue()(c)) {
+		if assert.NoError(t, handler.ShowQueue()(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 		}
 	})
@@ -95,7 +95,7 @@ func TestJobsController_JobsQueue(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		assert.Error(t, handler.JobsQueue()(c))
+		assert.Error(t, handler.ShowQueue()(c))
 	})
 }
 
@@ -119,7 +119,7 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		if assert.NoError(t, handler.JobsWorkers()(c)) {
+		if assert.NoError(t, handler.ListWorkers()(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 		}
 	})
@@ -138,7 +138,7 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 			},
 		}
 
-		assert.Error(t, handler.JobsWorkers()(c))
+		assert.Error(t, handler.ListWorkers()(c))
 	})
 }
 

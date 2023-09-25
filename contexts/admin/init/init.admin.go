@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
@@ -105,29 +107,26 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		),
 	)
 
-	cont := web.JobsController{
-		Repo:   repo,
-		Logger: di.Logger.(*slog.Logger),
-		Cmds:   container,
-	}
-
-	{
-		jobs := di.AdminRouter.Group("/jobs")
-		jobs.GET("", cont.JobsHome())
-		jobs.GET("/", cont.JobsHome())
-		jobs.GET("/:queue", cont.JobsQueue())
-		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
-		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
-		jobs.GET("/workers", cont.JobsWorkers())
-		jobs.GET("/settings", cont.JobsSettings())
-		jobs.GET("/schedule", cont.JobsSchedule())
-		jobs.POST("/schedule", cont.JobsScheduleNew())
-	}
-
 	{
 		settingsCont := web.NewSettingsController(di.AdminRouter, settingsRepo)
 		settingsCont.List()
 		settingsCont.Update()
+	}
+
+	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)))
+	cont.Cmds = container
+
+	{
+		jobs := di.AdminRouter.Group("/jobs")
+		jobs.GET("", cont.ListQueues())
+		jobs.GET("/", cont.ListQueues())
+		jobs.GET("/:queue", cont.ShowQueue())
+		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
+		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
+		jobs.GET("/workers", cont.ListWorkers())
+		jobs.GET("/settings", cont.ShowSettings())
+		jobs.GET("/schedule", cont.CreateJobs())
+		jobs.POST("/schedule", cont.ScheduleJobs())
 	}
 
 	return &AdminContext{

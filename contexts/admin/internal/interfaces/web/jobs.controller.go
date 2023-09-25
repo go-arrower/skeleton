@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-arrower/skeleton/shared/interfaces/web"
+
+	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/labstack/echo/v4"
 
@@ -17,24 +20,40 @@ import (
 
 const defaultQueueName = "Default"
 
-func (cont JobsController) JobsHome() func(c echo.Context) error {
+func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter) *JobsController {
+	return &JobsController{
+		logger: logger,
+		repo:   repo,
+		p:      presenter,
+	}
+}
+
+type JobsController struct {
+	logger alog.Logger
+	repo   jobs.Repository
+	p      *web.DefaultPresenter
+
+	Cmds application.JobsCommandContainer
+}
+
+func (jc *JobsController) ListQueues() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := cont.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.home", echo.Map{
+		return c.Render(http.StatusOK, "=>jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues", echo.Map{
 			"Queues": res.QueueStats,
-		})
+		}))
 	}
 }
 
-func (cont JobsController) JobsQueue() func(c echo.Context) error {
+func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.Param("queue")
 
-		res, err := cont.Cmds.GetQueue(c.Request().Context(), application.GetQueueRequest{
+		res, err := jc.Cmds.GetQueue(c.Request().Context(), application.GetQueueRequest{
 			QueueName: queue,
 		})
 		if err != nil {
@@ -43,40 +62,62 @@ func (cont JobsController) JobsQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
-		return c.Render(http.StatusOK, "=>jobs.queue", echo.Map{
+		return c.Render(http.StatusOK, "=>jobs.queue", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
 			"QueueName": page.QueueName,
 			"Jobs":      page.Jobs,
 			"Stats":     page.Stats,
-		})
+		}))
 	}
 }
 
-func (cont JobsController) JobsWorkers() func(c echo.Context) error {
+func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := cont.Cmds.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
+		res, err := jc.Cmds.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", echo.Map{
+		return c.Render(http.StatusOK, "=>jobs.workers", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Worker", echo.Map{
 			"workers": presentWorkers(res.Pool),
-		})
+		}))
 	}
 }
 
-func (cont JobsController) JobsSettings() func(c echo.Context) error {
+func (jc *JobsController) DeleteJob() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>jobs.settings", nil)
+		q := c.Param("queue")
+		jobID := c.Param("job_id")
+
+		_ = jc.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }
 
-func (cont JobsController) JobsSchedule() func(c echo.Context) error {
+func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>jobs.schedule", nil)
+		q := c.Param("queue")
+		jobID := c.Param("job_id")
+
+		_ = jc.Cmds.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
+
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }
 
-func (cont JobsController) JobsScheduleNew() func(c echo.Context) error {
+func (jc *JobsController) ShowSettings() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>jobs.settings", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings"))
+	}
+}
+
+func (jc *JobsController) CreateJobs() func(c echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule Test Jobs"))
+	}
+}
+
+func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.FormValue("queue")
 		jt := c.FormValue("job_type")
@@ -87,7 +128,7 @@ func (cont JobsController) JobsScheduleNew() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		err = cont.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
+		err = jc.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
 			Queue:   queue,
 			JobType: jt,
 			Count:   count,
@@ -214,27 +255,5 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob,
 		EstimateUntilEmpty:   duration,
-	}
-}
-
-func (cont JobsController) DeleteJob() func(c echo.Context) error {
-	return func(c echo.Context) error {
-		q := c.Param("queue")
-		jobID := c.Param("job_id")
-
-		_ = cont.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
-
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
-	}
-}
-
-func (cont JobsController) RescheduleJob() func(c echo.Context) error {
-	return func(c echo.Context) error {
-		q := c.Param("queue")
-		jobID := c.Param("job_id")
-
-		_ = cont.Cmds.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
-
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
 }
