@@ -3,6 +3,9 @@ package user_test
 import (
 	"context"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
+	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
@@ -34,3 +37,22 @@ var (
 		Verified:     user.BoolFlag{}.SetTrue(),
 	}
 )
+
+// used by AuthenticationService
+func settingsService(active bool) admin.SettingsAPI {
+	settingsService := admin_init.NewMemorySettingsAPI()
+	settingsService.Add(ctx, admin.Setting{
+		Key:   admin.SettingLogin,
+		Value: admin.NewSettingValue(active),
+	})
+
+	return settingsService
+}
+
+func newVerifiedUser() user.User {
+	usr := newUser()
+	usr.Verified = user.BoolFlag{}.SetTrue()
+	usr.PasswordHash = strongPasswordHash
+
+	return usr
+}

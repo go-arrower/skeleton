@@ -47,9 +47,9 @@ func LoginUser(
 	logger alog.Logger,
 	repo user.Repository,
 	queue jobs.Enqueuer,
+	authenticator *user.AuthenticationService,
 ) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
 	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
-	authenticator := user.NewAuthenticationService()
 
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
 		usr, err := repo.FindByLogin(ctx, user.Login(in.LoginEmail))

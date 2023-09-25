@@ -78,3 +78,13 @@ func registrator(repo user.Repository) *user.RegistrationService {
 
 	return user.NewRegistrationService(settingsService, repo)
 }
+
+func authentificator() *user.AuthenticationService {
+	settingsService := admin_init.NewMemorySettingsAPI()
+	settingsService.Add(ctx, admin.Setting{
+		Key:   admin.SettingLogin,
+		Value: admin.NewSettingValue(true),
+	})
+
+	return user.NewAuthenticationService(settingsService)
+}

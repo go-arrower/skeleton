@@ -27,7 +27,7 @@ func TestLoginUser(t *testing.T) {
 		logger := alog.NewTest(&buf)
 		alog.Unwrap(logger).SetLevel(alog.LevelInfo)
 
-		cmd := application.LoginUser(logger, repo, nil)
+		cmd := application.LoginUser(logger, repo, nil, authentificator())
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: user0Login,
@@ -47,7 +47,7 @@ func TestLoginUser(t *testing.T) {
 		_ = repo.Save(ctx, userVerified)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, queue, authentificator())
 
 		res, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail: validUserLogin,
@@ -76,7 +76,7 @@ func TestLoginUser(t *testing.T) {
 		_ = repo.Save(ctx, userVerified)
 		queue := jobs.NewInMemoryJobs()
 
-		cmd := application.LoginUser(alog.NewTest(nil), repo, queue)
+		cmd := application.LoginUser(alog.NewTest(nil), repo, queue, authentificator())
 
 		_, err := cmd(ctx, application.LoginUserRequest{
 			LoginEmail:  validUserLogin,
