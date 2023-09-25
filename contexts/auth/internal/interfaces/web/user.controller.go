@@ -53,6 +53,7 @@ type UserController struct {
 	CmdLoginUser    func(context.Context, application.LoginUserRequest) (application.LoginUserResponse, error)
 	CmdRegisterUser func(context.Context, application.RegisterUserRequest) (application.RegisterUserResponse, error)
 	CmdShowUserUser func(context.Context, application.ShowUserRequest) (application.ShowUserResponse, error)
+	CmdNewUser      func(context.Context, application.NewUserRequest) error
 	CmdVerifyUser   func(context.Context, application.VerifyUserRequest) error
 	CmdBlockUser    func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
 	CmdUnBlockUser  func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
@@ -365,6 +366,47 @@ func (uc UserController) DestroySession(queries *models.Queries) func(echo.Conte
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users/"+userID)
+	}
+}
+
+func (uc UserController) New() func(echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "=>auth.user.new", nil)
+	}
+}
+
+func (uc UserController) Store() func(echo.Context) error {
+	return func(c echo.Context) error {
+		newUser := application.NewUserRequest{}
+
+		if err := c.Bind(&newUser); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		err := uc.CmdNewUser(c.Request().Context(), newUser)
+		if err != nil {
+			valErrs := make(map[string]string)
+
+			if errors.Is(err, user.ErrUserAlreadyExists) {
+				valErrs["Email"] = "User already exists"
+			}
+
+			var validationErrors validator.ValidationErrors
+			if !errors.As(err, &validationErrors) {
+				for _, e := range validationErrors {
+					valErrs[e.StructField()] = e.Translate(nil)
+				}
+			}
+
+			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Neuer Benutzer", map[string]any{
+				"Errors": valErrs,
+				"Email":  newUser.Email,
+			})
+
+			return c.Render(http.StatusOK, "=>auth.user.new", page)
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
 	}
 }
 

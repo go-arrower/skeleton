@@ -1,11 +1,6 @@
 package init
 
 import (
-	"net/http"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-	"github.com/google/uuid"
-
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/auth"
@@ -21,8 +16,4 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) {
 	router.GET("/:userID/verify/:token", c.userController.Verify()).Name = auth.RouteVerifyUser
 
 	router.GET("/profile", nil, auth.EnsureUserIsLoggedInMiddleware)
-
-	router.POST("/test", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "user.component", models.AuthUser{ID: uuid.New(), Login: "fake login"})
-	})
 }

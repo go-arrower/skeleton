@@ -58,7 +58,7 @@ type (
 
 		Verified  BoolFlag // todo make all flags private, so they can not be manipulated outside of the business logic
 		Blocked   BoolFlag
-		SuperUser BoolFlag
+		SuperUser BoolFlag // todo make it small Superuser, as it is one word/concept and not a composition
 
 		Sessions []Session
 	}

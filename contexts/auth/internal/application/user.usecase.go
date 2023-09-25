@@ -112,7 +112,7 @@ type (
 		RegisterEmail          string `form:"login" validate:"max=1024,required,email"`
 		Password               string `form:"password" validate:"max=1024,min=8"`
 		PasswordConfirmation   string `form:"password_confirmation" validate:"max=1024,eqfield=Password"`
-		AcceptedTermsOfService bool   `form:"tos" validate:"required"`
+		AcceptedTermsOfService bool   `form:"tos" validate:"boolean,required"`
 
 		UserAgent  string
 		IP         string `validate:"ip"`
@@ -262,6 +262,38 @@ func ShowUser(repo user.Repository) func(context.Context, ShowUserRequest) (Show
 		}
 
 		return ShowUserResponse{User: usr}, nil
+	}
+}
+
+type (
+	NewUserRequest struct {
+		Email       string `form:"email" validate:"max=1024,required,email"`
+		FirstName   string `form:"firstName" validate:"max=1024"`
+		LastName    string `form:"lastName" validate:"max=1024"`
+		DisplayName string `form:"displayName" validate:"max=1024"`
+		Superuser   bool   `form:"superuser" validate:"boolean"`
+	}
+)
+
+func NewUser(repo user.Repository, registrator *user.RegistrationService) func(context.Context, NewUserRequest) error {
+	return func(ctx context.Context, in NewUserRequest) error {
+		usr, err := registrator.RegisterNewUser(ctx, in.Email, "RanDomS1cuP!") // todo set random pw
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		usr.Name = user.NewName(in.FirstName, in.LastName, in.DisplayName)
+
+		if in.Superuser {
+			usr.SuperUser = user.BoolFlag{}.SetTrue()
+		}
+
+		err = repo.Save(ctx, usr)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		return nil
 	}
 }
 

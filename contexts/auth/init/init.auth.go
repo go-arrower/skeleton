@@ -38,6 +38,8 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	queries := models.New(di.DB)
 	repo, _ := repository.NewPostgresRepository(di.DB)
+	registrator := user.NewRegistrationService(di.SettingsService, repo)
+
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
 	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
 
@@ -56,7 +58,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.RegisterUser(di.Logger, repo, user.NewRegistrationService(di.SettingsService, repo), di.ArrowerQueue),
+					application.RegisterUser(di.Logger, repo, registrator, di.ArrowerQueue),
 				),
 			),
 		),
@@ -66,6 +68,15 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			mw.Logged(logger,
 				mw.Validate(nil,
 					application.ShowUser(repo),
+				),
+			),
+		),
+	)
+	userController.CmdNewUser = mw.TracedU(di.TraceProvider,
+		mw.MetricU(di.MeterProvider,
+			mw.LoggedU(logger,
+				mw.ValidateU(nil,
+					application.NewUser(repo, registrator),
 				),
 			),
 		),

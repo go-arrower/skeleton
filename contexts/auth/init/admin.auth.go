@@ -20,10 +20,11 @@ func (c *AuthContext) registerAdminRoutes(router *echo.Group, di localDI) {
 	router.GET("/settings", c.settingsController.List())
 
 	router.GET("/users", c.userController.List())
-	router.GET("/users/create", c.userController.Create())
 	router.POST("/users", c.userController.Register())
 	router.GET("/users/:userID", c.userController.Show())
 	router.GET("/users/:userID/sessions/:sessionKey", c.userController.DestroySession(di.queries))
+	router.GET("/users/new", c.userController.New())
+	router.POST("/users/new", c.userController.Store())
 
 	c.userController.BlockUser()
 	c.userController.UnBlockUser()
