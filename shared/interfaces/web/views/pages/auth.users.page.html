@@ -34,15 +34,17 @@
     <tbody>
     {{ $currentUserID := .currentUserID }}
     {{ range .users }}
-        {{ if eq $currentUserID .ID.Value }}
-            <tr class="bg-green-200 even:bg-slate-50">
-                {{ template "user.component" . }}
-            </tr>
-        {{ else }}
-            <tr class="odd:bg-white even:bg-slate-50">
-                {{ template "user.component" . }}
-            </tr>
-        {{ end }}
+        {{ $userDict := dict "User" . "CurrentUserID" $currentUserID  }}
+        {{ template "user.component" $userDict }}
+{{/*        {{ if eq $currentUserID .ID.Value }}*/}}
+{{/*            <tr class="bg-green-200 even:bg-slate-50">*/}}
+{{/*                {{ template "user.component" $myDict }}*/}}
+{{/*            </tr>*/}}
+{{/*        {{ else }}*/}}
+{{/*            <tr class="odd:bg-white even:bg-slate-50">*/}}
+{{/*                {{ template "user.component" . }}*/}}
+{{/*            </tr>*/}}
+{{/*        {{ end }}*/}}
     {{ else }}
         <tr>
             <td colspan="7">No Users</td>
