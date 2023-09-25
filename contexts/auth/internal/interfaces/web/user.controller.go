@@ -229,7 +229,10 @@ func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
 		u, _ := uc.Queries.AllUsers(c.Request().Context())
 
-		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{"users": u})
+		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{
+			"users":         u,
+			"currentUserID": auth.CurrentUserID(c.Request().Context()),
+		})
 
 		return c.Render(http.StatusOK, "=>auth.users", page)
 	}
