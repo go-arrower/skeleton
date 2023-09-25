@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labstack/echo-contrib/echoprometheus"
+
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/arrower/alog"
@@ -53,10 +55,12 @@ func main() {
 
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
+	router.HideBanner = true
 	router.Logger.SetOutput(io.Discard)
 	router.Validator = &CustomValidator{validator: validator.New()}
 	router.IPExtractor = echo.ExtractIPFromXFFHeader()                                                   // see: https://echo.labstack.com/docs/ip-address
 	router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(di.TraceProvider))) // todo set servername
+	router.Use(echoprometheus.NewMiddleware("skeleton"))                                                 //todo set name
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
 
