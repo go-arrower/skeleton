@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -46,6 +47,41 @@ func (jc *JobsController) ListQueues() func(c echo.Context) error {
 		return c.Render(http.StatusOK, "=>jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues", echo.Map{
 			"Queues": res.QueueStats,
 		}))
+	}
+}
+
+func (jc *JobsController) PendingJobsPieChartData() func(echo.Context) error {
+	type pieData struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}
+
+	return func(c echo.Context) error {
+		res, err := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		var json []pieData
+		for _, q := range res.QueueStats {
+			json = append(json, pieData{Name: string(q.QueueName), Value: q.PendingJobs})
+		}
+
+		return c.JSON(http.StatusOK, json)
+	}
+}
+
+func (jc *JobsController) ProcessedJobsLineChartData() func(echo.Context) error {
+	type lineData struct {
+		XAxis  []string `json:"xAxis"`
+		Series []int    `json:"series"`
+	}
+
+	return func(c echo.Context) error {
+		return c.JSON(http.StatusOK, lineData{
+			XAxis:  []string{"01.09", "02.09", "03.09", "04.09", "05.09", "06.09", "07.09"},
+			Series: []int{120, 200, 250, 750, 1000, 1500, rand.Intn(3) * 1000},
+		})
 	}
 }
 
