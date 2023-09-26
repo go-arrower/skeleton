@@ -46,6 +46,7 @@
 <script type="text/javascript">
     var queuesChart;
     var oldData
+    var init = false
 
     var processedChart;
 
@@ -53,9 +54,9 @@
         const response = await fetch("/admin/jobs/data/pending");
         const data = await response.json();
 
-        // if (JSON.stringify(oldData) === JSON.stringify(data)) {
-        //     return
-        // }
+        if (JSON.stringify(oldData) === JSON.stringify(data)) { // oder of keys is important for this form of equality check
+            return
+        }
 
         oldData = data
 
@@ -86,7 +87,31 @@
         });
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+
+    document.body.addEventListener('htmx:load', function (e) {
+        if (init === false) {
+            initPie();
+            initLine();
+
+            init = true;
+        }
+
+        updatePendingJobsPieChart()
+    });
+
+    document.body.addEventListener('htmx:beforeOnLoad', function (e) {
+        if (e.detail.pathInfo.finalRequestPath !== "/admin/jobs") { // user leaves page
+            echarts.dispose(queuesChart)
+            // queuesChart = undefined
+            echarts.dispose(processedChart)
+            // processedChart = undefined
+
+            oldData = undefined
+            document.init = false
+        }
+    })
+
+    function initPie() {
         // Create the echarts instance
         queuesChart = echarts.init(document.getElementById('queues'));
         queuesChart.showLoading();
@@ -115,13 +140,9 @@
             ],
             // roseType: 'area'
         });
+    }
 
-        document.body.addEventListener('htmx:load', function () {
-            updatePendingJobsPieChart()
-        });
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
+    function initLine() {
         processedChart = echarts.init(document.getElementById('processed'));
         processedChart.showLoading();
 
@@ -162,7 +183,7 @@
         });
 
         updateProcessedLineChart();
-    });
+    }
 </script>
 
 
