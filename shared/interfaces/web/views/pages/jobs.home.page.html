@@ -8,6 +8,7 @@
 {{ define "page.js" }}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="/js/behaviors/pending-jobs-by-queue.js" ></script>
+    <script src="/js/behaviors/processed-jobs.js" ></script>
 {{ end }}
 
 
@@ -16,7 +17,7 @@
         <div data-js-pending-jobs-by-queue class="h-52"></div>
     </div>
     <div class="max-w-md grow"> <!-- wrap, so the echart uses the full width and height when rendering -->
-        <div id="processed" class="h-96"></div>
+        <div data-js-processed-jobs class="h-96"></div>
     </div>
 </div>
 
@@ -47,148 +48,6 @@
 </table>
 
 
-<script type="text/javascript">
-    var queuesChart;
-    var oldData
-    var init = false
-
-    var processedChart;
-
-    // async function updatePendingJobsPieChart() {
-    //     const response = await fetch("/admin/jobs/data/pending");
-    //     const data = await response.json();
-    //
-    //     if (JSON.stringify(oldData) === JSON.stringify(data)) { // oder of keys is important for this form of equality check
-    //         return
-    //     }
-    //
-    //     oldData = data
-    //
-    //     queuesChart.hideLoading();
-    //     queuesChart.setOption({
-    //         series: [
-    //             {
-    //                 data: data
-    //             }
-    //         ]
-    //     });
-    // }
-
-    async function updateProcessedLineChart() {
-        const response = await fetch("/admin/jobs/data/processed");
-        const data = await response.json();
-
-        processedChart.hideLoading();
-        processedChart.setOption({
-            xAxis: {
-                data: data.xAxis
-            },
-            series: [
-                {
-                    data: data.series
-                }
-            ]
-        });
-    }
-
-
-    document.body.addEventListener('htmx:load', function (e) {
-        if (init === false) {
-            // initPie();
-            initLine();
-
-            init = true;
-        }
-
-        // updatePendingJobsPieChart()
-    });
-
-    document.body.addEventListener('htmx:beforeOnLoad', function (e) {
-        if (e.detail.pathInfo.finalRequestPath !== "/admin/jobs") { // user leaves page
-            // echarts.dispose(queuesChart)
-            // queuesChart = undefined
-            echarts.dispose(processedChart)
-            // processedChart = undefined
-
-            oldData = undefined
-            document.init = false
-        }
-    })
-
-    // function initPie() {
-    //     // Create the echarts instance
-    //     queuesChart = echarts.init(document.getElementById('queues'));
-    //     queuesChart.showLoading();
-    //
-    //     queuesChart.setOption({
-    //         tooltip: {
-    //             trigger: 'item',
-    //             formatter: '<b>{b}</b>: {c} ({d}%)'
-    //         },
-    //         title: {
-    //             text: 'Pending Jobs per Queue',
-    //             right: '25%',
-    //         },
-    //         series: [
-    //             {
-    //                 type: 'pie',
-    //                 data: [],
-    //                 emphasis: {
-    //                     itemStyle: {
-    //                         shadowBlur: 10,
-    //                         shadowOffsetX: 0,
-    //                         shadowColor: 'rgba(0, 0, 0, 0.5)'
-    //                     }
-    //                 }
-    //             }
-    //         ],
-    //         // roseType: 'area'
-    //     });
-    // }
-
-    function initLine() {
-        processedChart = echarts.init(document.getElementById('processed'));
-        processedChart.showLoading();
-
-        processedChart.setOption({
-            tooltip: {
-                trigger: 'axis',
-                // axisPointer: { type: 'cross' }
-            },
-            title: {
-                text: 'Processed Jobs',
-                right: '30%',
-            },
-            xAxis: {
-                type: 'category',
-            },
-            yAxis: {
-                type: 'value',
-                name: 'Jobs',
-            },
-            series: [
-                {
-                    type: 'line',
-                    smooth: true
-                }
-            ],
-            toolbox: {
-                feature: {
-                    myTool1: {
-                        show: true,
-                        title: 'Reload',
-                        icon: 'path://M432.45,595.444c0,2.177-4.661,6.82-11.305,6.82c-6.475,0-11.306-4.567-11.306-6.82s4.852-6.812,11.306-6.812C427.841,588.632,432.452,593.191,432.45,595.444L432.45,595.444z M421.155,589.876c-3.009,0-5.448,2.495-5.448,5.572s2.439,5.572,5.448,5.572c3.01,0,5.449-2.495,5.449-5.572C426.604,592.371,424.165,589.876,421.155,589.876L421.155,589.876z M421.146,591.891c-1.916,0-3.47,1.589-3.47,3.549c0,1.959,1.554,3.548,3.47,3.548s3.469-1.589,3.469-3.548C424.614,593.479,423.062,591.891,421.146,591.891L421.146,591.891zM421.146,591.891',
-                        onclick: function () {
-                            updateProcessedLineChart();
-                        }
-                    },
-                }
-            }
-        });
-
-        updateProcessedLineChart();
-    }
-</script>
 
 
 {{ define "queue"}}
