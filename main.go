@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -81,11 +80,11 @@ func main() {
 	ip := getOutboundIP()
 
 	queue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
-		jobs.WithPoolName(fmt.Sprintf("%s - %s", ip, "default")),
+		jobs.WithPoolName(ip),
 	)
 	arrowerQueue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
 		jobs.WithQueue("arrower"),
-		jobs.WithPoolName(fmt.Sprintf("%s - %s", ip, "arrower")),
+		jobs.WithPoolName(ip),
 	)
 	di.DefaultQueue = queue
 	di.ArrowerQueue = arrowerQueue
@@ -180,16 +179,14 @@ func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 // So, what the code does actually, is to get the local up address if it would connect to that target,
 // you can change to any other IP address you want. conn.LocalAddr().String() is the local ip and port.
 // https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
-func getOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+func getOutboundIP() string {
+	conn, err := net.Dial("udp", "5.1.66.255:80")
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
 
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-	return localAddr.IP
+	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
 
 //nolint:lll
