@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -76,12 +78,14 @@ func main() {
 	di.AdminRouter = di.WebRouter.Group("/admin")
 	di.AdminRouter.Use(auth.EnsureUserIsSuperuserMiddleware)
 
+	ip := getOutboundIP()
+
 	queue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
-		jobs.WithPoolName("random-pool-name"),
+		jobs.WithPoolName(fmt.Sprintf("%s - %s", ip, "default")),
 	)
 	arrowerQueue, _ := jobs.NewPostgresJobs(di.Logger, di.MeterProvider, di.TraceProvider, pg.PGx,
 		jobs.WithQueue("arrower"),
-		jobs.WithPoolName("random-pool-name"),
+		jobs.WithPoolName(fmt.Sprintf("%s - %s", ip, "arrower")),
 	)
 	di.DefaultQueue = queue
 	di.ArrowerQueue = arrowerQueue
@@ -168,6 +172,24 @@ func injectMW(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return nil
 	}
+}
+
+// Get preferred outbound ip of this machine.
+//
+// Actually it does not establish any connection and the destination does not need to be existed at all :)
+// So, what the code does actually, is to get the local up address if it would connect to that target,
+// you can change to any other IP address you want. conn.LocalAddr().String() is the local ip and port.
+// https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
+func getOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
 }
 
 //nolint:lll
