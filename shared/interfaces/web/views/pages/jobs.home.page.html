@@ -5,11 +5,15 @@
         {{ len .Queues }} Queues
     {{ end }}
 {{ end }}
+{{ define "page.js" }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js" integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/js/behaviors/pending-jobs-by-queue.js" ></script>
+{{ end }}
 
 
 <div id="statistics" class="flex">
-    <div class="max-w-md grow flex flex-col justify-center"> <!-- wrap, so the chart cen be centered vertically -->
-        <div id="queues" class="h-52"></div>
+    <div class="max-w-md grow flex flex-col justify-center"> <!-- wrap, so the chart can be centered vertically -->
+        <div data-js-pending-jobs-by-queue class="h-52"></div>
     </div>
     <div class="max-w-md grow"> <!-- wrap, so the echart uses the full width and height when rendering -->
         <div id="processed" class="h-96"></div>
@@ -50,25 +54,25 @@
 
     var processedChart;
 
-    async function updatePendingJobsPieChart() {
-        const response = await fetch("/admin/jobs/data/pending");
-        const data = await response.json();
-
-        if (JSON.stringify(oldData) === JSON.stringify(data)) { // oder of keys is important for this form of equality check
-            return
-        }
-
-        oldData = data
-
-        queuesChart.hideLoading();
-        queuesChart.setOption({
-            series: [
-                {
-                    data: data
-                }
-            ]
-        });
-    }
+    // async function updatePendingJobsPieChart() {
+    //     const response = await fetch("/admin/jobs/data/pending");
+    //     const data = await response.json();
+    //
+    //     if (JSON.stringify(oldData) === JSON.stringify(data)) { // oder of keys is important for this form of equality check
+    //         return
+    //     }
+    //
+    //     oldData = data
+    //
+    //     queuesChart.hideLoading();
+    //     queuesChart.setOption({
+    //         series: [
+    //             {
+    //                 data: data
+    //             }
+    //         ]
+    //     });
+    // }
 
     async function updateProcessedLineChart() {
         const response = await fetch("/admin/jobs/data/processed");
@@ -90,18 +94,18 @@
 
     document.body.addEventListener('htmx:load', function (e) {
         if (init === false) {
-            initPie();
+            // initPie();
             initLine();
 
             init = true;
         }
 
-        updatePendingJobsPieChart()
+        // updatePendingJobsPieChart()
     });
 
     document.body.addEventListener('htmx:beforeOnLoad', function (e) {
         if (e.detail.pathInfo.finalRequestPath !== "/admin/jobs") { // user leaves page
-            echarts.dispose(queuesChart)
+            // echarts.dispose(queuesChart)
             // queuesChart = undefined
             echarts.dispose(processedChart)
             // processedChart = undefined
@@ -111,36 +115,36 @@
         }
     })
 
-    function initPie() {
-        // Create the echarts instance
-        queuesChart = echarts.init(document.getElementById('queues'));
-        queuesChart.showLoading();
-
-        queuesChart.setOption({
-            tooltip: {
-                trigger: 'item',
-                formatter: '<b>{b}</b>: {c} ({d}%)'
-            },
-            title: {
-                text: 'Pending Jobs per Queue',
-                right: '25%',
-            },
-            series: [
-                {
-                    type: 'pie',
-                    data: [],
-                    emphasis: {
-                        itemStyle: {
-                            shadowBlur: 10,
-                            shadowOffsetX: 0,
-                            shadowColor: 'rgba(0, 0, 0, 0.5)'
-                        }
-                    }
-                }
-            ],
-            // roseType: 'area'
-        });
-    }
+    // function initPie() {
+    //     // Create the echarts instance
+    //     queuesChart = echarts.init(document.getElementById('queues'));
+    //     queuesChart.showLoading();
+    //
+    //     queuesChart.setOption({
+    //         tooltip: {
+    //             trigger: 'item',
+    //             formatter: '<b>{b}</b>: {c} ({d}%)'
+    //         },
+    //         title: {
+    //             text: 'Pending Jobs per Queue',
+    //             right: '25%',
+    //         },
+    //         series: [
+    //             {
+    //                 type: 'pie',
+    //                 data: [],
+    //                 emphasis: {
+    //                     itemStyle: {
+    //                         shadowBlur: 10,
+    //                         shadowOffsetX: 0,
+    //                         shadowColor: 'rgba(0, 0, 0, 0.5)'
+    //                     }
+    //                 }
+    //             }
+    //         ],
+    //         // roseType: 'area'
+    //     });
+    // }
 
     function initLine() {
         processedChart = echarts.init(document.getElementById('processed'));
