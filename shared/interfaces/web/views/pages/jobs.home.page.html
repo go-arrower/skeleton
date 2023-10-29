@@ -17,7 +17,10 @@
         <div data-js-pending-jobs-by-queue class="h-52"></div>
     </div>
     <div class="max-w-md grow"> <!-- wrap, so the echart uses the full width and height when rendering -->
-        <div data-js-processed-jobs class="h-96"></div>
+        <div data-js-processed-jobs data-interval="hour" class="h-96"></div>
+    </div>
+    <div class="max-w-md grow">
+        <div data-js-processed-jobs data-interval="week" class="h-96"></div>
     </div>
 </div>
 

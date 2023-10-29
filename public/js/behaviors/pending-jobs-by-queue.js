@@ -5,9 +5,9 @@ document.addEventListener('htmx:beforeOnLoad', leave)
 
 function initAllPendingJobsPieCharts() {
     document.querySelectorAll("[data-js-pending-jobs-by-queue]").forEach(elem => {
-        elem.setAttribute('chart-initialised', true);
+        elem.setAttribute('data-chart-initialised', true);
 
-        queuesChart = echarts.init(elem);
+        let queuesChart = echarts.init(elem);
 
         queuesChart.showLoading();
         queuesChart.setOption({
@@ -41,7 +41,7 @@ function initAllPendingJobsPieCharts() {
 
 function updateAllPendingJobsPieCharts() {
     document.querySelectorAll("[data-js-pending-jobs-by-queue]").forEach(elem => {
-        queuesChart = echarts.init(elem);
+        let queuesChart = echarts.init(elem);
         updatePendingJobsPieChart(queuesChart)
     })
 }

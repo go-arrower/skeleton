@@ -3,10 +3,13 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 
@@ -34,7 +37,8 @@ type JobsController struct {
 	repo   jobs.Repository
 	p      *web.DefaultPresenter
 
-	Cmds application.JobsCommandContainer
+	Cmds    application.JobsCommandContainer
+	Queries *models.Queries
 }
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {
@@ -78,9 +82,44 @@ func (jc *JobsController) ProcessedJobsLineChartData() func(echo.Context) error 
 	}
 
 	return func(c echo.Context) error {
+		interval := c.Param("interval")
+
+		var data []models.PendingJobsRow
+		var err error
+
+		if interval == "hour" { // show last 60 minutes
+			data, err = jc.Queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{
+				DateBin:    pgtype.Interval{Valid: true, Microseconds: int64(time.Minute * 5 / time.Microsecond)},
+				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour)},
+				Limit:      12,
+			})
+		} else {
+			data, err = jc.Queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{ // show whole week
+				DateBin:    pgtype.Interval{Valid: true, Days: 1},
+				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour * 24 * 7)},
+				Limit:      7,
+			})
+		}
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		var xaxis []string
+		var series []int
+
+		for _, d := range data {
+			if interval == "hour" {
+				xaxis = append([]string{d.T.Time.Format("15:04")}, xaxis...)
+			} else {
+				xaxis = append([]string{d.T.Time.Format("01.02")}, xaxis...)
+			}
+
+			series = append([]int{int(d.Count)}, series...)
+		}
+
 		return c.JSON(http.StatusOK, lineData{
-			XAxis:  []string{"01.09", "02.09", "03.09", "04.09", "05.09", "06.09", "07.09"},
-			Series: []int{120, 200, 250, 750, 1000, 1500, rand.Intn(3) * 1000},
+			XAxis:  xaxis,
+			Series: series,
 		})
 	}
 }

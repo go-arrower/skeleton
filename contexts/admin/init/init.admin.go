@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
+
 	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
@@ -115,13 +117,14 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 
 	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)))
 	cont.Cmds = container
+	cont.Queries = models2.New(di.DB)
 
 	{
 		jobs := di.AdminRouter.Group("/jobs")
 		jobs.GET("", cont.ListQueues())
 		jobs.GET("/", cont.ListQueues())
-		jobs.GET("/data/pending", cont.PendingJobsPieChartData())      // todo better htmx fruednly data URL
-		jobs.GET("/data/processed", cont.ProcessedJobsLineChartData()) // todo better htmx fruednly data URL
+		jobs.GET("/data/pending", cont.PendingJobsPieChartData())                // todo better htmx fruednly data URL
+		jobs.GET("/data/processed/:interval", cont.ProcessedJobsLineChartData()) // todo better htmx fruednly data URL
 		jobs.GET("/:queue", cont.ShowQueue())
 		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
 		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
