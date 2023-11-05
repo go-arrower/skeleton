@@ -5,14 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
-
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
-
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
-
-	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
-
+	models3 "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
@@ -20,8 +13,12 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
+	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
+	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
@@ -134,9 +131,15 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.POST("/schedule", cont.ScheduleJobs())
 	}
 
-	return &AdminContext{
+	adminContext := &AdminContext{
 		settingsRepo: settingsRepo,
-	}, nil
+	}
+
+	api, _ := adminContext.SettingsAPI(context.Background())
+	jc := web.NewLogsController(di.Logger, models3.New(di.DB), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(api))
+	jc.ShowLogs()
+
+	return adminContext, nil
 }
 
 type AdminContext struct {

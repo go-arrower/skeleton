@@ -9,11 +9,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-arrower/arrower/alog"
+
 	"github.com/labstack/echo-contrib/echoprometheus"
 
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 
-	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
 	"github.com/go-playground/validator/v10"
@@ -53,6 +54,17 @@ func main() {
 	}
 
 	di.DB = pg.PGx
+
+	di.Logger = alog.New(
+		alog.WithLevel(slog.LevelDebug),
+		alog.WithHandler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			AddSource:   true,
+			Level:       nil, // this level is ignored, ArrowerLogger's level is used for all handlers.
+			ReplaceAttr: alog.MapLogLevelsToName,
+		})),
+		alog.WithHandler(alog.NewLokiHandler(nil)),
+		alog.WithHandler(alog.NewPostgresHandler(di.DB, nil)),
+	)
 
 	router := echo.New()
 	router.Debug = true // todo only in dev mode

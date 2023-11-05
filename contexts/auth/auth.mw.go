@@ -15,9 +15,9 @@ var ErrInvalidSessionValue = errors.New("invalid session value")
 
 const (
 	CtxAuthLoggedIn                  arrower.CTXKey = "auth.pass"
-	CtxAuthUserID                    arrower.CTXKey = "auth.user_id"
 	CtxAuthIsSuperuser               arrower.CTXKey = "auth.superuser"
 	CtxAuthIsSuperuserLoggedInAsUser arrower.CTXKey = "auth.superuser_logged_in_as_user"
+	// CtxAuthUserID                 arrower.CTXKey = "auth.user_id", see arrower/comtext.go.
 )
 
 const (
@@ -63,7 +63,7 @@ func EnsureUserIsLoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
 			}
 
-			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, uID)))
+			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), arrower.CtxAuthUserID, uID)))
 
 			passed.userID = true
 		}
@@ -108,7 +108,7 @@ func EnsureUserIsSuperuserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
 			}
 
-			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, uID)))
+			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), arrower.CtxAuthUserID, uID)))
 
 			passed.userID = true
 		}
@@ -157,7 +157,7 @@ func EnrichCtxWithUserInfoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return fmt.Errorf("could not access user_id: %w", ErrInvalidSessionValue)
 			}
 
-			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), CtxAuthUserID, uID)))
+			c.SetRequest(c.Request().WithContext(context.WithValue(c.Request().Context(), arrower.CtxAuthUserID, uID)))
 		}
 
 		if sess.Values[SessKeyIsSuperuser] != nil {
@@ -186,7 +186,7 @@ func IsLoggedIn(ctx context.Context) bool {
 }
 
 func CurrentUserID(ctx context.Context) string {
-	if v, ok := ctx.Value(CtxAuthUserID).(string); ok {
+	if v, ok := ctx.Value(arrower.CtxAuthUserID).(string); ok {
 		return v
 	}
 
