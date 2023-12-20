@@ -31,7 +31,7 @@ type (
 )
 
 // ListAllQueues returns all Queues.
-func ListAllQueues(repo jobs.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
+func ListAllQueues(repo domain.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 	return func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 		queues, _ := repo.Queues(ctx) // todo repo needs to return type []QueueName
 		qWithStats := make(map[domain.QueueName]domain.QueueStats)
@@ -52,13 +52,13 @@ type (
 		QueueName string // todo type QueueName?
 	}
 	GetQueueResponse struct {
-		Jobs []jobs.PendingJob
-		Kpis jobs.QueueKPIs
+		Jobs []domain.PendingJob
+		Kpis domain.QueueKPIs
 	}
 )
 
 // GetQueue returns a Queue.
-func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
+func GetQueue(repo domain.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
 	return func(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
 		queue := in.QueueName
 		if queue == defaultQueueName {
@@ -78,11 +78,11 @@ func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQ
 type (
 	GetWorkersRequest  struct{}
 	GetWorkersResponse struct {
-		Pool []jobs.WorkerPool
+		Pool []domain.WorkerPool
 	}
 )
 
-func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
+func GetWorkers(repo domain.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
 	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
 		wp, _ := repo.WorkerPools(ctx)
 
@@ -96,7 +96,7 @@ func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (
 	}
 }
 
-func queueKpiToStats(queue string, kpis jobs.QueueKPIs) domain.QueueStats {
+func queueKpiToStats(queue string, kpis domain.QueueKPIs) domain.QueueStats {
 	if queue == "" {
 		queue = defaultQueueName
 	}
@@ -169,7 +169,7 @@ func ProcessSomeJob() func(context.Context, SomeJob) error {
 	return func(ctx context.Context, job SomeJob) error {
 		time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
 
-		if rand.Intn(100) > 80 { //nolint:gosec,gomndworkers,gomnd
+		if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd
 			return errors.New("some error") //nolint:goerr113
 		}
 
@@ -195,7 +195,7 @@ type (
 	}
 )
 
-func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) error {
+func DeleteJob(repo domain.Repository) func(context.Context, DeleteJobRequest) error {
 	return func(ctx context.Context, in DeleteJobRequest) error {
 		err := repo.Delete(ctx, in.JobID)
 
@@ -209,7 +209,7 @@ type (
 	}
 )
 
-func RescheduleJob(repo jobs.Repository) func(context.Context, RescheduleJobRequest) error {
+func RescheduleJob(repo domain.Repository) func(context.Context, RescheduleJobRequest) error {
 	return func(ctx context.Context, in RescheduleJobRequest) error {
 		err := repo.RunJobAt(ctx, in.JobID, time.Now())
 

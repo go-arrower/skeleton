@@ -14,7 +14,6 @@ import (
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/arrower/alog"
-	"github.com/go-arrower/arrower/jobs"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
@@ -24,7 +23,7 @@ import (
 
 const defaultQueueName = "Default"
 
-func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter) *JobsController {
+func NewJobsController(logger alog.Logger, repo domain.Repository, presenter *web.DefaultPresenter) *JobsController {
 	return &JobsController{
 		logger: logger,
 		repo:   repo,
@@ -34,7 +33,7 @@ func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.
 
 type JobsController struct {
 	logger alog.Logger
-	repo   jobs.Repository
+	repo   domain.Repository
 	p      *web.DefaultPresenter
 
 	Cmds    application.JobsCommandContainer
@@ -216,7 +215,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 	}
 }
 
-func presentWorkers(pool []jobs.WorkerPool) []pages.JobWorker {
+func presentWorkers(pool []domain.WorkerPool) []pages.JobWorker {
 	jobWorkers := make([]pages.JobWorker, len(pool))
 
 	for i, _ := range pool {
@@ -267,13 +266,13 @@ type (
 	}
 
 	QueuePage struct {
-		Jobs      []jobs.PendingJob
+		Jobs      []domain.PendingJob
 		QueueName string
 		Stats     QueueStats
 	}
 )
 
-func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) QueuePage {
+func buildQueuePage(queue string, jobs []domain.PendingJob, kpis domain.QueueKPIs) QueuePage {
 	if queue == "" {
 		queue = defaultQueueName
 	}
@@ -288,7 +287,7 @@ func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) Q
 	}
 }
 
-func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
+func prettyFormatPayload(jobs []domain.PendingJob) []domain.PendingJob {
 	for i := 0; i < len(jobs); i++ { //nolint:varnamelen
 		var m map[string]interface{}
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
@@ -304,7 +303,7 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 	return jobs
 }
 
-func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
+func queueKpiToStats(queue string, kpis domain.QueueKPIs) QueueStats {
 	if queue == "" {
 		queue = defaultQueueName
 	}

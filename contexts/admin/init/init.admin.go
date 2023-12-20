@@ -6,9 +6,8 @@ import (
 	"net/http"
 
 	models3 "github.com/go-arrower/arrower/alog/models"
-	"github.com/go-arrower/arrower/jobs"
-	"github.com/go-arrower/arrower/jobs/models"
 	"github.com/go-arrower/arrower/mw"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/models"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin"
@@ -33,7 +32,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		})
 	})
 
-	repo := jobs.NewTracedJobsRepository(jobs.NewPostgresJobsRepository(models.New(di.DB)))
+	repo := domain.NewTracedJobsRepository(domain.NewPostgresJobsRepository(models.New(di.DB)))
 	settingsRepo := repository.NewSettingsMemoryRepository()
 
 	container := application.JobsCommandContainer{
