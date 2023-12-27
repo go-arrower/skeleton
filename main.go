@@ -38,7 +38,7 @@ func main() {
 
 	di.Logger, di.MeterProvider, di.TraceProvider = setupTelemetry(ctx)
 	alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
-	// alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 
 	pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 		User:       "arrower",
@@ -65,6 +65,7 @@ func main() {
 		alog.WithHandler(alog.NewLokiHandler(nil)),
 		alog.WithHandler(alog.NewPostgresHandler(di.DB, nil)),
 	)
+	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
