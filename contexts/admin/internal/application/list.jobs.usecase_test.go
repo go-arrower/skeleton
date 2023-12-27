@@ -13,7 +13,7 @@ func TestScheduleJobs(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	jq := jobs.NewInMemoryJobs()
+	jq := jobs.NewTestingJobs()
 	assert := jq.Assert(t)
 
 	scheduleJobs := application.ScheduleJobs(jq)

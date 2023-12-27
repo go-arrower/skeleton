@@ -45,7 +45,7 @@ func TestLoginUser(t *testing.T) {
 
 		repo := repository.NewMemoryRepository()
 		_ = repo.Save(ctx, userVerified)
-		queue := jobs.NewInMemoryJobs()
+		queue := jobs.NewTestingJobs()
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, queue, authentificator())
 
@@ -74,7 +74,7 @@ func TestLoginUser(t *testing.T) {
 
 		repo := repository.NewMemoryRepository()
 		_ = repo.Save(ctx, userVerified)
-		queue := jobs.NewInMemoryJobs()
+		queue := jobs.NewTestingJobs()
 
 		cmd := application.LoginUser(alog.NewTest(nil), repo, queue, authentificator())
 
@@ -127,7 +127,7 @@ func TestRegisterUser(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
-		queue := jobs.NewInMemoryJobs()
+		queue := jobs.NewTestingJobs()
 		registrator := registrator(repo)
 
 		cmd := application.RegisterUser(alog.NewNoopLogger(), repo, registrator, queue)
