@@ -12,7 +12,7 @@ import (
 )
 
 const deleteJob = `-- name: DeleteJob :exec
-DELETE FROM public.gue_jobs WHERE job_id = $1
+DELETE FROM arrower.gue_jobs WHERE job_id = $1
 `
 
 func (q *Queries) DeleteJob(ctx context.Context, jobID string) error {
@@ -21,18 +21,18 @@ func (q *Queries) DeleteJob(ctx context.Context, jobID string) error {
 }
 
 const getPendingJobs = `-- name: GetPendingJobs :many
-SELECT job_id, priority, run_at, job_type, args, error_count, last_error, queue, created_at, updated_at FROM public.gue_jobs WHERE queue = $1 ORDER BY priority, run_at ASC LIMIT 100
+SELECT job_id, priority, run_at, job_type, args, error_count, last_error, queue, created_at, updated_at FROM arrower.gue_jobs WHERE queue = $1 ORDER BY priority, run_at ASC LIMIT 100
 `
 
-func (q *Queries) GetPendingJobs(ctx context.Context, queue string) ([]GueJob, error) {
+func (q *Queries) GetPendingJobs(ctx context.Context, queue string) ([]ArrowerGueJob, error) {
 	rows, err := q.db.Query(ctx, getPendingJobs, queue)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GueJob
+	var items []ArrowerGueJob
 	for rows.Next() {
-		var i GueJob
+		var i ArrowerGueJob
 		if err := rows.Scan(
 			&i.JobID,
 			&i.Priority,
@@ -56,9 +56,9 @@ func (q *Queries) GetPendingJobs(ctx context.Context, queue string) ([]GueJob, e
 }
 
 const getQueues = `-- name: GetQueues :many
-SELECT queue FROM public.gue_jobs
+SELECT queue FROM arrower.gue_jobs
 UNION
-SELECT queue FROM public.gue_jobs_history
+SELECT queue FROM arrower.gue_jobs_history
 `
 
 func (q *Queries) GetQueues(ctx context.Context) ([]string, error) {
@@ -82,18 +82,18 @@ func (q *Queries) GetQueues(ctx context.Context) ([]string, error) {
 }
 
 const getWorkerPools = `-- name: GetWorkerPools :many
-SELECT id, queue, workers, created_at, updated_at FROM public.gue_jobs_worker_pool WHERE updated_at > NOW() - INTERVAL '2 minutes' ORDER BY queue, id
+SELECT id, queue, workers, created_at, updated_at FROM arrower.gue_jobs_worker_pool WHERE updated_at > NOW() - INTERVAL '2 minutes' ORDER BY queue, id
 `
 
-func (q *Queries) GetWorkerPools(ctx context.Context) ([]GueJobsWorkerPool, error) {
+func (q *Queries) GetWorkerPools(ctx context.Context) ([]ArrowerGueJobsWorkerPool, error) {
 	rows, err := q.db.Query(ctx, getWorkerPools)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GueJobsWorkerPool
+	var items []ArrowerGueJobsWorkerPool
 	for rows.Next() {
-		var i GueJobsWorkerPool
+		var i ArrowerGueJobsWorkerPool
 		if err := rows.Scan(
 			&i.ID,
 			&i.Queue,
@@ -112,7 +112,7 @@ func (q *Queries) GetWorkerPools(ctx context.Context) ([]GueJobsWorkerPool, erro
 }
 
 const statsAvgDurationOfJobs = `-- name: StatsAvgDurationOfJobs :one
-SELECT AVG(EXTRACT(MICROSECONDS FROM (finished_at - created_at))) AS durration_in_microseconds FROM public.gue_jobs_history WHERE queue = $1
+SELECT AVG(EXTRACT(MICROSECONDS FROM (finished_at - created_at))) AS durration_in_microseconds FROM arrower.gue_jobs_history WHERE queue = $1
 `
 
 func (q *Queries) StatsAvgDurationOfJobs(ctx context.Context, queue string) (float64, error) {
@@ -123,7 +123,7 @@ func (q *Queries) StatsAvgDurationOfJobs(ctx context.Context, queue string) (flo
 }
 
 const statsFailedJobs = `-- name: StatsFailedJobs :one
-SELECT COUNT(*) FROM public.gue_jobs WHERE queue = $1 AND error_count <> 0
+SELECT COUNT(*) FROM arrower.gue_jobs WHERE queue = $1 AND error_count <> 0
 `
 
 func (q *Queries) StatsFailedJobs(ctx context.Context, queue string) (int64, error) {
@@ -134,7 +134,7 @@ func (q *Queries) StatsFailedJobs(ctx context.Context, queue string) (int64, err
 }
 
 const statsPendingJobs = `-- name: StatsPendingJobs :one
-SELECT COUNT(*) FROM public.gue_jobs WHERE queue = $1
+SELECT COUNT(*) FROM arrower.gue_jobs WHERE queue = $1
 `
 
 func (q *Queries) StatsPendingJobs(ctx context.Context, queue string) (int64, error) {
@@ -145,7 +145,7 @@ func (q *Queries) StatsPendingJobs(ctx context.Context, queue string) (int64, er
 }
 
 const statsPendingJobsPerType = `-- name: StatsPendingJobsPerType :many
-SELECT job_type, COUNT(*) as count FROM public.gue_jobs WHERE queue = $1 GROUP BY job_type
+SELECT job_type, COUNT(*) as count FROM arrower.gue_jobs WHERE queue = $1 GROUP BY job_type
 `
 
 type StatsPendingJobsPerTypeRow struct {
@@ -174,7 +174,7 @@ func (q *Queries) StatsPendingJobsPerType(ctx context.Context, queue string) ([]
 }
 
 const statsProcessedJobs = `-- name: StatsProcessedJobs :one
-SELECT COUNT(*) FROM public.gue_jobs_history WHERE queue = $1
+SELECT COUNT(*) FROM arrower.gue_jobs_history WHERE queue = $1
 `
 
 func (q *Queries) StatsProcessedJobs(ctx context.Context, queue string) (int64, error) {
@@ -185,7 +185,7 @@ func (q *Queries) StatsProcessedJobs(ctx context.Context, queue string) (int64, 
 }
 
 const statsQueueWorkerPoolSize = `-- name: StatsQueueWorkerPoolSize :one
-SELECT COALESCE(SUM(workers),0)::INTEGER FROM public.gue_jobs_worker_pool WHERE queue = $1 AND updated_at > NOW() - INTERVAL '1 minutes'
+SELECT COALESCE(SUM(workers),0)::INTEGER FROM arrower.gue_jobs_worker_pool WHERE queue = $1 AND updated_at > NOW() - INTERVAL '1 minutes'
 `
 
 func (q *Queries) StatsQueueWorkerPoolSize(ctx context.Context, queue string) (int32, error) {
@@ -196,7 +196,7 @@ func (q *Queries) StatsQueueWorkerPoolSize(ctx context.Context, queue string) (i
 }
 
 const updateRunAt = `-- name: UpdateRunAt :exec
-UPDATE public.gue_jobs SET run_at = $1 WHERE job_id = $2
+UPDATE arrower.gue_jobs SET run_at = $1 WHERE job_id = $2
 `
 
 type UpdateRunAtParams struct {
@@ -210,7 +210,7 @@ func (q *Queries) UpdateRunAt(ctx context.Context, arg UpdateRunAtParams) error 
 }
 
 const upsertWorkerToPool = `-- name: UpsertWorkerToPool :exec
-INSERT INTO public.gue_jobs_worker_pool (id, queue, workers, created_at, updated_at)
+INSERT INTO arrower.gue_jobs_worker_pool (id, queue, workers, created_at, updated_at)
     VALUES($1, $2, $3, STATEMENT_TIMESTAMP(), $4)
 ON CONFLICT (id, queue) DO
     UPDATE SET updated_at = STATEMENT_TIMESTAMP(), workers = $3

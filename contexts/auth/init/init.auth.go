@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
-
 	"github.com/go-arrower/skeleton/contexts/admin"
+
+	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/arrower/mw"
 	"go.opentelemetry.io/otel/metric"
@@ -35,6 +35,33 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	tracer := di.TraceProvider.Tracer(fmt.Sprintf("%s/%s", di.Config.ApplicationName, contextName))
 	_ = meter
 	_ = tracer
+
+	{ // register default auth settings
+		_ = di.SettingsService.Add(context.Background(), admin.Setting{
+			Key:   admin.SettingRegistration,
+			Value: admin.NewSettingValue(true),
+			UIOptions: admin.Options{
+				Type:         admin.Checkbox,
+				Label:        "Enable Registration",
+				Info:         "Allows new Users to register themselves",
+				DefaultValue: admin.NewSettingValue(true),
+				ReadOnly:     false,
+				Danger:       false,
+			},
+		})
+		di.SettingsService.Add(context.Background(), admin.Setting{
+			Key:   admin.SettingLogin,
+			Value: admin.NewSettingValue(true),
+			UIOptions: admin.Options{
+				Type:         admin.Checkbox,
+				Label:        "Enable Login",
+				Info:         "Allows Users to login to the application",
+				DefaultValue: admin.NewSettingValue(true),
+				ReadOnly:     false,
+				Danger:       false,
+			},
+		})
+	}
 
 	queries := models.New(di.DB)
 	repo, _ := repository.NewPostgresRepository(di.DB)
@@ -108,33 +135,6 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 			),
 		),
 	)
-
-	{ // register default auth settings
-		di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.SettingRegistration,
-			Value: admin.NewSettingValue(true),
-			UIOptions: admin.Options{
-				Type:         admin.Checkbox,
-				Label:        "Enable Registration",
-				Info:         "Allows new Users to register themselves",
-				DefaultValue: admin.NewSettingValue(true),
-				ReadOnly:     false,
-				Danger:       false,
-			},
-		})
-		di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.SettingLogin,
-			Value: admin.NewSettingValue(true),
-			UIOptions: admin.Options{
-				Type:         admin.Checkbox,
-				Label:        "Enable Login",
-				Info:         "Allows Users to login to the application",
-				DefaultValue: admin.NewSettingValue(true),
-				ReadOnly:     false,
-				Danger:       false,
-			},
-		})
-	}
 
 	authContext := AuthContext{
 		settingsController: web.NewSettingsController(web2.NewDefaultPresenter(di.SettingsService), queries),

@@ -25,6 +25,7 @@ type SettingsAPI interface {
 const contextName = "auth"
 
 var (
+	// todo rename settings to be more clear: e.g. SettingAllowRegistration
 	SettingRegistration = NewSettingKey(contextName, "registration.registration_enabled")
 	SettingLogin        = NewSettingKey(contextName, "registration.login_enabled")
 )

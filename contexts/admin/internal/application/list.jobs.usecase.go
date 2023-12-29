@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/go-arrower/arrower/alog"
+
 	"github.com/go-arrower/arrower/jobs"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
@@ -165,8 +167,11 @@ type (
 	LongRunningJob struct{}
 )
 
-func ProcessSomeJob() func(context.Context, SomeJob) error {
+func ProcessSomeJob(logger alog.Logger) func(context.Context, SomeJob) error {
 	return func(ctx context.Context, job SomeJob) error {
+		logger.InfoContext(ctx, "LOG ASYNC SIMPLE JOB")
+		//panic("SOME JOB PANICS")
+
 		time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
 
 		if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd

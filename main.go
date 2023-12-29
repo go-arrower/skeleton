@@ -65,7 +65,7 @@ func main() {
 		alog.WithHandler(alog.NewLokiHandler(nil)),
 		alog.WithHandler(alog.NewPostgresHandler(di.DB, nil)),
 	)
-	alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	//alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 
 	router := echo.New()
 	router.Debug = true // todo only in dev mode
@@ -77,7 +77,6 @@ func main() {
 	router.Use(echoprometheus.NewMiddleware("skeleton"))                                                 //todo set name
 	router.Use(middleware.Static("public"))
 	router.Use(injectMW)
-
 	di.APIRouter = router.Group("/api") // todo add api middleware
 
 	// router.Use(session.Middleware())

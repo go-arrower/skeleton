@@ -87,7 +87,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 				di.MeterProvider,
 				mw.LoggedU(
 					di.Logger.(*slog.Logger),
-					application.ProcessSomeJob(),
+					application.ProcessSomeJob(di.Logger),
 				),
 			),
 		),
@@ -145,11 +145,11 @@ type AdminContext struct {
 	settingsRepo domain.SettingRepository
 }
 
-func (c *AdminContext) SettingsAPI(ctx context.Context) (admin.SettingsAPI, error) {
+func (c *AdminContext) SettingsAPI(_ context.Context) (admin.SettingsAPI, error) {
 	return application.NewSettingsApp(c.settingsRepo), nil
 }
 
-func (c *AdminContext) Shutdown(ctx context.Context) error {
+func (c *AdminContext) Shutdown(_ context.Context) error {
 	return nil
 }
 

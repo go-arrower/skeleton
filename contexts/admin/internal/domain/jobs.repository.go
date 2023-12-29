@@ -91,7 +91,7 @@ func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue strin
 	return jobsToDomain(jobs), nil
 }
 
-func jobsToDomain(j []models.GueJob) []PendingJob {
+func jobsToDomain(j []models.ArrowerGueJob) []PendingJob {
 	jobs := make([]PendingJob, len(j))
 
 	for i := 0; i < len(j); i++ {
@@ -101,7 +101,7 @@ func jobsToDomain(j []models.GueJob) []PendingJob {
 	return jobs
 }
 
-func jobToDomain(job models.GueJob) PendingJob {
+func jobToDomain(job models.ArrowerGueJob) PendingJob {
 	return PendingJob{
 		ID:         job.JobID,
 		Priority:   job.Priority,
@@ -109,7 +109,7 @@ func jobToDomain(job models.GueJob) PendingJob {
 		Type:       job.JobType,
 		Payload:    string(job.Args),
 		ErrorCount: job.ErrorCount,
-		LastError:  job.LastError.String,
+		LastError:  job.LastError,
 		Queue:      job.Queue,
 		CreatedAt:  job.CreatedAt.Time,
 		UpdatedAt:  job.UpdatedAt.Time,
@@ -249,7 +249,7 @@ func (repo *PostgresJobsRepository) WorkerPools(ctx context.Context) ([]WorkerPo
 	return workersToDomain(w), nil
 }
 
-func workersToDomain(w []models.GueJobsWorkerPool) []WorkerPool {
+func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []WorkerPool {
 	workers := make([]WorkerPool, len(w))
 
 	for i, w := range w {
