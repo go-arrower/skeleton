@@ -9,48 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ArrowerGueJob struct {
-	JobID      string
-	Priority   int16
-	RunAt      pgtype.Timestamptz
-	JobType    string
-	Args       []byte
-	ErrorCount int32
-	LastError  string
-	Queue      string
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-}
-
-type ArrowerGueJobsHistory struct {
-	JobID      string
-	Priority   int16
-	RunAt      pgtype.Timestamptz
-	JobType    string
-	Args       []byte
-	Queue      string
-	RunCount   int32
-	RunError   pgtype.Text
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	Success    bool
-	FinishedAt pgtype.Timestamptz
-}
-
-type ArrowerGueJobsWorkerPool struct {
-	ID        string
-	Queue     string
-	Workers   int16
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-type ArrowerLog struct {
-	Time   pgtype.Timestamptz
-	UserID uuid.NullUUID
-	Log    []byte
-}
-
 type AuthSession struct {
 	Key          []byte
 	Data         []byte
