@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sort"
 
 	models3 "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/arrower/mw"
@@ -26,9 +27,24 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	})
 
 	di.AdminRouter.GET("/routes", func(c echo.Context) error {
+		routes := di.WebRouter.Routes()
+
+		// sort routes by path and then by method
+		sort.Slice(routes, func(i, j int) bool {
+			if routes[i].Path < routes[j].Path {
+				return true
+			}
+
+			if routes[i].Path == routes[j].Path {
+				return routes[i].Method < routes[j].Method
+			}
+
+			return false
+		})
+
 		return c.Render(http.StatusOK, "=>admin.routes", echo.Map{
 			"Flashes": nil,
-			"Routes":  di.WebRouter.Routes(),
+			"Routes":  routes,
 		})
 	})
 
