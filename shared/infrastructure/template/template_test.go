@@ -104,6 +104,28 @@ func TestRenderer_Render(t *testing.T) {
 		assert.Contains(t, buf.String(), testdata.P0Content)
 	})
 
+	t.Run("view fragments", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, err := NewRenderer(alog.NewTest(nil), trace.NewNoopTracerProvider(), testdata.SimpleFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, renderer)
+
+		buf := &bytes.Buffer{}
+		err = renderer.Render(buf, "p2#fragment", nil, testdata.EmptyEchoContext())
+		assert.NoError(t, err)
+
+		t.Log(buf.String())
+		assert.Contains(t, buf.String(), "FRAGMENT CONTENT")
+
+		buf.Reset()
+		err = renderer.Render(buf, "p2#other_fragment", nil, testdata.EmptyEchoContext())
+		assert.NoError(t, err)
+
+		t.Log(buf.String())
+		assert.Contains(t, buf.String(), "OTHER FRAGMENT")
+	})
+
 	t.Run("render non existing page", func(t *testing.T) {
 		t.Parallel()
 

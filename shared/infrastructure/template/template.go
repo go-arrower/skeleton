@@ -253,7 +253,8 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	_, span := r.tracer.Start(c.Request().Context(), "render")
 	defer span.End()
 
-	layout, page := parseLayoutAndPage(name)
+	origName := name
+	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
 
 	if strings.HasPrefix(name, separator) {
 		layout = r.defaultLayout
@@ -342,7 +343,15 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		)
 	}
 
-	err := templ.ExecuteTemplate(w, cleanedName, data)
+	renderTemplate := cleanedName
+
+	p := strings.Split(origName, "#")
+	if len(p) == 2 {
+		renderTemplate = p[1]
+	}
+	// return error in the else case
+
+	err := templ.ExecuteTemplate(w, renderTemplate, data)
 	if err != nil {
 		return fmt.Errorf("%w: could not execute template: %v", ErrRenderFailed, err)
 	}

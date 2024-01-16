@@ -26,6 +26,7 @@ var SimpleFiles = fstest.MapFS{
 	"components/c1.component.html": {Data: []byte(C1Content)},
 	"pages/p0.page.html":           {Data: []byte(P0Content)},
 	"pages/p1.page.html":           {Data: []byte(P1Content)},
+	"pages/p2.page.html":           {Data: []byte(P0Content + `{{block "fragment" .}}FRAGMENT CONTENT{{end}} {{block "other_fragment" .}}OTHER FRAGMENT{{end}}`)},
 	"global.layout.html":           {Data: []byte(LContent)},
 }
 
