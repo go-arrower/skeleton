@@ -18,10 +18,14 @@ import (
 )
 
 var (
-	ErrLoadFailed        = errors.New("load renderer failed")
-	ErrInvalidFS         = fmt.Errorf("%w: invalid fs", ErrLoadFailed)
-	ErrRenderFailed      = errors.New("rendering failed")
-	ErrTemplateNotExists = errors.New("template does not exist")
+	ErrLoadFailed         = errors.New("load renderer failed")
+	ErrInvalidFS          = fmt.Errorf("%w: invalid fs", ErrLoadFailed)
+	ErrRenderFailed       = errors.New("rendering failed")
+	ErrNotExistsComponent = fmt.Errorf("%w: component does not exist", ErrRenderFailed)
+	ErrNotExistsPage      = fmt.Errorf("%w: page does not exist", ErrRenderFailed)
+	ErrNotExistsFragment  = fmt.Errorf("%w: fragment does not exist", ErrRenderFailed)
+	ErrNotExistsLayout    = fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
+	ErrTemplateNotExists  = errors.New("template does not exist")
 )
 
 const separator = "=>"
@@ -228,7 +232,7 @@ func layoutName(layoutName string) string {
 
 func pageName(pageName string) string {
 	name := strings.TrimPrefix(pageName, "pages/")
-	name = strings.TrimSuffix(name, ".page.html")
+	name = strings.TrimSuffix(name, ".html")
 
 	return name
 }
@@ -255,10 +259,13 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	origName := name
 	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
+	fmt.Println("Layout after split", layout)
 
 	if strings.HasPrefix(name, separator) {
+		fmt.Println("page has seperator prefix: use defaultLayout:", r.defaultLayout)
 		layout = r.defaultLayout
 	}
+	fmt.Println("Layout after default seperator", layout)
 
 	if _, ok := r.rawLayouts[layout]; layout != "" && !ok {
 		return fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
@@ -321,8 +328,17 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			return fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err)
 		}
 
-		if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
-			return fmt.Errorf("%w: page does not exist", ErrRenderFailed)
+		fmt.Println()
+		fmt.Println(page)
+		fmt.Println(r.rawPages)
+		//if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
+		if _, ok := r.rawPages[page]; !ok {
+			newTemplate = r.components.Lookup(page)
+			// todo add name of page to the error message
+			if newTemplate == nil {
+				// todo update error message to include components
+				return fmt.Errorf("%w: page %s does not exist", ErrRenderFailed, page)
+			}
 		}
 
 		_, err = newTemplate.New("content").Parse(r.rawPages[page])

@@ -10,14 +10,11 @@ import (
 	"strings"
 
 	"github.com/go-arrower/arrower/alog"
-
-	"github.com/labstack/echo-contrib/echoprometheus"
-
-	"github.com/go-arrower/skeleton/shared/interfaces/web"
-
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
+	"github.com/go-arrower/skeleton/shared/interfaces/web"
 	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
