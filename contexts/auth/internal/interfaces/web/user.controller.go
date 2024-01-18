@@ -422,7 +422,7 @@ func (uc UserController) BlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "user.blocked.component", models.AuthUser{
+		return c.Render(http.StatusOK, "auth.users#user.blocked", models.AuthUser{
 			ID:           uuid.MustParse(string(res.UserID)),
 			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: true},
 		})
@@ -438,7 +438,7 @@ func (uc UserController) UnBlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "user.blocked.component", models.AuthUser{
+		return c.Render(http.StatusOK, "auth.users#user.blocked", models.AuthUser{
 			ID:           uuid.MustParse(string(res.UserID)),
 			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: false},
 		})
