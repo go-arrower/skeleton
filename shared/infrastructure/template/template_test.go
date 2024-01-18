@@ -4,6 +4,8 @@
 //nolint:testpackage
 package template
 
+// todo rename package to renderer, or web, or echo?
+
 import (
 	"bytes"
 	"math/rand"

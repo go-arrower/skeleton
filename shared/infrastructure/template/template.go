@@ -259,13 +259,10 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	origName := name
 	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
-	fmt.Println("Layout after split", layout)
 
 	if strings.HasPrefix(name, separator) {
-		fmt.Println("page has seperator prefix: use defaultLayout:", r.defaultLayout)
 		layout = r.defaultLayout
 	}
-	fmt.Println("Layout after default seperator", layout)
 
 	if _, ok := r.rawLayouts[layout]; layout != "" && !ok {
 		return fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
@@ -328,9 +325,6 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			return fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err)
 		}
 
-		fmt.Println()
-		fmt.Println(page)
-		fmt.Println(r.rawPages)
 		//if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
 		if _, ok := r.rawPages[page]; !ok {
 			newTemplate = r.components.Lookup(page)
