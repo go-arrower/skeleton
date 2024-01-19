@@ -25,7 +25,7 @@ var (
 	ErrNotExistsPage      = fmt.Errorf("%w: page does not exist", ErrRenderFailed)
 	ErrNotExistsFragment  = fmt.Errorf("%w: fragment does not exist", ErrRenderFailed)
 	ErrNotExistsLayout    = fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
-	ErrTemplateNotExists  = errors.New("template does not exist")
+	ErrTemplateNotExists  = fmt.Errorf("%w: template does not exist", ErrRenderFailed)
 )
 
 const separator = "=>"
@@ -89,17 +89,11 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 func getDefaultLayout(rawLayouts map[string]string) string {
 	var defaultLayout string
 
-	if len(rawLayouts) == 1 {
-		for k := range rawLayouts {
+	for k := range rawLayouts {
+		if k == "default" {
 			defaultLayout = k
-		}
-	} else {
-		for k := range rawLayouts {
-			if k == "default" {
-				defaultLayout = k
 
-				break
-			}
+			break
 		}
 	}
 
@@ -260,12 +254,12 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	origName := name
 	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
 
-	if strings.HasPrefix(name, separator) {
+	if _, ok := r.rawPages[page]; ok && layout == "" {
 		layout = r.defaultLayout
 	}
 
 	if _, ok := r.rawLayouts[layout]; layout != "" && !ok {
-		return fmt.Errorf("%w: layout does not exist", ErrRenderFailed)
+		return fmt.Errorf("%w", ErrNotExistsLayout)
 	}
 
 	cleanedName := layout + "=>" + page
@@ -317,7 +311,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 		newTemplate, err := r.components.Clone() // FIXME in prepare..() the page has already a clone of components=> might be unnecessary work
 		if err != nil {
-			return fmt.Errorf("%w: could not clone: %v", ErrRenderFailed, err)
+			return fmt.Errorf("%w", ErrTemplateNotExists)
 		}
 
 		_, err = newTemplate.New(cleanedName).Parse(r.rawLayouts[layout])
@@ -325,13 +319,10 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			return fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err)
 		}
 
-		//if _, ok := r.rawPages[page]; !ok && !strings.HasSuffix(page, ".component") {
 		if _, ok := r.rawPages[page]; !ok {
 			newTemplate = r.components.Lookup(page)
-			// todo add name of page to the error message
 			if newTemplate == nil {
-				// todo update error message to include components
-				return fmt.Errorf("%w: page %s does not exist", ErrRenderFailed, page)
+				return fmt.Errorf("%w", ErrTemplateNotExists)
 			}
 		}
 
@@ -359,7 +350,20 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	if len(p) == 2 {
 		renderTemplate = p[1]
 	}
-	// return error in the else case
+
+	{ // check if fragment exists
+		found := false
+
+		for _, f := range templ.Templates() { // todo use Lookup() instead
+			if f.Name() == renderTemplate {
+				found = true
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("%w", ErrNotExistsFragment)
+		}
+	}
 
 	err := templ.ExecuteTemplate(w, renderTemplate, data)
 	if err != nil {
@@ -405,7 +409,7 @@ func (r *Renderer) Layout() string {
 // SetDefaultLayout sets the default layout.
 func (r *Renderer) SetDefaultLayout(l string) error {
 	if _, ok := r.rawLayouts[l]; !ok {
-		return ErrTemplateNotExists
+		return ErrNotExistsLayout
 	}
 
 	r.defaultLayout = l

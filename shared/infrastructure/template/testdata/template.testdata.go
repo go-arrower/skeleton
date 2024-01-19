@@ -3,10 +3,12 @@ package testdata
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -19,7 +21,7 @@ const (
 	P2Content       = "p2"
 	F0Content       = "f0"
 	F1Content       = "f1"
-	LContent        = "layout"
+	LContent        = "layout" // todo why is there also LDefaultContent?
 	LDefaultContent = "defaultLayout"
 	LOtherContent   = "otherLayout"
 )
@@ -59,23 +61,53 @@ var LayoutsPagesAndComponents = fstest.MapFS{
     {{end}}`)},
 }
 
-var LayoutOneLayout = fstest.MapFS{
+var SingleNonDefaultLayout = fstest.MapFS{
 	"pages/p0.page.html": {Data: []byte(P0Content)},
 	"global.layout.html": {Data: []byte(LContent)},
 }
 
-var LayoutWithDefault = fstest.MapFS{
+var MultipleLayoutsWithDefaultLayout = fstest.MapFS{
 	"pages/p0.html":       {Data: []byte(P0Content)},
 	"global.layout.html":  {Data: []byte(LContent)},
 	"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
 }
 
-func NewEmptyEchoContext(t *testing.T) echo.Context {
+func NewEchoContext(t *testing.T) echo.Context {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
 	return echo.New().NewContext(req, rec)
+}
+
+func GenRandomPages(numPages int) (fstest.MapFS, []string) {
+	fs := fstest.MapFS{
+		"default.layout.html": {Data: []byte(LContent + ` {{template "content" .}}`)},
+	}
+
+	var pageNames []string
+
+	for i := 0; i < numPages; i++ {
+		p := randomString(5)
+		fs["pages/"+p+".html"] = &fstest.MapFile{Data: []byte(p)} //nolint:exhaustruct
+
+		pageNames = append(pageNames, p)
+	}
+
+	return fs, pageNames
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randomString(n int) string {
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // used for ids, not security
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rnd.Intn(len(letters))]
+	}
+
+	return string(b)
 }
