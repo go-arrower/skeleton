@@ -117,7 +117,16 @@ func TestRenderer_Render(t *testing.T) {
 		t.Run("component and page with same name", func(t *testing.T) {
 			t.Parallel()
 
-			// TODO use page as default and overwrite component
+			renderer, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.ConflictingTemplateFiles, false)
+			assert.NoError(t, err)
+			assert.NotNil(t, renderer)
+
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "conflict", nil, testdata.NewEchoContext(t))
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), testdata.P0Content)
+			assert.NotContains(t, buf.String(), testdata.C0Content)
 		})
 	})
 

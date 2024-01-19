@@ -73,6 +73,11 @@ var MultipleLayoutsWithDefaultLayout = fstest.MapFS{
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
 }
 
+var ConflictingTemplateFiles = fstest.MapFS{
+	"components/conflict.html": {Data: []byte(C0Content)},
+	"pages/conflict.html":      {Data: []byte(P0Content)},
+}
+
 func NewEchoContext(t *testing.T) echo.Context {
 	t.Helper()
 
