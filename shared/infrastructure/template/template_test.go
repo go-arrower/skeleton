@@ -429,48 +429,42 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 func TestParseLayoutAndPage(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct { // todo transform to map style of testing
-		testName       string
+	tests := map[string]struct {
 		name           string
 		expectedLayout string
 		expectedPage   string
 	}{
-		{
-			"empty",
+		"empty": {
 			"",
 			"",
 			"",
 		},
-		{
-			"just page",
+		"just page": {
 			"p0",
 			"",
 			"p0",
 		},
-		{
-			"layout and page",
+		"layout and page": {
 			"l=>p",
 			"l",
 			"p",
 		},
-		{
-			"trim whitespaces",
+		"trim whitespaces": {
 			" l => p ",
 			"l",
 			"p",
 		},
-		{
-			"layout, sub-layout, and page",
+		"layout, sub-layout, and page": {
 			"l=>s=>p",
 			"l=>s",
 			"p",
 		},
 	}
 
-	for _, tt := range tests {
+	for name, tt := range tests {
 		tt := tt
 
-		t.Run(tt.testName, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			l, p := parseLayoutAndPage(tt.name)
