@@ -193,7 +193,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 func rawTemplateNames(pages map[string]string) []string {
 	var names []string
 
-	for k, _ := range pages {
+	for k := range pages {
 		names = append(names, k)
 	}
 
