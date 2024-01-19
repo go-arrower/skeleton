@@ -145,7 +145,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, buf.String(), testdata.P0Content)
-			assert.NotContains(t, buf.String(), testdata.LContent)
+			assert.NotContains(t, buf.String(), testdata.LOtherContent)
 		})
 
 		t.Run("non existing page", func(t *testing.T) {
@@ -233,7 +233,7 @@ func TestRenderer_Render(t *testing.T) {
 			err = renderer.Render(buf, "global=>p0", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
-			assert.Contains(t, buf.String(), testdata.LContent)
+			assert.Contains(t, buf.String(), testdata.LOtherContent)
 			assert.Contains(t, buf.String(), testdata.P0Content)
 			assert.Contains(t, buf.String(), testdata.C0Content)
 			assert.NotContains(t, buf.String(), testdata.C1Content)
@@ -243,7 +243,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Contains(t, buf.String(), testdata.LOtherContent)
-			assert.NotContains(t, buf.String(), testdata.LContent)
+			assert.NotContains(t, buf.String(), testdata.LDefaultContent)
 			assert.Contains(t, buf.String(), testdata.P0Content)
 			assert.Contains(t, buf.String(), testdata.C0Content)
 			assert.NotContains(t, buf.String(), testdata.C1Content)
@@ -317,7 +317,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, renderer.templates, 3) // previous templates + global=>p0
 
-		assert.Contains(t, buf.String(), testdata.LContent)
+		assert.Contains(t, buf.String(), testdata.LOtherContent)
 		assert.Contains(t, buf.String(), testdata.P0Content)
 		assert.Contains(t, buf.String(), testdata.C0Content)
 		assert.NotContains(t, buf.String(), testdata.C1Content)
@@ -327,7 +327,7 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, renderer.templates, 4) // previous templates + global=>p1
 
-		assert.Contains(t, buf.String(), testdata.LContent)
+		assert.Contains(t, buf.String(), testdata.LOtherContent)
 		assert.Contains(t, buf.String(), testdata.P1Content)
 		assert.NotContains(t, buf.String(), testdata.P0Content)
 		assert.NotContains(t, buf.String(), testdata.C0Content)

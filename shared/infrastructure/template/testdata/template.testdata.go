@@ -21,7 +21,6 @@ const (
 	P2Content       = "p2"
 	F0Content       = "f0"
 	F1Content       = "f1"
-	LContent        = "layout" // todo why is there also LDefaultContent?
 	LDefaultContent = "defaultLayout"
 	LOtherContent   = "otherLayout"
 )
@@ -34,7 +33,7 @@ var TemplateFiles = fstest.MapFS{
 	"pages/p0.html":      {Data: []byte(P0Content)},
 	"pages/p1.html":      {Data: []byte(P1Content + ` {{template "c0" .}}`)},
 	"pages/p2.html":      {Data: []byte(P2Content + fmt.Sprintf(`{{block "f0" .}}%s{{end}} {{block "f1" .}}%s{{end}}`, F0Content, F1Content))},
-	"global.layout.html": {Data: []byte(LContent)},
+	"global.layout.html": {Data: []byte(LOtherContent)},
 }
 
 var LayoutsPagesAndComponents = fstest.MapFS{
@@ -45,7 +44,7 @@ var LayoutsPagesAndComponents = fstest.MapFS{
 	"global.layout.html": {Data: []byte(`<!DOCTYPE html>
 <html lang="en">
 <body>
-	layout
+	otherLayout
     {{ block "layout" . }}
         {{block "content" .}}
             Fallback, if "content" is not defined elsewhere
@@ -63,12 +62,12 @@ var LayoutsPagesAndComponents = fstest.MapFS{
 
 var SingleNonDefaultLayout = fstest.MapFS{
 	"pages/p0.page.html": {Data: []byte(P0Content)},
-	"global.layout.html": {Data: []byte(LContent)},
+	"global.layout.html": {Data: []byte(LOtherContent)},
 }
 
 var MultipleLayoutsWithDefaultLayout = fstest.MapFS{
 	"pages/p0.html":       {Data: []byte(P0Content)},
-	"global.layout.html":  {Data: []byte(LContent)},
+	"global.layout.html":  {Data: []byte(LOtherContent)},
 	"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
 }
@@ -89,7 +88,7 @@ func NewEchoContext(t *testing.T) echo.Context {
 
 func GenRandomPages(numPages int) (fstest.MapFS, []string) {
 	fs := fstest.MapFS{
-		"default.layout.html": {Data: []byte(LContent + ` {{template "content" .}}`)},
+		"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},
 	}
 
 	var pageNames []string
