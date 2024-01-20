@@ -1,48 +1,87 @@
-{{ define "admin.title" }}Schedule new Jobs{{ end }}
+{{ define "admin.title" }}Schedule a Job{{ end }}
 
 
+<form autocomplete="off" method="post" action="/admin/jobs/schedule" class="flex flex-wrap space-y-2">
+    <div class="w-1/5">
+        <label for="queues">Queue</label>
+    </div>
+    <div class="w-4/5">
+        <input id="queues" list="known-queues" name="queue" value="Default"
+               hx-get="/admin/jobs/jobTypes"
+               hx-trigger="input"
+               hx-target="#known-job-types" />
+        <datalist id="known-queues">
+            {{ range .Queues }}
+                <option value="{{ . }}"></option>
+            {{ end }}
+        </datalist>
+    </div>
 
-<table class="table-auto border border-collapse text-left">
-    <thead class="bg-gray-100">
-    <tr>
-        <th scope="col" class="p-1 border border-slate-300">Queue</th>
-        <th scope="col" class="p-1 border border-slate-300">Job Type</th>
-        <th scope="col" class="p-1 border border-slate-300">Count</th>
-        <th scope="col" class="p-1 border border-slate-300">Schedule</th>
-    </tr>
-    </thead>
-    <tbody>
-        <tr class="odd:bg-white even:bg-slate-50">
-            <form method="POST" action="/admin/jobs/schedule">
-                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
-                <td class="p-1"><input type="text" name="job_type" value="SomeJob" placeholder="Job Type" /></td>
-                <td class="p-1"><input type="text" name="count" value="1" placeholder="Amount" /></td>
-                <td class="p-1"><input type="submit" value="Schedule Job"></td>
-            </form>
-        </tr>
-        <tr class="odd:bg-white even:bg-slate-50">
-            <form method="POST" action="/admin/jobs/schedule">
-                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
-                <td class="p-1"><input type="text" name="job_type" value="SomeJob" placeholder="Job Type" /></td>
-                <td class="p-1"><input type="text" name="count" value="100" placeholder="Amount" /></td>
-                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
-            </form>
-        </tr>
-        <tr class="odd:bg-white even:bg-slate-50">
-            <form method="POST" action="/admin/jobs/schedule">
-                <td class="p-1"><input type="text" name="queue" value="Default" placeholder="Queue name" readonly /></td>
-                <td class="p-1"><input type="text" name="job_type" value="LongRunningJob" placeholder="Job Type" /></td>
-                <td class="p-1"><input type="text" name="count" value="10" placeholder="Amount" /></td>
-                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
-            </form>
-        </tr>
-        <tr class="odd:bg-white even:bg-slate-50">
-            <form method="POST" action="/admin/jobs/schedule">
-                <td class="p-1"><input type="text" name="queue" value="" placeholder="Queue name" readonly /></td>
-                <td class="p-1"><input type="text" name="job_type" value="" placeholder="Job Type" /></td>
-                <td class="p-1"><input type="text" name="count" value="" placeholder="Amount" /></td>
-                <td class="p-1"><input type="submit" value="Schedule Job(s)"></td>
-            </form>
-        </tr>
-    </tbody>
-</table>
+    <div class="w-1/5">
+        <label for="job-type">Job Type</label>
+    </div>
+    <div class="w-4/5">
+        <input id="job-type" name="job-type" list="known-job-types" />
+        <datalist id="known-job-types">
+            {{ block "known-job-types" . }}
+                {{ range .JobTypes }}
+                    <option value="{{ . }}"></option>
+                {{ end }}
+            {{ end }}
+        </datalist>
+    </div>
+
+    <div class="w-1/5">
+        <label for="priority">Priority</label>
+    </div>
+    <div class="w-4/5">
+        <input type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
+        <datalist id="priorities">
+            <option value="-1000"></option>
+            <option value="-500"></option>
+            <option value="-250"></option>
+            <option value="-100"></option>
+            <option value="0"></option>
+            <option value="100"></option>
+            <option value="250"></option>
+            <option value="500"></option>
+            <option value="1000"></option>
+        </datalist>
+    </div>
+
+    <div class="w-1/5">
+        <label for="payload">Payload</label>
+    </div>
+    <div class="w-4/5">
+        <textarea id="payload" name="payload" onchange="
+            let data = {};
+            try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
+                document.getElementById('payload-error').classList.remove('invisible');
+                return;
+            }
+            document.getElementById('payload').value = JSON.stringify(data, undefined, 2);
+            document.getElementById('payload-error').classList.add('invisible');
+        ">{}</textarea>
+        <br/>
+        <span id="payload-error" class="invisible text-red-500">The payload is not valid JSON</span>
+    </div>
+
+    <div class="w-1/5">
+        <label for="count">Amount</label>
+    </div>
+    <div class="w-4/5">
+        <input type="number" id="count" name="count" min="1" max="1000000000" value="1" />
+    </div>
+
+    <div class="w-1/5">
+        <label>Run At time</label>
+    </div>
+    <div class="w-4/5">
+        <pre>=now()</pre>
+    </div>
+
+    <div class="w-1/5"></div>
+    <div class="w-4/5">
+        <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
+    </div>
+</form>

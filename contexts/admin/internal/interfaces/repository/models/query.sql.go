@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const jobTypes = `-- name: JobTypes :many
+SELECT DISTINCT(job_type)
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+`
+
+func (q *Queries) JobTypes(ctx context.Context, queue string) ([]string, error) {
+	rows, err := q.db.Query(ctx, jobTypes, queue)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var job_type string
+		if err := rows.Scan(&job_type); err != nil {
+			return nil, err
+		}
+		items = append(items, job_type)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pendingJobs = `-- name: PendingJobs :many
 SELECT bins.t, COUNT(t)
 FROM (SELECT date_bin($1, finished_at, TIMESTAMP WITH TIME ZONE'2001-01-01')::TIMESTAMPTZ as t

@@ -129,16 +129,20 @@ func queueKpiToStats(queue string, kpis domain.QueueKPIs) domain.QueueStats {
 
 type (
 	ScheduleJobsRequest struct {
-		Queue   string
-		JobType string
-		Count   int
+		Queue    string
+		JobType  string
+		Priority int16
+		Payload  string
+		Count    int
 	}
 	ScheduleJobsResponse struct{}
 )
 
 func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, ScheduleJobsRequest) error {
 	return func(ctx context.Context, in ScheduleJobsRequest) error {
-		err := jq.Enqueue(ctx, buildJobs(in.JobType, in.Count))
+		err := jq.Enqueue(ctx, buildJobs(in.JobType, in.Payload, in.Count),
+			jobs.WithPriority(in.Priority),
+		)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -147,7 +151,7 @@ func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, ScheduleJobsRequest) e
 	}
 }
 
-func buildJobs(jobType string, count int) []any {
+func buildJobs(jobType string, payload string, count int) []any {
 	jobs := make([]any, count)
 
 	for i := 0; i < count; i++ {

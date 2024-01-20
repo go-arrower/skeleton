@@ -187,15 +187,57 @@ func (jc *JobsController) ShowSettings() func(c echo.Context) error {
 
 func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule Test Jobs"))
+		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+
+		var queues []string
+		for q, _ := range res.QueueStats {
+			queue := string(q)
+			if queue == "" {
+				queue = "Default"
+			}
+
+			queues = append(queues, queue)
+		}
+
+		jobType, _ := jc.Queries.JobTypes(c.Request().Context(), "")
+		_ = jobType
+
+		return c.Render(http.StatusOK, "jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
+			"Queues":   queues,
+			"JobTypes": jobType,
+		}))
+	}
+}
+
+func (jc *JobsController) ShowJobTypes() func(_ echo.Context) error {
+	return func(c echo.Context) error {
+		queue := c.QueryParam("queue")
+
+		if queue == "Default" {
+			queue = ""
+		}
+
+		jobType, _ := jc.Queries.JobTypes(c.Request().Context(), queue)
+
+		return c.Render(http.StatusOK, "jobs.schedule#known-job-types", echo.Map{
+			"JobTypes": jobType,
+		})
 	}
 }
 
 func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.FormValue("queue")
-		jt := c.FormValue("job_type")
+		jt := c.FormValue("job-type")
+		prio := c.FormValue("priority")
+		payload := c.FormValue("payload")
 		num := c.FormValue("count")
+
+		priority, err := strconv.Atoi(prio)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+		priority = priority * -1
 
 		count, err := strconv.Atoi(num)
 		if err != nil {
@@ -203,9 +245,11 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		}
 
 		err = jc.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
-			Queue:   queue,
-			JobType: jt,
-			Count:   count,
+			Queue:    queue,
+			JobType:  jt,
+			Priority: int16(priority),
+			Payload:  payload,
+			Count:    count,
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)

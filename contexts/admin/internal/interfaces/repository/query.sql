@@ -6,3 +6,8 @@ FROM (SELECT date_bin($1, finished_at, TIMESTAMP WITH TIME ZONE'2001-01-01')::TI
 GROUP BY bins.t
 ORDER BY bins.t DESC
 LIMIT $3;
+
+-- name: JobTypes :many
+SELECT DISTINCT(job_type)
+FROM arrower.gue_jobs_history
+WHERE queue = $1;
