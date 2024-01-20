@@ -2,16 +2,22 @@ package application
 
 import (
 	"context"
+	crand "crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"time"
 
-	"github.com/go-arrower/arrower/alog"
+	"go.opentelemetry.io/otel/propagation"
 
-	"github.com/go-arrower/arrower/jobs"
+	"github.com/go-arrower/arrower/alog"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
 const defaultQueueName = "Default"
@@ -138,11 +144,9 @@ type (
 	ScheduleJobsResponse struct{}
 )
 
-func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, ScheduleJobsRequest) error {
+func ScheduleJobs(queries *models.Queries) func(context.Context, ScheduleJobsRequest) error {
 	return func(ctx context.Context, in ScheduleJobsRequest) error {
-		err := jq.Enqueue(ctx, buildJobs(in.JobType, in.Payload, in.Count),
-			jobs.WithPriority(in.Priority),
-		)
+		_, err := queries.ScheduleJobs(ctx, buildJobs(in))
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -151,16 +155,37 @@ func ScheduleJobs(jq jobs.Enqueuer) func(context.Context, ScheduleJobsRequest) e
 	}
 }
 
-func buildJobs(jobType string, payload string, count int) []any {
-	jobs := make([]any, count)
+func buildJobs(in ScheduleJobsRequest) []models.ScheduleJobsParams {
+	jobs := make([]models.ScheduleJobsParams, in.Count)
 
-	for i := 0; i < count; i++ {
-		switch jobType {
-		case "SomeJob":
-			jobs[i] = SomeJob{}
-		case "LongRunningJob":
-			jobs[i] = LongRunningJob{}
+	entropy := &ulid.LockedMonotonicReader{
+		MonotonicReader: ulid.Monotonic(crand.Reader, 0),
+	}
+
+	type jobPayload struct { // todo reuse the one in the jobs package
+		// Carrier contains the otel tracing information.
+		Carrier propagation.MapCarrier `json:"carrier"`
+		// JobData is the actual data as string instead of []byte,
+		// so that it is readable more easily when assessing it via psql directly.
+		JobData string `json:"jobData"`
+	}
+
+	args, _ := json.Marshal(jobPayload{JobData: in.Payload})
+
+	for i := 0; i < in.Count; i++ {
+		jobID, _ := ulid.New(ulid.Now(), entropy)
+
+		jobs[i] = models.ScheduleJobsParams{
+			JobID:     jobID.String(),
+			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			Queue:     in.Queue,
+			JobType:   in.JobType,
+			Priority:  in.Priority,
+			RunAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			Args:      args,
 		}
+
 	}
 
 	return jobs
@@ -168,6 +193,7 @@ func buildJobs(jobType string, payload string, count int) []any {
 
 type (
 	SomeJob        struct{}
+	NamedJob       struct{ Name string }
 	LongRunningJob struct{}
 )
 
@@ -181,6 +207,14 @@ func ProcessSomeJob(logger alog.Logger) func(context.Context, SomeJob) error {
 		if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd
 			return errors.New("some error") //nolint:goerr113
 		}
+
+		return nil
+	}
+}
+
+func ProcessNamedJob(logger alog.Logger) func(context.Context, NamedJob) error {
+	return func(ctx context.Context, job NamedJob) error {
+		logger.InfoContext(ctx, "named job", slog.String("name", job.Name))
 
 		return nil
 	}

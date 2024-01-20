@@ -77,3 +77,14 @@ func (q *Queries) PendingJobs(ctx context.Context, arg PendingJobsParams) ([]Pen
 	}
 	return items, nil
 }
+
+type ScheduleJobsParams struct {
+	JobID     string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	Queue     string
+	JobType   string
+	Priority  int16
+	RunAt     pgtype.Timestamptz
+	Args      []byte
+}

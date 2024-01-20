@@ -11,3 +11,7 @@ LIMIT $3;
 SELECT DISTINCT(job_type)
 FROM arrower.gue_jobs_history
 WHERE queue = $1;
+
+-- name: ScheduleJobs :copyfrom
+INSERT INTO arrower.gue_jobs (job_id, created_at, updated_at, queue, job_type, priority, run_at, args)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);

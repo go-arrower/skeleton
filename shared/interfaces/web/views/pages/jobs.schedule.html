@@ -2,10 +2,10 @@
 
 
 <form autocomplete="off" method="post" action="/admin/jobs/schedule" class="flex flex-wrap space-y-2">
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label for="queues">Queue</label>
     </div>
-    <div class="w-4/5">
+    <div class="w-10/12">
         <input id="queues" list="known-queues" name="queue" value="Default"
                hx-get="/admin/jobs/jobTypes"
                hx-trigger="input"
@@ -17,10 +17,10 @@
         </datalist>
     </div>
 
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label for="job-type">Job Type</label>
     </div>
-    <div class="w-4/5">
+    <div class="w-10/12">
         <input id="job-type" name="job-type" list="known-job-types" />
         <datalist id="known-job-types">
             {{ block "known-job-types" . }}
@@ -31,10 +31,10 @@
         </datalist>
     </div>
 
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label for="priority">Priority</label>
     </div>
-    <div class="w-4/5">
+    <div class="w-10/12">
         <input type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
         <datalist id="priorities">
             <option value="-1000"></option>
@@ -49,11 +49,11 @@
         </datalist>
     </div>
 
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label for="payload">Payload</label>
     </div>
-    <div class="w-4/5">
-        <textarea id="payload" name="payload" onchange="
+    <div class="w-10/12">
+        <textarea id="payload" name="payload" class="h-64" onchange="
             let data = {};
             try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
                 document.getElementById('payload-error').classList.remove('invisible');
@@ -66,22 +66,22 @@
         <span id="payload-error" class="invisible text-red-500">The payload is not valid JSON</span>
     </div>
 
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label for="count">Amount</label>
     </div>
-    <div class="w-4/5">
+    <div class="w-10/12">
         <input type="number" id="count" name="count" min="1" max="1000000000" value="1" />
     </div>
 
-    <div class="w-1/5">
+    <div class="w-2/12">
         <label>Run At time</label>
     </div>
-    <div class="w-4/5">
+    <div class="w-10/12">
         <pre>=now()</pre>
     </div>
 
-    <div class="w-1/5"></div>
-    <div class="w-4/5">
+    <div class="w-2/12"></div>
+    <div class="w-10/12">
         <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
     </div>
 </form>

@@ -8,12 +8,12 @@ import (
 
 	models3 "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/arrower/mw"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/models"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
@@ -76,7 +76,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		ScheduleJobs: mw.TracedU(
 			di.TraceProvider, mw.MetricU(
 				di.MeterProvider, mw.LoggedU(
-					di.Logger.(*slog.Logger), application.ScheduleJobs(di.DefaultQueue),
+					di.Logger.(*slog.Logger), application.ScheduleJobs(models2.New(di.DB)),
 				),
 			),
 		),
@@ -104,6 +104,18 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 				mw.LoggedU(
 					di.Logger.(*slog.Logger),
 					application.ProcessSomeJob(di.Logger),
+				),
+			),
+		),
+	)
+	_ = di.DefaultQueue.RegisterJobFunc(
+		mw.TracedU(
+			di.TraceProvider,
+			mw.MetricU(
+				di.MeterProvider,
+				mw.LoggedU(
+					di.Logger.(*slog.Logger),
+					application.ProcessNamedJob(di.Logger),
 				),
 			),
 		),

@@ -233,6 +233,11 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		payload := c.FormValue("payload")
 		num := c.FormValue("count")
 
+		jq := queue
+		if queue == "Default" {
+			jq = ""
+		}
+
 		priority, err := strconv.Atoi(prio)
 		if err != nil {
 			return fmt.Errorf("%w", err)
@@ -245,7 +250,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		}
 
 		err = jc.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
-			Queue:    queue,
+			Queue:    jq,
 			JobType:  jt,
 			Priority: int16(priority),
 			Payload:  payload,
