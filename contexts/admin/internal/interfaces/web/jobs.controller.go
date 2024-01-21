@@ -181,7 +181,12 @@ func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 
 func (jc *JobsController) ShowSettings() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>jobs.settings", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings"))
+		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+
+		return c.Render(http.StatusOK, "jobs.settings", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+			"Jobs":    size.Jobs,
+			"History": size.History,
+		}))
 	}
 }
 

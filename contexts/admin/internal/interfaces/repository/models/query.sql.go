@@ -11,6 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const jobTableSize = `-- name: JobTableSize :one
+SELECT pg_size_pretty(pg_total_relation_size('arrower.gue_jobs'))         as jobs,
+       pg_size_pretty(pg_total_relation_size('arrower.gue_jobs_history')) as history
+`
+
+type JobTableSizeRow struct {
+	Jobs    string
+	History string
+}
+
+func (q *Queries) JobTableSize(ctx context.Context) (JobTableSizeRow, error) {
+	row := q.db.QueryRow(ctx, jobTableSize)
+	var i JobTableSizeRow
+	err := row.Scan(&i.Jobs, &i.History)
+	return i, err
+}
+
 const jobTypes = `-- name: JobTypes :many
 SELECT DISTINCT(job_type)
 FROM arrower.gue_jobs_history
