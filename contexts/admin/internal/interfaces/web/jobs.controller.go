@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
@@ -38,6 +40,7 @@ type JobsController struct {
 
 	Cmds    application.JobsCommandContainer
 	Queries *models.Queries
+	DB      *pgxpool.Pool
 }
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {
@@ -184,6 +187,26 @@ func (jc *JobsController) ShowSettings() func(c echo.Context) error {
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
 		return c.Render(http.StatusOK, "jobs.settings", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+			"Jobs":    size.Jobs,
+			"History": size.History,
+		}))
+	}
+}
+
+func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
+	return func(c echo.Context) error {
+		table := c.Param("table")
+
+		if table == "jobs" {
+			_, _ = jc.DB.Exec(c.Request().Context(), `VACUUM FULL arrower.gue_jobs`)
+		} else if table == "history" {
+			_, _ = jc.DB.Exec(c.Request().Context(), `VACUUM FULL arrower.gue_jobs_history`)
+		}
+
+		// reload the dashboard badges with the size, by using htmx's oob technique
+		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+
+		return c.Render(http.StatusOK, "jobs.settings#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,
 		}))

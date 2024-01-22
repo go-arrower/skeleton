@@ -142,6 +142,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)))
 	cont.Cmds = container
 	cont.Queries = models2.New(di.DB)
+	cont.DB = di.DB
 
 	{
 		jobs := di.AdminRouter.Group("/jobs")
@@ -154,6 +155,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
 		jobs.GET("/workers", cont.ListWorkers())
 		jobs.GET("/settings", cont.ShowSettings())
+		jobs.POST("/vacuum/:table", cont.VacuumJobTables())
 		jobs.GET("/schedule", cont.CreateJobs())
 		jobs.GET("/jobTypes", cont.ShowJobTypes())
 		jobs.POST("/schedule", cont.ScheduleJobs())
