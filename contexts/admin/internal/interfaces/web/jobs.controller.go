@@ -228,6 +228,23 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 	}
 }
 
+func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
+	return func(c echo.Context) error {
+		days, _ := strconv.Atoi(c.QueryParam("days"))
+
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+
+		size, _ := jc.Queries.JobHistorySize(c.Request().Context(), pgtype.Timestamptz{Time: estimateBefore, Valid: true})
+
+		var fmtSize string
+		if size != "" {
+			fmtSize = fmt.Sprintf("~ %s", size)
+		}
+
+		return c.String(http.StatusOK, fmtSize)
+	}
+}
+
 func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})

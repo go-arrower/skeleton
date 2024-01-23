@@ -24,3 +24,8 @@ SELECT pg_size_pretty(pg_total_relation_size('arrower.gue_jobs'))         as job
 DELETE
 FROM arrower.gue_jobs_history
 WHERE created_at <= $1;
+
+-- name: JobHistorySize :one
+SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.*))), '')
+FROM arrower.gue_jobs_history
+WHERE created_at <= $1;

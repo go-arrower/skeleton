@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const jobHistorySize = `-- name: JobHistorySize :one
+SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.*))), '')
+FROM arrower.gue_jobs_history
+WHERE created_at <= $1
+`
+
+func (q *Queries) JobHistorySize(ctx context.Context, createdAt pgtype.Timestamptz) (interface{}, error) {
+	row := q.db.QueryRow(ctx, jobHistorySize, createdAt)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
 const jobTableSize = `-- name: JobTableSize :one
 SELECT pg_size_pretty(pg_total_relation_size('arrower.gue_jobs'))         as jobs,
        pg_size_pretty(pg_total_relation_size('arrower.gue_jobs_history')) as history
