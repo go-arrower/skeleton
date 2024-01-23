@@ -95,6 +95,17 @@ func (q *Queries) PendingJobs(ctx context.Context, arg PendingJobsParams) ([]Pen
 	return items, nil
 }
 
+const pruneHistory = `-- name: PruneHistory :exec
+DELETE
+FROM arrower.gue_jobs_history
+WHERE created_at <= $1
+`
+
+func (q *Queries) PruneHistory(ctx context.Context, createdAt pgtype.Timestamptz) error {
+	_, err := q.db.Exec(ctx, pruneHistory, createdAt)
+	return err
+}
+
 type ScheduleJobsParams struct {
 	JobID     string
 	CreatedAt pgtype.Timestamptz

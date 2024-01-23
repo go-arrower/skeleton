@@ -208,6 +208,26 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 	}
 }
 
+func (jc *JobsController) PruneHistory() func(echo.Context) error {
+	return func(c echo.Context) error {
+		days, _ := strconv.Atoi(c.FormValue("days"))
+
+		if days == 0 && c.FormValue("days") != "all" {
+			return c.NoContent(http.StatusBadRequest)
+		}
+
+		_ = jc.app.PruneHistory(c.Request().Context(), days)
+
+		// reload the dashboard badges with the size, by using htmx's oob technique
+		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+
+		return c.Render(http.StatusOK, "jobs.settings#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+			"Jobs":    size.Jobs,
+			"History": size.History,
+		}))
+	}
+}
+
 func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})

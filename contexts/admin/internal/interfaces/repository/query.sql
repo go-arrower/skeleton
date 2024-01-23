@@ -19,3 +19,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 -- name: JobTableSize :one
 SELECT pg_size_pretty(pg_total_relation_size('arrower.gue_jobs'))         as jobs,
        pg_size_pretty(pg_total_relation_size('arrower.gue_jobs_history')) as history;
+
+-- name: PruneHistory :exec
+DELETE
+FROM arrower.gue_jobs_history
+WHERE created_at <= $1;
