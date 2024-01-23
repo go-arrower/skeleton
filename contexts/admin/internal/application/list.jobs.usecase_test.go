@@ -16,7 +16,7 @@ func TestScheduleJobs(t *testing.T) {
 	jq := jobs.NewTestingJobs()
 	assert := jq.Assert(t)
 
-	scheduleJobs := application.ScheduleJobs(jq)
+	scheduleJobs := application.ScheduleJobs(nil)
 
 	_ = scheduleJobs(ctx, application.ScheduleJobsRequest{
 		Queue:   "",

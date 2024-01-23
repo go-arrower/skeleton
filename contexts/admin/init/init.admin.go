@@ -139,10 +139,9 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		settingsCont.Update()
 	}
 
-	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)))
+	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)), application.NewJobsApplication(di.DB))
 	cont.Cmds = container
 	cont.Queries = models2.New(di.DB)
-	cont.DB = di.DB
 
 	{
 		jobs := di.AdminRouter.Group("/jobs")
