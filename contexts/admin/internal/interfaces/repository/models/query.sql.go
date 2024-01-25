@@ -11,6 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const jobHistoryPayloadSize = `-- name: JobHistoryPayloadSize :one
+SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.args))), '')
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND created_at <= $2
+  AND args <> ''
+`
+
+type JobHistoryPayloadSizeParams struct {
+	Queue     string
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) JobHistoryPayloadSize(ctx context.Context, arg JobHistoryPayloadSizeParams) (interface{}, error) {
+	row := q.db.QueryRow(ctx, jobHistoryPayloadSize, arg.Queue, arg.CreatedAt)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
 const jobHistorySize = `-- name: JobHistorySize :one
 SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.*))), '')
 FROM arrower.gue_jobs_history
@@ -116,6 +136,23 @@ WHERE created_at <= $1
 
 func (q *Queries) PruneHistory(ctx context.Context, createdAt pgtype.Timestamptz) error {
 	_, err := q.db.Exec(ctx, pruneHistory, createdAt)
+	return err
+}
+
+const pruneHistoryPayload = `-- name: PruneHistoryPayload :exec
+UPDATE arrower.gue_jobs_history
+SET args = ''::BYTEA
+WHERE queue = $1
+  AND created_at <= $2
+`
+
+type PruneHistoryPayloadParams struct {
+	Queue     string
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) PruneHistoryPayload(ctx context.Context, arg PruneHistoryPayloadParams) error {
+	_, err := q.db.Exec(ctx, pruneHistoryPayload, arg.Queue, arg.CreatedAt)
 	return err
 }
 

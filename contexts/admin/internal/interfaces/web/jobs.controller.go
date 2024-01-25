@@ -185,9 +185,22 @@ func (jc *JobsController) ShowSettings() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
+		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+
+		var queues []string
+		for q, _ := range res.QueueStats {
+			queue := string(q)
+			if queue == "" {
+				queue = "Default"
+			}
+
+			queues = append(queues, queue)
+		}
+
 		return c.Render(http.StatusOK, "jobs.settings", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,
+			"Queues":  queues,
 		}))
 	}
 }
@@ -208,7 +221,7 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 	}
 }
 
-func (jc *JobsController) PruneHistory() func(echo.Context) error {
+func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 	return func(c echo.Context) error {
 		days, _ := strconv.Atoi(c.FormValue("days"))
 
@@ -228,6 +241,25 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 	}
 }
 
+func (jc *JobsController) PruneHistory() func(echo.Context) error {
+	return func(c echo.Context) error {
+		days, _ := strconv.Atoi(c.FormValue("days"))
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+
+		queue := c.FormValue("queue")
+		if queue == "Default" {
+			queue = ""
+		}
+
+		_ = jc.Queries.PruneHistoryPayload(c.Request().Context(), models.PruneHistoryPayloadParams{
+			Queue:     queue,
+			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
+		})
+
+		return c.NoContent(http.StatusOK)
+	}
+}
+
 func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
 	return func(c echo.Context) error {
 		days, _ := strconv.Atoi(c.QueryParam("days"))
@@ -235,6 +267,30 @@ func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
 		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
 
 		size, _ := jc.Queries.JobHistorySize(c.Request().Context(), pgtype.Timestamptz{Time: estimateBefore, Valid: true})
+
+		var fmtSize string
+		if size != "" {
+			fmtSize = fmt.Sprintf("~ %s", size)
+		}
+
+		return c.String(http.StatusOK, fmtSize)
+	}
+}
+
+func (jc *JobsController) EstimateHistoryPayloadSize() func(echo.Context) error {
+	return func(c echo.Context) error {
+		queue := c.QueryParam("queue")
+		if queue == "Default" {
+			queue = ""
+		}
+
+		days, _ := strconv.Atoi(c.QueryParam("days"))
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+
+		size, _ := jc.Queries.JobHistoryPayloadSize(c.Request().Context(), models.JobHistoryPayloadSizeParams{
+			Queue:     queue,
+			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
+		})
 
 		var fmtSize string
 		if size != "" {

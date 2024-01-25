@@ -20,12 +20,25 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 SELECT pg_size_pretty(pg_total_relation_size('arrower.gue_jobs'))         as jobs,
        pg_size_pretty(pg_total_relation_size('arrower.gue_jobs_history')) as history;
 
+-- name: JobHistorySize :one
+SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.*))), '')
+FROM arrower.gue_jobs_history
+WHERE created_at <= $1;
+
 -- name: PruneHistory :exec
 DELETE
 FROM arrower.gue_jobs_history
 WHERE created_at <= $1;
 
--- name: JobHistorySize :one
-SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.*))), '')
+-- name: JobHistoryPayloadSize :one
+SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.args))), '')
 FROM arrower.gue_jobs_history
-WHERE created_at <= $1;
+WHERE queue = $1
+  AND created_at <= $2
+  AND args <> '';
+
+-- name: PruneHistoryPayload :exec
+UPDATE arrower.gue_jobs_history
+SET args = ''::BYTEA
+WHERE queue = $1
+  AND created_at <= $2;
