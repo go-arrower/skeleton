@@ -100,7 +100,7 @@
         <span class="text-xs"
               hx-get="/admin/jobs/history/size/"
               hx-swap="innerHTML"
-              hx-trigger="load, input from:#delete-history-by-days">
+              hx-trigger="load, input from:#delete-history-by-days, arrower:admin.jobs.history.deleted from:body">
         </span>
     </div>
     <div class="flex hover:text-red-500 items-center"
@@ -124,7 +124,7 @@
         <span class="text-xs"
               hx-get="/admin/jobs/history/size/"
               hx-swap="innerHTML"
-              hx-trigger="load">
+              hx-trigger="load, arrower:admin.jobs.history.deleted from:body">
         </span>
     </div>
 
@@ -165,7 +165,7 @@
         <span class="text-xs"
               hx-get="/admin/jobs/history/payload/size/"
               hx-swap="innerHTML"
-              hx-trigger="load, input from:#prune-history-by-days, input from:#prune-history-by-queue">
+              hx-trigger="load, input from:#prune-history-by-days, input from:#prune-history-by-queue, arrower:admin.jobs.history.deleted from:body">
         </span>
     </div>
 </div>

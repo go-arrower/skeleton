@@ -7,21 +7,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
-
-	"github.com/go-arrower/skeleton/shared/interfaces/web"
-
 	"github.com/go-arrower/arrower/alog"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
+	"github.com/go-arrower/skeleton/shared/interfaces/web"
 	"github.com/go-arrower/skeleton/shared/interfaces/web/views/pages"
 )
 
-const defaultQueueName = "Default"
+const (
+	defaultQueueName = "Default"
+
+	historyTableSizeChanged = "arrower:admin.jobs.history.deleted"
+)
 
 func NewJobsController(logger alog.Logger, repo domain.Repository, presenter *web.DefaultPresenter, app *application.JobsApplication) *JobsController {
 	return &JobsController{
@@ -234,6 +235,8 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 		// reload the dashboard badges with the size, by using htmx's oob technique
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
+		c.Response().Header().Set("HX-Trigger", historyTableSizeChanged)
+
 		return c.Render(http.StatusOK, "jobs.settings#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,
@@ -255,6 +258,8 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 			Queue:     queue,
 			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
 		})
+
+		c.Response().Header().Set("HX-Trigger", historyTableSizeChanged)
 
 		return c.NoContent(http.StatusOK)
 	}
