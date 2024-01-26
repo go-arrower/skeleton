@@ -146,7 +146,12 @@ type (
 
 func ScheduleJobs(queries *models.Queries) func(context.Context, ScheduleJobsRequest) error {
 	return func(ctx context.Context, in ScheduleJobsRequest) error {
-		_, err := queries.ScheduleJobs(ctx, buildJobs(in))
+		carrier := propagation.MapCarrier{}
+		propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+
+		propagator.Inject(ctx, carrier)
+
+		_, err := queries.ScheduleJobs(ctx, buildJobs(in, carrier))
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -155,7 +160,7 @@ func ScheduleJobs(queries *models.Queries) func(context.Context, ScheduleJobsReq
 	}
 }
 
-func buildJobs(in ScheduleJobsRequest) []models.ScheduleJobsParams {
+func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.ScheduleJobsParams {
 	jobs := make([]models.ScheduleJobsParams, in.Count)
 
 	entropy := &ulid.LockedMonotonicReader{
@@ -170,7 +175,7 @@ func buildJobs(in ScheduleJobsRequest) []models.ScheduleJobsParams {
 		JobData string `json:"jobData"`
 	}
 
-	args, _ := json.Marshal(jobPayload{JobData: in.Payload})
+	args, _ := json.Marshal(jobPayload{JobData: in.Payload, Carrier: carrier})
 
 	for i := 0; i < in.Count; i++ {
 		jobID, _ := ulid.New(ulid.Now(), entropy)
