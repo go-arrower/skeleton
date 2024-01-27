@@ -493,18 +493,31 @@ func buildQueuePage(queue string, jobs []domain.PendingJob, kpis domain.QueueKPI
 
 func prettyFormatPayload(jobs []domain.PendingJob) []domain.PendingJob {
 	for i := 0; i < len(jobs); i++ { //nolint:varnamelen
-		var m map[string]interface{}
+		var m application.JobPayload
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
-		data, _ := json.MarshalIndent(m, "", "  ") //nolint:errchkjson // trust the type checks to work for simplicity
+		data, _ := json.MarshalIndent(m.JobData, "", "  ") //nolint:errchkjson // trust the type checks to work for simplicity
 		jobs[i].Payload = string(data)
+		jobs[i].Payload = m.JobData
 
 		if jobs[i].Queue == "" {
 			jobs[i].Queue = defaultQueueName
+			jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
 		}
 	}
 
 	return jobs
+}
+
+func fmtRunAtTime(t time.Time) string {
+	now := time.Now()
+
+	isToday := t.Year() == now.Year() && t.Month() == now.Month() && t.Day() == now.Day()
+	if isToday {
+		return fmt.Sprintf("%02d:%02d", t.Hour(), t.Minute())
+	}
+
+	return t.Format("2006.01.02 15:04")
 }
 
 func queueKpiToStats(queue string, kpis domain.QueueKPIs) QueueStats {

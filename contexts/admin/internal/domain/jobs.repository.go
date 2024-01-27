@@ -26,6 +26,7 @@ type (
 		CreatedAt  time.Time
 		UpdatedAt  time.Time
 		RunAt      time.Time
+		RunAtFmt   string
 		ID         string
 		Type       string
 		Queue      string
