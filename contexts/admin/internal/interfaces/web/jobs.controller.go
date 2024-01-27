@@ -8,13 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
@@ -410,7 +409,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 			Priority: int16(priority),
 			Payload:  payload,
 			Count:    count,
-			RunAt:    runAt,
+			RunAt:    runAt.Add(-1 * time.Hour), // todo needs to apply read tz, to prevent dirty hack, to overcome client and server times
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
