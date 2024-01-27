@@ -361,8 +361,14 @@ func (jc *JobsController) PayloadExamples() func(_ echo.Context) error {
 			pJson[i] = prettyString(jobPayload.JobData)
 		}
 
+		if queue == "" {
+			queue = defaultQueueName
+		}
+
 		return c.Render(http.StatusOK, "jobs.schedule#payload-examples", echo.Map{
 			"Payloads": pJson,
+			"Queue":    queue,
+			"JobType":  jobType,
 		})
 	}
 }

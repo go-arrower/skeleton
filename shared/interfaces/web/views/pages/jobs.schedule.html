@@ -91,16 +91,16 @@
             <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
         </div>
     </form>
-    {{ block "payload-examples" .Payload }}
+    {{ block "payload-examples" .Payloads }}
     <table id="payload-examples"
            hx-get="/admin/jobs/payloads"
            hx-include="#queues, #job-type"
            hx-trigger="input from:#job-type delay:200ms"
            hx-swap="outerHTML">
-        {{ with . }}{{/* only render tis, if payloads are present. If not he hx-triggers are still firing */}}
+        {{ if .Payloads }}{{/* only render this, if payloads are present. If not he hx-triggers are still firing */}}
         <thead class="bg-gray-100">
             <tr>
-                <th>Past payloads from {{ .Queue }} {{ .JobType }}</th>
+                <th>{{ .Queue }}: {{ .JobType }} - past payloads </th>
             </tr>
         </thead>
         <tbody>
