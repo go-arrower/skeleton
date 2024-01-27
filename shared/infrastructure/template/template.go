@@ -334,6 +334,11 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		r.templates[cleanedName] = newTemplate
 		templ = newTemplate // "found" the template
 
+		//
+		templ.Funcs(template.FuncMap{
+			"reverse": c.Echo().Reverse,
+		})
+
 		r.logger.LogAttrs(nil, alog.LevelInfo,
 			"template cached",
 			slog.String("called_template", name),

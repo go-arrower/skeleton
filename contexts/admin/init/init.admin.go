@@ -153,7 +153,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
 		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
 		jobs.GET("/schedule", cont.CreateJobs()).Name = "admin.jobs.schedule"
-		jobs.POST("/schedule", cont.ScheduleJobs()).Name = "admin.jobs.schedule_new"
+		jobs.POST("/schedule", cont.ScheduleJobs()).Name = "admin.jobs.new"
 		jobs.GET("/jobTypes", cont.ShowJobTypes())
 		jobs.GET("/workers", cont.ListWorkers())
 		jobs.GET("/maintenance", cont.ShowMaintenance()).Name = "admin.jobs.maintenance"

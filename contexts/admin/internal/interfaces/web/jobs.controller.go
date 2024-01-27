@@ -312,7 +312,7 @@ func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queues, _ := jc.app.Queues(c.Request().Context())
 
-		jobType, _ := jc.Queries.JobTypes(c.Request().Context(), "")
+		jobType, _ := jc.app.JobTypesForQueue(c.Request().Context(), jobs.DefaultQueueName)
 
 		return c.Render(http.StatusOK, "jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
 			"Queues":   queues,
@@ -325,11 +325,7 @@ func (jc *JobsController) ShowJobTypes() func(_ echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.QueryParam("queue")
 
-		if jobs.QueueName(queue) == jobs.DefaultQueueName {
-			queue = ""
-		}
-
-		jobType, _ := jc.Queries.JobTypes(c.Request().Context(), queue)
+		jobType, _ := jc.app.JobTypesForQueue(c.Request().Context(), jobs.QueueName(queue))
 
 		return c.Render(http.StatusOK, "jobs.schedule#known-job-types", echo.Map{
 			"JobTypes": jobType,

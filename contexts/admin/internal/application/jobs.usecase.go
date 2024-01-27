@@ -47,6 +47,24 @@ func (app *JobsApplication) Queues(ctx context.Context) (jobs.QueueNames, error)
 	return queueNames, nil
 }
 
+func (app *JobsApplication) JobTypesForQueue(ctx context.Context, queue jobs.QueueName) ([]jobs.JobType, error) {
+	if queue == jobs.DefaultQueueName {
+		queue = ""
+	}
+
+	types, err := app.queries.JobTypes(ctx, string(queue))
+	if err != nil {
+		return nil, fmt.Errorf("could not get job types for queue: %s: %v", queue, err)
+	}
+
+	jobTypes := make([]jobs.JobType, len(types))
+	for i, jt := range types {
+		jobTypes[i] = jobs.JobType(jt)
+	}
+
+	return jobTypes, nil
+}
+
 func (app *JobsApplication) VacuumJobsTable(ctx context.Context, table string) error {
 	if !isValidTable(table) {
 		return fmt.Errorf("%w: invalid table: %s", ErrVacuumFailed, table)
