@@ -1,93 +1,119 @@
 {{ define "admin.title" }}Schedule a Job{{ end }}
 
-
-<form autocomplete="off" method="post" action="{{ reverse "admin.jobs.new" }}" class="flex flex-wrap space-y-2">
-    <div class="w-2/12">
-        <label for="queues">Queue</label>
-    </div>
-    <div class="w-10/12">
-        <!-- todo make default a var -->
-        <input id="queues" list="known-queues" name="queue" value="Default"
-               hx-get="/admin/jobs/jobTypes"
-               hx-trigger="input"
-               hx-target="#known-job-types" />
-        <datalist id="known-queues">
-            {{ range .Queues }}
-                <option value="{{ . }}"></option>
-            {{ end }}
-        </datalist>
-    </div>
-
-    <div class="w-2/12">
-        <label for="job-type">Job Type</label>
-    </div>
-    <div class="w-10/12">
-        <input id="job-type" name="job-type" list="known-job-types" />
-        <datalist id="known-job-types">
-            {{ block "known-job-types" . }}
-                {{ range .JobTypes }}
+<div class="grid grid-cols-1 sm:grid-cols-2">
+    <form autocomplete="off" method="post" action="{{ reverse "admin.jobs.new" }}" class="flex flex-wrap space-y-2">
+        <div class="w-4/12">
+            <label for="queues">Queue</label>
+        </div>
+        <div class="w-8/12">
+            <!-- todo make default a var -->
+            <input id="queues" list="known-queues" name="queue" value="Default"
+                   hx-get="/admin/jobs/jobTypes"
+                   hx-trigger="input"
+                   hx-target="#known-job-types" />
+            <datalist id="known-queues">
+                {{ range .Queues }}
                     <option value="{{ . }}"></option>
                 {{ end }}
+            </datalist>
+        </div>
+
+        <div class="w-4/12">
+            <label for="job-type">Job Type</label>
+        </div>
+        <div class="w-8/12">
+            <input id="job-type" name="job-type" list="known-job-types" />
+            <datalist id="known-job-types">
+                {{ block "known-job-types" . }}
+                    {{ range .JobTypes }}
+                        <option value="{{ . }}"></option>
+                    {{ end }}
+                {{ end }}
+            </datalist>
+        </div>
+
+        <div class="w-4/12">
+            <label for="priority">Priority</label>
+        </div>
+        <div class="w-8/12">
+            <input type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
+            <datalist id="priorities">
+                <option value="-1000"></option>
+                <option value="-500"></option>
+                <option value="-250"></option>
+                <option value="-100"></option>
+                <option value="0"></option>
+                <option value="100"></option>
+                <option value="250"></option>
+                <option value="500"></option>
+                <option value="1000"></option>
+            </datalist>
+        </div>
+
+        <div class="w-4/12">
+            <label for="payload">Payload</label>
+        </div>
+        <div class="w-8/12">
+            <textarea id="payload" name="payload" class="h-64" onchange="
+                let data = {};
+                try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
+                    document.getElementById('payload-error').classList.remove('invisible');
+                    return;
+                }
+                document.getElementById('payload').value = JSON.stringify(data, undefined, 2);
+                document.getElementById('payload-error').classList.add('invisible');
+            ">{}</textarea>
+            <br/>
+            <span id="payload-error" class="invisible text-red-500">The payload is not valid JSON</span>
+        </div>
+
+        <div class="w-4/12">
+            <label for="count">Amount</label>
+        </div>
+        <div class="w-8/12">
+            <input type="number" id="count" name="count" min="1" max="1000000000" value="1" />
+        </div>
+
+        <div class="w-4/12">
+            <label for="runAt">Run At time</label>
+        </div>
+        <div class="w-8/12">
+            <input type="datetime-local"
+                   id="runAt"
+                   name="runAt-time"
+                   value="{{ .RunAt }}"
+                   min="{{ .RunAtMin }}"
+                   required />
+        </div>
+
+        <div class="w-4/12"></div>
+        <div class="w-8/12">
+            <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
+        </div>
+    </form>
+    {{ block "payload-examples" .Payload }}
+    <table id="payload-examples"
+           hx-get="/admin/jobs/payloads"
+           hx-include="#queues, #job-type"
+           hx-trigger="input from:#job-type delay:200ms"
+           hx-swap="outerHTML">
+        {{ with . }}{{/* only render tis, if payloads are present. If not he hx-triggers are still firing */}}
+        <thead class="bg-gray-100">
+            <tr>
+                <th>Past payloads from {{ .Queue }} {{ .JobType }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Payloads }}
+                <tr class="odd:bg-white even:bg-slate-50" onclick="
+                document.getElementById('payload').value = this.firstElementChild.firstElementChild.innerHTML;
+                document.getElementById('payload-error').classList.add('invisible');
+                ">
+                    <td><pre>{{ . }}</pre></td>
+                </tr>
             {{ end }}
-        </datalist>
-    </div>
-
-    <div class="w-2/12">
-        <label for="priority">Priority</label>
-    </div>
-    <div class="w-10/12">
-        <input type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
-        <datalist id="priorities">
-            <option value="-1000"></option>
-            <option value="-500"></option>
-            <option value="-250"></option>
-            <option value="-100"></option>
-            <option value="0"></option>
-            <option value="100"></option>
-            <option value="250"></option>
-            <option value="500"></option>
-            <option value="1000"></option>
-        </datalist>
-    </div>
-
-    <div class="w-2/12">
-        <label for="payload">Payload</label>
-    </div>
-    <div class="w-10/12">
-        <textarea id="payload" name="payload" class="h-64" onchange="
-            let data = {};
-            try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
-                document.getElementById('payload-error').classList.remove('invisible');
-                return;
-            }
-            document.getElementById('payload').value = JSON.stringify(data, undefined, 2);
-            document.getElementById('payload-error').classList.add('invisible');
-        ">{}</textarea>
-        <br/>
-        <span id="payload-error" class="invisible text-red-500">The payload is not valid JSON</span>
-    </div>
-
-    <div class="w-2/12">
-        <label for="count">Amount</label>
-    </div>
-    <div class="w-10/12">
-        <input type="number" id="count" name="count" min="1" max="1000000000" value="1" />
-    </div>
-
-    <div class="w-2/12">
-        <label for="runAt">Run At time</label>
-    </div>
-    <div class="w-10/12">
-        <input type="datetime-local"
-               id="runAt"
-               name="runAt-time"
-               value="{{ .RunAt }}"
-               min="{{ .RunAtMin }}"
-               required />
-    </div>
-
-    <div class="w-2/12"></div>
-    <div class="w-10/12">
-        <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
-    </div>
-</form>
+        </tbody>
+        {{ end }}
+    </table>
+    {{ end }}
+</div>

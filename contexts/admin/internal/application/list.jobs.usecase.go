@@ -161,6 +161,14 @@ func ScheduleJobs(queries *models.Queries) func(context.Context, ScheduleJobsReq
 	}
 }
 
+type JobPayload struct { // todo reuse the one in the jobs package
+	// Carrier contains the otel tracing information.
+	Carrier propagation.MapCarrier `json:"carrier"`
+	// JobData is the actual data as string instead of []byte,
+	// so that it is readable more easily when assessing it via psql directly.
+	JobData string `json:"jobData"`
+}
+
 func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.ScheduleJobsParams {
 	jobs := make([]models.ScheduleJobsParams, in.Count)
 
@@ -168,15 +176,7 @@ func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.
 		MonotonicReader: ulid.Monotonic(crand.Reader, 0),
 	}
 
-	type jobPayload struct { // todo reuse the one in the jobs package
-		// Carrier contains the otel tracing information.
-		Carrier propagation.MapCarrier `json:"carrier"`
-		// JobData is the actual data as string instead of []byte,
-		// so that it is readable more easily when assessing it via psql directly.
-		JobData string `json:"jobData"`
-	}
-
-	args, _ := json.Marshal(jobPayload{JobData: in.Payload, Carrier: carrier})
+	args, _ := json.Marshal(JobPayload{JobData: in.Payload, Carrier: carrier})
 
 	for i := 0; i < in.Count; i++ {
 		jobID, _ := ulid.New(ulid.Now(), entropy)

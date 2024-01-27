@@ -155,6 +155,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.GET("/schedule", cont.CreateJobs()).Name = "admin.jobs.schedule"
 		jobs.POST("/schedule", cont.ScheduleJobs()).Name = "admin.jobs.new"
 		jobs.GET("/jobTypes", cont.ShowJobTypes())
+		jobs.GET("/payloads", cont.PayloadExamples())
 		jobs.GET("/workers", cont.ListWorkers())
 		jobs.GET("/maintenance", cont.ShowMaintenance()).Name = "admin.jobs.maintenance"
 		jobs.POST("/vacuum/:table", cont.VacuumJobTables())

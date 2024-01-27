@@ -115,6 +115,40 @@ func (q *Queries) JobTypes(ctx context.Context, queue string) ([]string, error) 
 	return items, nil
 }
 
+const lastHistoryPayloads = `-- name: LastHistoryPayloads :many
+SELECT args
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND job_type = $2
+ORDER BY created_at DESC
+LIMIT 5
+`
+
+type LastHistoryPayloadsParams struct {
+	Queue   string
+	JobType string
+}
+
+func (q *Queries) LastHistoryPayloads(ctx context.Context, arg LastHistoryPayloadsParams) ([][]byte, error) {
+	rows, err := q.db.Query(ctx, lastHistoryPayloads, arg.Queue, arg.JobType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var args []byte
+		if err := rows.Scan(&args); err != nil {
+			return nil, err
+		}
+		items = append(items, args)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pendingJobs = `-- name: PendingJobs :many
 SELECT bins.t, COUNT(t)
 FROM (SELECT date_bin($1, finished_at, TIMESTAMP WITH TIME ZONE'2001-01-01')::TIMESTAMPTZ as t

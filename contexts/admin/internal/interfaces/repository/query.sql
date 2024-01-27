@@ -50,3 +50,12 @@ UPDATE arrower.gue_jobs_history
 SET args = ''::BYTEA
 WHERE queue = $1
   AND created_at <= $2;
+
+
+-- name: LastHistoryPayloads :many
+SELECT args
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND job_type = $2
+ORDER BY created_at DESC
+LIMIT 5;
