@@ -6,6 +6,7 @@
         <label for="queues">Queue</label>
     </div>
     <div class="w-10/12">
+        <!-- todo make default a var -->
         <input id="queues" list="known-queues" name="queue" value="Default"
                hx-get="/admin/jobs/jobTypes"
                hx-trigger="input"

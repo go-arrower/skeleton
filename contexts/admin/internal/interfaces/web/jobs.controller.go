@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
@@ -308,20 +310,9 @@ func (jc *JobsController) EstimateHistoryPayloadSize() func(echo.Context) error 
 
 func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
-
-		var queues []string
-		for q, _ := range res.QueueStats {
-			queue := string(q)
-			if queue == "" {
-				queue = "Default"
-			}
-
-			queues = append(queues, queue)
-		}
+		queues, _ := jc.app.Queues(c.Request().Context())
 
 		jobType, _ := jc.Queries.JobTypes(c.Request().Context(), "")
-		_ = jobType
 
 		return c.Render(http.StatusOK, "jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
 			"Queues":   queues,
@@ -334,7 +325,7 @@ func (jc *JobsController) ShowJobTypes() func(_ echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.QueryParam("queue")
 
-		if queue == "Default" {
+		if jobs.QueueName(queue) == jobs.DefaultQueueName {
 			queue = ""
 		}
 

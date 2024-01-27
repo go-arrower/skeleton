@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -24,6 +26,25 @@ func NewJobsApplication(db *pgxpool.Pool) *JobsApplication {
 type JobsApplication struct {
 	db      *pgxpool.Pool
 	queries *models.Queries
+}
+
+// Queues returns a list of all known Queues.
+func (app *JobsApplication) Queues(ctx context.Context) (jobs.QueueNames, error) {
+	queues, err := app.queries.GetQueues(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get queues: %v", err)
+	}
+
+	queueNames := make(jobs.QueueNames, len(queues))
+	for i, q := range queues {
+		if q == "" {
+			q = string(jobs.DefaultQueueName)
+		}
+
+		queueNames[i] = jobs.QueueName(q)
+	}
+
+	return queueNames, nil
 }
 
 func (app *JobsApplication) VacuumJobsTable(ctx context.Context, table string) error {

@@ -11,6 +11,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getQueues = `-- name: GetQueues :many
+SELECT queue
+FROM arrower.gue_jobs
+UNION
+SELECT queue
+FROM arrower.gue_jobs_history
+`
+
+func (q *Queries) GetQueues(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, getQueues)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var queue string
+		if err := rows.Scan(&queue); err != nil {
+			return nil, err
+		}
+		items = append(items, queue)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const jobHistoryPayloadSize = `-- name: JobHistoryPayloadSize :one
 SELECT COALESCE(pg_size_pretty(SUM(pg_column_size(arrower.gue_jobs_history.args))), '')
 FROM arrower.gue_jobs_history

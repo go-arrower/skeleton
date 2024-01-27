@@ -1,3 +1,11 @@
+-- name: GetQueues :many
+SELECT queue
+FROM arrower.gue_jobs
+UNION
+SELECT queue
+FROM arrower.gue_jobs_history;
+
+
 -- name: PendingJobs :many
 SELECT bins.*, COUNT(t)
 FROM (SELECT date_bin($1, finished_at, TIMESTAMP WITH TIME ZONE'2001-01-01')::TIMESTAMPTZ as t
