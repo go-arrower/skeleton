@@ -42,7 +42,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 			return false
 		})
 
-		return c.Render(http.StatusOK, "=>admin.routes", echo.Map{
+		return c.Render(http.StatusOK, "admin.routes", echo.Map{
 			"Flashes": nil,
 			"Routes":  routes,
 		})
@@ -153,7 +153,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.GET("/:queue/delete/:job_id", cont.DeleteJob())
 		jobs.GET("/:queue/reschedule/:job_id", cont.RescheduleJob())
 		jobs.GET("/workers", cont.ListWorkers())
-		jobs.GET("/settings", cont.ShowSettings())
+		jobs.GET("/maintenance", cont.ShowMaintenance()).Name = "admin.jobs.maintenance"
 		jobs.POST("/vacuum/:table", cont.VacuumJobTables())
 		jobs.POST("/history", cont.DeleteHistory())
 		jobs.POST("/history/prune", cont.PruneHistory())
