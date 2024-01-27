@@ -75,10 +75,15 @@
     </div>
 
     <div class="w-2/12">
-        <label>Run At time</label>
+        <label for="runAt">Run At time</label>
     </div>
     <div class="w-10/12">
-        <pre>=now()</pre>
+        <input type="datetime-local"
+               id="runAt"
+               name="runAt-time"
+               value="{{ .RunAt }}"
+               min="{{ .RunAtMin }}"
+               required />
     </div>
 
     <div class="w-2/12"></div>

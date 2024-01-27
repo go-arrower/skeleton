@@ -140,6 +140,7 @@ type (
 		Priority int16
 		Payload  string
 		Count    int
+		RunAt    time.Time
 	}
 	ScheduleJobsResponse struct{}
 )
@@ -187,7 +188,7 @@ func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.
 			Queue:     in.Queue,
 			JobType:   in.JobType,
 			Priority:  in.Priority,
-			RunAt:     pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			RunAt:     pgtype.Timestamptz{Time: in.RunAt, Valid: true},
 			Args:      args,
 		}
 

@@ -24,6 +24,8 @@ const (
 	defaultQueueName = "Default"
 
 	historyTableSizeChanged = "arrower:admin.jobs.history.deleted"
+
+	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
 
 func NewJobsController(logger alog.Logger, repo domain.Repository, presenter *web.DefaultPresenter, app *application.JobsApplication) *JobsController {
@@ -314,9 +316,13 @@ func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 
 		jobType, _ := jc.app.JobTypesForQueue(c.Request().Context(), jobs.DefaultQueueName)
 
+		y, m, d := time.Now().Date()
+
 		return c.Render(http.StatusOK, "jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
 			"Queues":   queues,
 			"JobTypes": jobType,
+			"RunAt":    time.Now().Format(htmlDatetimeLayout),
+			"RunAtMin": fmt.Sprintf("%d-%02d-%02dT00:00", y, m, d),
 		}))
 	}
 }
@@ -340,6 +346,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		prio := c.FormValue("priority")
 		payload := c.FormValue("payload")
 		num := c.FormValue("count")
+		t := c.FormValue("runAt-time")
 
 		jq := queue
 		if queue == "Default" {
@@ -357,12 +364,15 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
+		runAt, _ := time.Parse(htmlDatetimeLayout, t)
+
 		err = jc.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
 			Queue:    jq,
 			JobType:  jt,
 			Priority: int16(priority),
 			Payload:  payload,
 			Count:    count,
+			RunAt:    runAt,
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
