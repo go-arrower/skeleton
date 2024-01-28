@@ -219,7 +219,7 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 		// reload the dashboard badges with the size, by using htmx's oob technique
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
-		return c.Render(http.StatusOK, "jobs.settings#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,
 		}))
@@ -241,7 +241,7 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 
 		c.Response().Header().Set("HX-Trigger", historyTableSizeChanged)
 
-		return c.Render(http.StatusOK, "jobs.settings#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,
 		}))
