@@ -1,4 +1,4 @@
-package infrastructure
+package infrastructure // todo config would be a better name OR move it to arrower.Config
 
 // Config is a structure used for service configuration.
 // It can be mapped from env variables or config files, e.g. by viper.
