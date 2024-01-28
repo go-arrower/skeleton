@@ -13,7 +13,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
@@ -48,7 +47,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		})
 	})
 
-	repo := domain.NewTracedJobsRepository(domain.NewPostgresJobsRepository(models.New(di.PGx)))
+	repo := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
 	settingsRepo := repository.NewSettingsMemoryRepository()
 
 	container := application.JobsCommandContainer{

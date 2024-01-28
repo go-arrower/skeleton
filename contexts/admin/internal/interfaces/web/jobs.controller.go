@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 	"github.com/go-arrower/skeleton/shared/interfaces/web/views/pages"
@@ -28,7 +28,7 @@ const (
 	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
 
-func NewJobsController(logger alog.Logger, repo domain.Repository, presenter *web.DefaultPresenter, app *application.JobsApplication) *JobsController {
+func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter, app *application.JobsApplication) *JobsController {
 	return &JobsController{
 		logger: logger,
 		repo:   repo,
@@ -39,7 +39,7 @@ func NewJobsController(logger alog.Logger, repo domain.Repository, presenter *we
 
 type JobsController struct {
 	logger alog.Logger
-	repo   domain.Repository
+	repo   jobs.Repository
 	p      *web.DefaultPresenter
 
 	Cmds    application.JobsCommandContainer
@@ -54,9 +54,10 @@ func (jc *JobsController) ListQueues() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues", echo.Map{
-			"Queues": res.QueueStats,
-		}))
+		return c.Render(http.StatusOK, "jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues",
+			echo.Map{
+				"Queues": res.QueueStats,
+			}))
 	}
 }
 
@@ -425,7 +426,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 	}
 }
 
-func presentWorkers(pool []domain.WorkerPool) []pages.JobWorker {
+func presentWorkers(pool []jobs.WorkerPool) []pages.JobWorker {
 	jobWorkers := make([]pages.JobWorker, len(pool))
 
 	for i, _ := range pool {
@@ -472,17 +473,17 @@ type (
 	}
 
 	ListQueuesPage struct {
-		Queues map[domain.QueueName]domain.QueueStats
+		Queues map[jobs.QueueName]jobs.QueueStats
 	}
 
 	QueuePage struct {
-		Jobs      []domain.PendingJob
+		Jobs      []jobs.PendingJob
 		QueueName string
 		Stats     QueueStats
 	}
 )
 
-func buildQueuePage(queue string, jobs []domain.PendingJob, kpis domain.QueueKPIs) QueuePage {
+func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) QueuePage {
 	if queue == "" {
 		queue = defaultQueueName
 	}
@@ -497,7 +498,7 @@ func buildQueuePage(queue string, jobs []domain.PendingJob, kpis domain.QueueKPI
 	}
 }
 
-func prettyFormatPayload(jobs []domain.PendingJob) []domain.PendingJob {
+func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 	for i := 0; i < len(jobs); i++ { //nolint:varnamelen
 		var m application.JobPayload
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
@@ -526,7 +527,7 @@ func fmtRunAtTime(t time.Time) string {
 	return t.Format("2006.01.02 15:04")
 }
 
-func queueKpiToStats(queue string, kpis domain.QueueKPIs) QueueStats {
+func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 	if queue == "" {
 		queue = defaultQueueName
 	}

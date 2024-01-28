@@ -10,13 +10,14 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
+
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/oklog/ulid/v2"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
@@ -34,22 +35,27 @@ type JobsCommandContainer struct {
 type (
 	ListAllQueuesRequest  struct{}
 	ListAllQueuesResponse struct {
-		QueueStats map[domain.QueueName]domain.QueueStats
+		QueueStats map[jobs.QueueName]jobs.QueueStats
 	}
 )
 
 // ListAllQueues returns all Queues.
-func ListAllQueues(repo domain.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
+func ListAllQueues(repo jobs.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
 	return func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
-		queues, _ := repo.Queues(ctx) // todo repo needs to return type []QueueName
-		qWithStats := make(map[domain.QueueName]domain.QueueStats)
-
-		for _, q := range queues {
-			s, _ := repo.QueueKPIs(ctx, q) // todo accept type QueueName
-			qWithStats[domain.QueueName(q)] = queueKpiToStats(q, s)
+		queues, err := repo.Queues(ctx)
+		if err != nil {
+			return ListAllQueuesResponse{}, fmt.Errorf("could not get queues: %w", err)
 		}
 
-		// return ListAllQueuesResponse{}, errors.New("some-error")
+		qWithStats := make(map[jobs.QueueName]jobs.QueueStats)
+		for _, q := range queues {
+			s, err := repo.QueueKPIs(ctx, q)
+			if err != nil {
+				return ListAllQueuesResponse{}, fmt.Errorf("could not get kpis for queue: %s: %w", q, err)
+			}
+
+			qWithStats[q] = queueKpiToStats(string(q), s)
+		}
 
 		return ListAllQueuesResponse{QueueStats: qWithStats}, nil
 	}
@@ -60,21 +66,21 @@ type (
 		QueueName string // todo type QueueName?
 	}
 	GetQueueResponse struct {
-		Jobs []domain.PendingJob
-		Kpis domain.QueueKPIs
+		Jobs []jobs.PendingJob
+		Kpis jobs.QueueKPIs
 	}
 )
 
 // GetQueue returns a Queue.
-func GetQueue(repo domain.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
+func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
 	return func(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
 		queue := in.QueueName
 		if queue == defaultQueueName {
 			queue = ""
 		}
 
+		kpis, _ := repo.QueueKPIs(ctx, jobs.QueueName(queue))
 		jobs, _ := repo.PendingJobs(ctx, queue)
-		kpis, _ := repo.QueueKPIs(ctx, queue)
 
 		return GetQueueResponse{
 			Jobs: jobs,
@@ -86,11 +92,11 @@ func GetQueue(repo domain.Repository) func(context.Context, GetQueueRequest) (Ge
 type (
 	GetWorkersRequest  struct{}
 	GetWorkersResponse struct {
-		Pool []domain.WorkerPool
+		Pool []jobs.WorkerPool
 	}
 )
 
-func GetWorkers(repo domain.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
+func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
 	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
 		wp, _ := repo.WorkerPools(ctx)
 
@@ -104,7 +110,7 @@ func GetWorkers(repo domain.Repository) func(context.Context, GetWorkersRequest)
 	}
 }
 
-func queueKpiToStats(queue string, kpis domain.QueueKPIs) domain.QueueStats {
+func queueKpiToStats(queue string, kpis jobs.QueueKPIs) jobs.QueueStats {
 	if queue == "" {
 		queue = defaultQueueName
 	}
@@ -120,8 +126,8 @@ func queueKpiToStats(queue string, kpis domain.QueueKPIs) domain.QueueStats {
 		duration = time.Duration(kpis.PendingJobs/kpis.AvailableWorkers) * kpis.AverageTimePerJob
 	}
 
-	return domain.QueueStats{
-		QueueName:            domain.QueueName(queue),
+	return jobs.QueueStats{
+		QueueName:            jobs.QueueName(queue),
 		PendingJobs:          kpis.PendingJobs,
 		PendingJobsPerType:   kpis.PendingJobsPerType,
 		FailedJobs:           kpis.FailedJobs,
@@ -244,7 +250,7 @@ type (
 	}
 )
 
-func DeleteJob(repo domain.Repository) func(context.Context, DeleteJobRequest) error {
+func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) error {
 	return func(ctx context.Context, in DeleteJobRequest) error {
 		err := repo.Delete(ctx, in.JobID)
 
@@ -258,7 +264,7 @@ type (
 	}
 )
 
-func RescheduleJob(repo domain.Repository) func(context.Context, RescheduleJobRequest) error {
+func RescheduleJob(repo jobs.Repository) func(context.Context, RescheduleJobRequest) error {
 	return func(ctx context.Context, in RescheduleJobRequest) error {
 		err := repo.RunJobAt(ctx, in.JobID, time.Now())
 

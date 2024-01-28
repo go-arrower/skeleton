@@ -4,4 +4,27 @@
 
 package models
 
-import ()
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type ArrowerGueJob struct {
+	JobID      string
+	Priority   int16
+	RunAt      pgtype.Timestamptz
+	JobType    string
+	Args       []byte
+	ErrorCount int32
+	LastError  string
+	Queue      string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type ArrowerGueJobsWorkerPool struct {
+	ID        string
+	Queue     string
+	Workers   int16
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}

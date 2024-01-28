@@ -1,5 +1,5 @@
 // Valid and invalid testdata for all tests to use for convenience.
-package domain_test // TODO MOVE TO TESTDATA FOLDER
+package repository_test // TODO MOVE TO TESTDATA FOLDER
 
 import (
 	"bytes"

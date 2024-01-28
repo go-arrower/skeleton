@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application/jobs"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,31 +22,21 @@ func NewJobsApplication(db *pgxpool.Pool) *JobsApplication {
 	return &JobsApplication{
 		db:      db,
 		queries: models.New(db),
+
+		repo: repository.NewPostgresJobsRepository(db),
 	}
 }
 
 type JobsApplication struct {
 	db      *pgxpool.Pool
 	queries *models.Queries
+
+	repo *repository.PostgresJobsRepository
 }
 
 // Queues returns a list of all known Queues.
 func (app *JobsApplication) Queues(ctx context.Context) (jobs.QueueNames, error) {
-	queues, err := app.queries.GetQueues(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get queues: %v", err)
-	}
-
-	queueNames := make(jobs.QueueNames, len(queues))
-	for i, q := range queues {
-		if q == "" {
-			q = string(jobs.DefaultQueueName)
-		}
-
-		queueNames[i] = jobs.QueueName(q)
-	}
-
-	return queueNames, nil
+	return app.repo.Queues(ctx)
 }
 
 func (app *JobsApplication) JobTypesForQueue(ctx context.Context, queue jobs.QueueName) ([]jobs.JobType, error) {

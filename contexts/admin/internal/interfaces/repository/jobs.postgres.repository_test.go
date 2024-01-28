@@ -1,6 +1,6 @@
 //go:build integration
 
-package domain_test
+package repository_test
 
 import (
 	"context"
@@ -8,17 +8,16 @@ import (
 	"testing"
 	"time"
 
+	jobs2 "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
+
+	"github.com/go-arrower/arrower/alog"
+	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/tests"
-
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
-
 	"github.com/stretchr/testify/assert"
 	mnoop "go.opentelemetry.io/otel/metric/noop"
 	tnoop "go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/go-arrower/arrower/alog"
-	"github.com/go-arrower/arrower/jobs"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/models"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 )
 
 var (
@@ -61,7 +60,7 @@ func TestPostgresGueRepository_Queues(t *testing.T) {
 
 		time.Sleep(100 * time.Millisecond) // wait for job to finish
 
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 
 		q, err := repo.Queues(ctx)
 		assert.NoError(t, err)
@@ -76,7 +75,7 @@ func TestPostgresJobsRepository_PendingJobs(t *testing.T) {
 		t.Parallel()
 
 		pg := pgHandler.NewTestDatabase()
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 
 		pendingJobs, err := repo.PendingJobs(ctx, "")
 		assert.NoError(t, err)
@@ -99,14 +98,14 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase()
 
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 
 		stats, err := repo.QueueKPIs(context.Background(), "")
 		assert.NoError(t, err)
 		assert.Equal(t, 0, stats.PendingJobs)
 		assert.Equal(t, 0, stats.FailedJobs)
 		assert.Equal(t, 0, stats.ProcessedJobs)
-		assert.Equal(t, stats.AverageTimePerJob, time.Duration(0))
+		assert.Equal(t, time.Duration(0), stats.AverageTimePerJob)
 		assert.Equal(t, 0, stats.AvailableWorkers)
 		assert.Empty(t, stats.PendingJobsPerType)
 	})
@@ -116,7 +115,7 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase("testdata/fixtures/queue_kpis.yaml")
 
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 
 		stats, err := repo.QueueKPIs(context.Background(), "")
 		assert.NoError(t, err)
@@ -132,45 +131,6 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 	})
 }
 
-func TestPostgresJobsRepository_RegisterWorkerPool(t *testing.T) {
-	t.Parallel()
-
-	t.Run("register worker pool", func(t *testing.T) {
-		t.Parallel()
-
-		pg := pgHandler.NewTestDatabase()
-
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
-
-		workerPool := domain.WorkerPool{
-			ID:       "1337",
-			Queue:    "",
-			Workers:  1337,
-			LastSeen: time.Now(),
-		}
-
-		// register new worker pool
-		err := repo.RegisterWorkerPool(context.Background(), workerPool)
-		assert.NoError(t, err)
-
-		// ensure worker pool got registered
-		wp, err := repo.WorkerPools(context.Background())
-		assert.NoError(t, err)
-		assert.Len(t, wp, 1)
-		wpLastSeen := wp[0].LastSeen
-
-		// ensure same pool updates it's registration
-		workerPool.Workers = 1
-		err = repo.RegisterWorkerPool(context.Background(), workerPool)
-		assert.NoError(t, err)
-		wp, err = repo.WorkerPools(context.Background())
-		assert.NoError(t, err)
-		assert.Len(t, wp, 1)
-		assert.True(t, wp[0].LastSeen.After(wpLastSeen))
-		assert.Equal(t, 1, wp[0].Workers)
-	})
-}
-
 func TestPostgresJobsRepository_Delete(t *testing.T) {
 	t.Parallel()
 
@@ -179,7 +139,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase()
 
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 
 		_ = jq.Enqueue(ctx, simpleJob{})
@@ -199,7 +159,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase()
 
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
 			jobs.WithPollInterval(time.Nanosecond),
 		)
@@ -219,7 +179,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 
 		err := repo.Delete(ctx, pending[0].ID)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, domain.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs2.ErrJobLockedAlready)
 
 		pending, _ = repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1, "delete should fail, as the job is currently processed and thus locked by the db")
@@ -233,7 +193,7 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 		t.Parallel()
 
 		pg := pgHandler.NewTestDatabase()
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
 			jobs.WithPollInterval(time.Nanosecond),
 		)
@@ -257,7 +217,7 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 		t.Parallel()
 
 		pg := pgHandler.NewTestDatabase()
-		repo := domain.NewPostgresJobsRepository(models.New(pg))
+		repo := repository.NewPostgresJobsRepository(pg)
 		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
 			jobs.WithPollInterval(time.Nanosecond),
 		)
@@ -278,6 +238,6 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		err := repo.RunJobAt(ctx, pending[0].ID, newJobTime)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, domain.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs2.ErrJobLockedAlready)
 	})
 }

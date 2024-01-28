@@ -11,16 +11,6 @@ sql:
         sql_package: "pgx/v5"
         omit_unused_structs: true
   - engine: "postgresql"
-    queries: "contexts/admin/internal/domain/query.sql"
-    schema: "../arrower/postgres/migrations"
-    strict_function_checks: true
-    gen:
-      go:
-        package: "models"
-        out: "contexts/admin/internal/domain/models"
-        sql_package: "pgx/v5"
-        omit_unused_structs: true
-  - engine: "postgresql"
     queries: "contexts/auth/internal/interfaces/repository/query.sql"
     schema: "../arrower/postgres/migrations"
     strict_function_checks: true
