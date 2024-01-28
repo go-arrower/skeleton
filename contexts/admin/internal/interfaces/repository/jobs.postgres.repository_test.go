@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	jobs2 "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/tests"
@@ -17,10 +15,14 @@ import (
 	mnoop "go.opentelemetry.io/otel/metric/noop"
 	tnoop "go.opentelemetry.io/otel/trace/noop"
 
+	jobs2 "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/testdata"
 )
 
 var (
+	ctx = context.Background()
+
 	pgHandler *tests.PostgresDocker
 	logger    alog.Logger
 )
@@ -48,15 +50,15 @@ func TestPostgresGueRepository_Queues(t *testing.T) {
 		jq0, _ := jobs.NewPostgresJobs(logger, mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
 			pg, jobs.WithPollInterval(time.Nanosecond),
 		)
-		_ = jq0.RegisterJobFunc(func(ctx context.Context, job simpleJob) error { return nil })
-		_ = jq0.Enqueue(ctx, simpleJob{})
+		_ = jq0.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error { return nil })
+		_ = jq0.Enqueue(ctx, testdata.SimpleJob{})
 
 		// And Given a different job queue run in the future
 		jq1, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
 			pg, jobs.WithPollInterval(time.Nanosecond), jobs.WithQueue("some_queue"),
 		)
-		_ = jq1.RegisterJobFunc(func(ctx context.Context, job simpleJob) error { return nil })
-		_ = jq1.Enqueue(ctx, simpleJob{}, jobs.WithRunAt(time.Now().Add(1*time.Hour)))
+		_ = jq1.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error { return nil })
+		_ = jq1.Enqueue(ctx, testdata.SimpleJob{}, jobs.WithRunAt(time.Now().Add(1*time.Hour)))
 
 		time.Sleep(100 * time.Millisecond) // wait for job to finish
 
@@ -82,7 +84,7 @@ func TestPostgresJobsRepository_PendingJobs(t *testing.T) {
 		assert.Empty(t, pendingJobs, "queue needs to be empty, as no jobs got enqueued yet")
 
 		jq, _ := jobs.NewPostgresJobs(logger, mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
-		_ = jq.Enqueue(ctx, simpleJob{})
+		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
 		pendingJobs, err = repo.PendingJobs(ctx, "")
 		assert.NoError(t, err)
@@ -142,7 +144,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 		repo := repository.NewPostgresJobsRepository(pg)
 		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 
-		_ = jq.Enqueue(ctx, simpleJob{})
+		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
 		pending, _ := repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1)
@@ -164,13 +166,13 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 			jobs.WithPollInterval(time.Nanosecond),
 		)
 
-		_ = jq.RegisterJobFunc(func(ctx context.Context, job simpleJob) error {
+		_ = jq.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error {
 			time.Sleep(1 * time.Minute) // simulate a long-running job
 			assert.Fail(t, "this should never be called, job continues to run but tests aborts")
 
 			return nil
 		})
-		_ = jq.Enqueue(ctx, simpleJob{})
+		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
 		pending, _ := repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1)
@@ -200,7 +202,7 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		newJobTime := time.Now().Add(time.Minute)
 
-		_ = jq.Enqueue(ctx, simpleJob{})
+		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
 		pending, _ := repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1)
@@ -222,14 +224,14 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 			jobs.WithPollInterval(time.Nanosecond),
 		)
 
-		_ = jq.RegisterJobFunc(func(ctx context.Context, job simpleJob) error {
+		_ = jq.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error {
 			time.Sleep(1 * time.Minute) // simulate a long-running job
 			assert.Fail(t, "this should never be called, job continues to run but tests aborts")
 
 			return nil
 		})
 
-		_ = jq.Enqueue(ctx, simpleJob{})
+		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 		pending, _ := repo.PendingJobs(ctx, "")
 
 		time.Sleep(100 * time.Millisecond) // start the worker
