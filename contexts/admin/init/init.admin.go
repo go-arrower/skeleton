@@ -48,7 +48,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		})
 	})
 
-	repo := domain.NewTracedJobsRepository(domain.NewPostgresJobsRepository(models.New(di.DB)))
+	repo := domain.NewTracedJobsRepository(domain.NewPostgresJobsRepository(models.New(di.PGx)))
 	settingsRepo := repository.NewSettingsMemoryRepository()
 
 	container := application.JobsCommandContainer{
@@ -76,7 +76,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		ScheduleJobs: mw.TracedU(
 			di.TraceProvider, mw.MetricU(
 				di.MeterProvider, mw.LoggedU(
-					di.Logger.(*slog.Logger), application.ScheduleJobs(models2.New(di.DB)),
+					di.Logger.(*slog.Logger), application.ScheduleJobs(models2.New(di.PGx)),
 				),
 			),
 		),
@@ -139,9 +139,9 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		settingsCont.Update()
 	}
 
-	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)), application.NewJobsApplication(di.DB))
+	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)), application.NewJobsApplication(di.PGx))
 	cont.Cmds = container
-	cont.Queries = models2.New(di.DB)
+	cont.Queries = models2.New(di.PGx)
 
 	{
 		jobs := di.AdminRouter.Group("/jobs")
@@ -170,7 +170,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	}
 
 	api, _ := adminContext.SettingsAPI(context.Background())
-	jc := web.NewLogsController(di.Logger, models3.New(di.DB), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(api))
+	jc := web.NewLogsController(di.Logger, models3.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(api))
 	jc.ShowLogs()
 
 	return adminContext, nil

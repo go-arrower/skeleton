@@ -63,8 +63,8 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		})
 	}
 
-	queries := models.New(di.DB)
-	repo, _ := repository.NewPostgresRepository(di.DB)
+	queries := models.New(di.PGx)
+	repo, _ := repository.NewPostgresRepository(di.PGx)
 	registrator := user.NewRegistrationService(di.SettingsService, repo)
 
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
