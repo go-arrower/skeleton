@@ -20,9 +20,10 @@ type TracedJobsRepository struct {
 
 var _ jobs.Repository = (*TracedJobsRepository)(nil)
 
+// TODO add the name of the repository as an attribute JobsRepository (or even better the original name: PostgresJobsRepository)
 func (repo *TracedJobsRepository) Queues(ctx context.Context) (jobs.QueueNames, error) {
-	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("arrower.jobs").
-		Start(ctx, "repo", trace.WithAttributes(attribute.String("method", "Queues")))
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("arrower.jobs"). // todo rename to skeleton.repository
+												Start(ctx, "repo", trace.WithAttributes(attribute.String("method", "Queues")))
 	defer span.End()
 
 	return repo.repo.Queues(ctx) //nolint:wrapcheck // this is decorator
