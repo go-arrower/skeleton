@@ -3,19 +3,21 @@ package user
 import (
 	"context"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-arrower/skeleton/contexts/admin"
 )
 
-func NewAuthenticationService(settingsService admin.SettingsAPI) *AuthenticationService {
-	return &AuthenticationService{settingsService: settingsService}
+func NewAuthenticationService(settings setting.Settings) *AuthenticationService {
+	return &AuthenticationService{settingsService: settings}
 }
 
 type AuthenticationService struct {
-	settingsService admin.SettingsAPI
+	settingsService setting.Settings
 }
 
 func (s *AuthenticationService) Authenticate(ctx context.Context, usr User, password string) bool {
-	if isLoginActive, err := s.settingsService.Setting(ctx, admin.SettingLogin); !isLoginActive.Bool() || err != nil {
+	if isLoginActive, err := s.settingsService.Setting(ctx, admin.SettingLogin); !isLoginActive.MustBool() || err != nil {
 		return false
 	}
 

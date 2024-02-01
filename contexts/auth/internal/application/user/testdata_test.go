@@ -3,8 +3,9 @@ package user_test
 import (
 	"context"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-arrower/skeleton/contexts/admin"
-	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
@@ -39,14 +40,11 @@ var (
 )
 
 // used by AuthenticationService
-func settingsService(active bool) admin.SettingsAPI {
-	settingsService := admin_init.NewMemorySettingsAPI()
-	settingsService.Add(ctx, admin.Setting{
-		Key:   admin.SettingLogin,
-		Value: admin.NewSettingValue(active),
-	})
+func settingsService(active bool) setting.Settings {
+	settings := setting.NewInMemorySettings()
+	settings.Save(ctx, admin.SettingLogin, setting.NewValue(active))
 
-	return settingsService
+	return settings
 }
 
 func newVerifiedUser() user.User {

@@ -10,9 +10,7 @@ import (
 	"github.com/go-arrower/arrower/mw"
 	"github.com/labstack/echo/v4"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	models2 "github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
@@ -138,7 +136,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		settingsCont.Update()
 	}
 
-	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(application.NewSettingsApp(settingsRepo)), application.NewJobsApplication(di.PGx))
+	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(di.Settings), application.NewJobsApplication(di.PGx))
 	cont.Cmds = container
 	cont.Queries = models2.New(di.PGx)
 
@@ -164,29 +162,16 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobs.GET("/history/payload/size/", cont.EstimateHistoryPayloadSize())
 	}
 
-	adminContext := &AdminContext{
-		settingsRepo: settingsRepo,
-	}
+	adminContext := &AdminContext{}
 
-	api, _ := adminContext.SettingsAPI(context.Background())
-	jc := web.NewLogsController(di.Logger, models3.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(api))
+	jc := web.NewLogsController(di.Logger, models3.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings))
 	jc.ShowLogs()
 
 	return adminContext, nil
 }
 
-type AdminContext struct {
-	settingsRepo domain.SettingRepository
-}
-
-func (c *AdminContext) SettingsAPI(_ context.Context) (admin.SettingsAPI, error) {
-	return application.NewSettingsApp(c.settingsRepo), nil
-}
+type AdminContext struct{}
 
 func (c *AdminContext) Shutdown(_ context.Context) error {
 	return nil
-}
-
-func NewMemorySettingsAPI() admin.SettingsAPI {
-	return application.NewSettingsApp(repository.NewSettingsMemoryRepository())
 }

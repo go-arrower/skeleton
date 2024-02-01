@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-arrower/skeleton/contexts/admin"
 )
 
@@ -13,16 +15,16 @@ var (
 	ErrUserAlreadyExists  = fmt.Errorf("%w: user already exists", ErrRegistrationFailed)
 )
 
-func NewRegistrationService(settingsService admin.SettingsAPI, repo Repository) *RegistrationService {
+func NewRegistrationService(settingsService setting.Settings, repo Repository) *RegistrationService {
 	return &RegistrationService{
-		settingsService: settingsService,
-		repo:            repo,
+		settings: settingsService,
+		repo:     repo,
 	}
 }
 
 type RegistrationService struct {
-	settingsService admin.SettingsAPI
-	repo            Repository
+	settings setting.Settings
+	repo     Repository
 }
 
 func (s *RegistrationService) RegisterNewUser(
@@ -30,12 +32,12 @@ func (s *RegistrationService) RegisterNewUser(
 	registerEmail string,
 	password string,
 ) (User, error) {
-	isRegistrationActive, err := s.settingsService.Setting(ctx, admin.SettingRegistration)
+	isRegistrationActive, err := s.settings.Setting(ctx, admin.SettingRegistration)
 	if err != nil {
 		return User{}, fmt.Errorf("%w: could not load settings: %v", ErrRegistrationFailed, err)
 	}
 
-	if !isRegistrationActive.Bool() {
+	if !isRegistrationActive.MustBool() {
 		return User{}, fmt.Errorf("%w: registration is disabled", ErrRegistrationFailed)
 	}
 

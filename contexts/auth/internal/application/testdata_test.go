@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
-	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
+	"github.com/go-arrower/arrower/setting"
 
+	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
@@ -70,21 +70,15 @@ var (
 )
 
 func registrator(repo user.Repository) *user.RegistrationService {
-	settingsService := admin_init.NewMemorySettingsAPI()
-	settingsService.Add(ctx, admin.Setting{
-		Key:   admin.SettingRegistration,
-		Value: admin.NewSettingValue(true),
-	})
+	settings := setting.NewInMemorySettings()
+	settings.Save(ctx, admin.SettingRegistration, setting.NewValue(true))
 
-	return user.NewRegistrationService(settingsService, repo)
+	return user.NewRegistrationService(settings, repo)
 }
 
 func authentificator() *user.AuthenticationService {
-	settingsService := admin_init.NewMemorySettingsAPI()
-	settingsService.Add(ctx, admin.Setting{
-		Key:   admin.SettingLogin,
-		Value: admin.NewSettingValue(true),
-	})
+	settings := setting.NewInMemorySettings()
+	settings.Save(ctx, admin.SettingLogin, setting.NewValue(true))
 
-	return user.NewAuthenticationService(settingsService)
+	return user.NewAuthenticationService(settings)
 }

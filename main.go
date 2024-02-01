@@ -48,8 +48,6 @@ func main() {
 	//
 	// load and initialise optional contexts provided by arrower
 	adminContext, _ := admin_init.NewAdminContext(di)
-	sAPI, _ := adminContext.SettingsAPI(ctx)
-	di.SettingsService = sAPI
 	authContext, _ := auth_init.NewAuthContext(di)
 
 	//
@@ -72,7 +70,7 @@ func main() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		presenter := web.NewDefaultPresenter(sAPI)
+		presenter := web.NewDefaultPresenter(di.Settings)
 		p, _ := presenter.MapDefaultBasePage(c.Request().Context(), "", map[string]interface{}{
 			"userID": userID,
 		})

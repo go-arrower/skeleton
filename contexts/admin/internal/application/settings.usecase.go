@@ -71,5 +71,3 @@ func (app *SettingsApp) UpdateAndGet(ctx context.Context, key admin.SettingKey, 
 
 	return setting, nil
 }
-
-var _ admin.SettingsAPI = (*SettingsApp)(nil)

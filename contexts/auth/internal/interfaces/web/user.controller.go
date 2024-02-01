@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
@@ -13,7 +15,6 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 
-	admin_init "github.com/go-arrower/skeleton/contexts/admin/init"
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
@@ -32,9 +33,9 @@ Proposal for naming conventions:
 	- delete
 */
 
-func NewUserController(routes *echo.Group, presenter *web.DefaultPresenter, secret []byte) UserController {
+func NewUserController(routes *echo.Group, presenter *web.DefaultPresenter, secret []byte, settings setting.Settings) UserController {
 	if presenter == nil {
-		presenter = web.NewDefaultPresenter(admin_init.NewMemorySettingsAPI())
+		presenter = web.NewDefaultPresenter(settings)
 	}
 
 	return UserController{

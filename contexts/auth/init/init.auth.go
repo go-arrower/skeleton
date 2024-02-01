@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-arrower/arrower/setting"
 	"github.com/go-arrower/skeleton/contexts/admin"
 
 	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
@@ -37,46 +38,49 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = tracer
 
 	{ // register default auth settings
-		_ = di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.SettingRegistration,
-			Value: admin.NewSettingValue(true),
-			UIOptions: admin.Options{
-				Type:         admin.Checkbox,
-				Label:        "Enable Registration",
-				Info:         "Allows new Users to register themselves",
-				DefaultValue: admin.NewSettingValue(true),
-				ReadOnly:     false,
-				Danger:       false,
-			},
-		})
-		di.SettingsService.Add(context.Background(), admin.Setting{
-			Key:   admin.SettingLogin,
-			Value: admin.NewSettingValue(true),
-			UIOptions: admin.Options{
-				Type:         admin.Checkbox,
-				Label:        "Enable Login",
-				Info:         "Allows Users to login to the application",
-				DefaultValue: admin.NewSettingValue(true),
-				ReadOnly:     false,
-				Danger:       false,
-			},
-		})
+		_ = di.Settings.Save(context.Background(), admin.SettingRegistration, setting.NewValue(true))
+		_ = di.Settings.Save(context.Background(), admin.SettingLogin, setting.NewValue(true))
+
+		//_ = di.Settings.Add(context.Background(), admin.Setting{
+		//	Key:   admin.SettingRegistration,
+		//	Value: admin.NewSettingValue(true),
+		//	UIOptions: admin.Options{
+		//		Type:         admin.Checkbox,
+		//		Label:        "Enable Registration",
+		//		Info:         "Allows new Users to register themselves",
+		//		DefaultValue: admin.NewSettingValue(true),
+		//		ReadOnly:     false,
+		//		Danger:       false,
+		//	},
+		//})
+		//di.Settings.Add(context.Background(), admin.Setting{
+		//	Key:   admin.SettingLogin,
+		//	Value: admin.NewSettingValue(true),
+		//	UIOptions: admin.Options{
+		//		Type:         admin.Checkbox,
+		//		Label:        "Enable Login",
+		//		Info:         "Allows Users to login to the application",
+		//		DefaultValue: admin.NewSettingValue(true),
+		//		ReadOnly:     false,
+		//		Danger:       false,
+		//	},
+		//})
 	}
 
 	queries := models.New(di.PGx)
 	repo, _ := repository.NewPostgresRepository(di.PGx)
-	registrator := user.NewRegistrationService(di.SettingsService, repo)
+	registrator := user.NewRegistrationService(di.Settings, repo)
 
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
 	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
 
-	userController := web.NewUserController(webRoutes, web2.NewDefaultPresenter(di.SettingsService), []byte("secret"))
+	userController := web.NewUserController(webRoutes, web2.NewDefaultPresenter(di.Settings), []byte("secret"), di.Settings)
 	userController.Queries = queries
 	userController.CmdLoginUser = mw.Traced(di.TraceProvider,
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.LoginUser(di.Logger, repo, di.ArrowerQueue, user.NewAuthenticationService(di.SettingsService)),
+					application.LoginUser(di.Logger, repo, di.ArrowerQueue, user.NewAuthenticationService(di.Settings)),
 				),
 			),
 		),
@@ -137,7 +141,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	)
 
 	authContext := AuthContext{
-		settingsController: web.NewSettingsController(web2.NewDefaultPresenter(di.SettingsService), queries),
+		settingsController: web.NewSettingsController(web2.NewDefaultPresenter(di.Settings), queries),
 		userController:     userController,
 		logger:             logger,
 		traceProvider:      di.TraceProvider,

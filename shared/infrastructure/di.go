@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
@@ -32,7 +34,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
@@ -60,7 +61,7 @@ type Container struct {
 	ArrowerQueue jobs.Queue
 	DefaultQueue jobs.Queue
 
-	SettingsService admin.SettingsAPI // todo refactor settings as a module like jobs and not part of admin context
+	Settings setting.Settings
 }
 
 func (c *Container) EnsureAllDependenciesPresent() error {
@@ -73,7 +74,8 @@ func (c *Container) EnsureAllDependenciesPresent() error {
 
 func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*Container, func(ctx context.Context) error, error) {
 	container := &Container{
-		Config: conf,
+		Config:   conf,
+		Settings: setting.NewInMemorySettings(),
 	}
 
 	{ // observability

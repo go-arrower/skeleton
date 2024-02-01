@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-arrower/arrower/setting"
+
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/labstack/echo/v4"
 
@@ -12,14 +14,14 @@ import (
 
 const appTitle = "skeleton"
 
-func NewDefaultPresenter(settingsAPI admin.SettingsAPI) *DefaultPresenter {
+func NewDefaultPresenter(settings setting.Settings) *DefaultPresenter {
 	return &DefaultPresenter{
-		settingsAPI: settingsAPI,
+		settings: settings,
 	}
 }
 
 type DefaultPresenter struct {
-	settingsAPI admin.SettingsAPI
+	settings setting.Settings
 }
 
 type BasePage struct {
@@ -41,15 +43,15 @@ func (p *DefaultPresenter) MapDefaultBasePage(ctx context.Context, title string,
 		docTitle = appTitle
 	}
 
-	isRegisterActive, _ := p.settingsAPI.Setting(ctx, admin.SettingRegistration)
-	isLoginActive, _ := p.settingsAPI.Setting(ctx, admin.SettingLogin)
+	isRegisterActive, _ := p.settings.Setting(ctx, admin.SettingRegistration)
+	isLoginActive, _ := p.settings.Setting(ctx, admin.SettingLogin)
 
-	showLoginBtn := isLoginActive.Bool() && !auth.IsLoggedIn(ctx)
+	showLoginBtn := isLoginActive.MustBool() && !auth.IsLoggedIn(ctx)
 
 	basePage := MapBasePage{
 		"Title":                    docTitle,
 		"Flashes":                  nil,
-		"ShowRegistrationBtn":      isRegisterActive.Bool() && !auth.IsLoggedIn(ctx),
+		"ShowRegistrationBtn":      isRegisterActive.MustBool() && !auth.IsLoggedIn(ctx),
 		"ShowLoginBtn":             showLoginBtn,
 		"ShowLogoutBtn":            auth.IsLoggedIn(ctx),
 		"ShowAdminBtn":             auth.IsSuperUser(ctx),
@@ -80,13 +82,13 @@ func (p *DefaultPresenter) DefaultBasePage(ctx context.Context, title string, ke
 		d = keyVals[0]
 	}
 
-	isRegisterActive, _ := p.settingsAPI.Setting(ctx, admin.SettingRegistration)
+	isRegisterActive, _ := p.settings.Setting(ctx, admin.SettingRegistration)
 
 	return BasePage{
 		Title:               docTitle,
 		Flashes:             nil,
 		D:                   d,
-		ShowRegistrationBtn: isRegisterActive.Bool(),
+		ShowRegistrationBtn: isRegisterActive.MustBool(),
 		ShowLoginBtn:        admin.SettingValue("").Bool(),
 		ShowLogoutBtn:       admin.SettingValue("").Bool(),
 	}

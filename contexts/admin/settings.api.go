@@ -1,9 +1,9 @@
 package admin
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"github.com/go-arrower/arrower/setting"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,20 +14,12 @@ var (
 	ErrInvalidSetting = errors.New("invalid setting")
 )
 
-type SettingsAPI interface {
-	Setting(ctx context.Context, setting SettingKey) (SettingValue, error)
-	Settings(ctx context.Context, settings ...SettingKey) ([]SettingValue, error)
-	SettingsByContext(ctx context.Context, context string) ([]SettingValue, error)
-
-	Add(ctx context.Context, setting Setting) error
-}
-
 const contextName = "auth"
 
 var (
 	// todo rename settings to be more clear: e.g. SettingAllowRegistration
-	SettingRegistration = NewSettingKey(contextName, "registration.registration_enabled")
-	SettingLogin        = NewSettingKey(contextName, "registration.login_enabled")
+	SettingRegistration = setting.NewKey(contextName, "", "registration.registration_enabled")
+	SettingLogin        = setting.NewKey(contextName, "", "registration.login_enabled")
 )
 
 type (
