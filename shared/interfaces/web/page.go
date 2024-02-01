@@ -89,7 +89,7 @@ func (p *DefaultPresenter) DefaultBasePage(ctx context.Context, title string, ke
 		Flashes:             nil,
 		D:                   d,
 		ShowRegistrationBtn: isRegisterActive.MustBool(),
-		ShowLoginBtn:        admin.SettingValue("").Bool(),
-		ShowLogoutBtn:       admin.SettingValue("").Bool(),
+		ShowLoginBtn:        false,
+		ShowLogoutBtn:       false,
 	}
 }

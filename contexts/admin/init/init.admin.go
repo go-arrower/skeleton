@@ -46,7 +46,6 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	})
 
 	repo := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
-	settingsRepo := repository.NewSettingsMemoryRepository()
 
 	container := application.JobsCommandContainer{
 		ListAllQueues: mw.Traced(
@@ -131,9 +130,8 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	)
 
 	{
-		settingsCont := web.NewSettingsController(di.AdminRouter, settingsRepo)
+		settingsCont := web.NewSettingsController(di.AdminRouter)
 		settingsCont.List()
-		settingsCont.Update()
 	}
 
 	cont := web.NewJobsController(di.Logger, repo, web2.NewDefaultPresenter(di.Settings), application.NewJobsApplication(di.PGx))
