@@ -3,8 +3,12 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/go-arrower/arrower/setting"
 
 	"github.com/google/uuid"
 
@@ -17,20 +21,22 @@ import (
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
-func NewLogsController(logger alog.Logger, queries *models.Queries, routes *echo.Group, presenter *web.DefaultPresenter) *LogsController {
+func NewLogsController(logger alog.Logger, settings setting.Settings, queries *models.Queries, routes *echo.Group, presenter *web.DefaultPresenter) *LogsController {
 	return &LogsController{
-		logger:  logger,
-		queries: queries,
-		r:       routes,
-		p:       presenter,
+		logger:   logger,
+		settings: settings,
+		queries:  queries,
+		r:        routes,
+		p:        presenter,
 	}
 }
 
 type LogsController struct {
-	logger  alog.Logger
-	queries *models.Queries
-	r       *echo.Group
-	p       *web.DefaultPresenter
+	logger   alog.Logger
+	settings setting.Settings
+	queries  *models.Queries
+	r        *echo.Group
+	p        *web.DefaultPresenter
 }
 
 func (lc *LogsController) ShowLogs() {
@@ -111,16 +117,51 @@ func (lc *LogsController) ShowLogs() {
 			logs = append(logs, log)
 		}
 
+		settingLevel, err := lc.settings.Setting(c.Request().Context(), alog.SettingLogLevel)
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
 		vals := echo.Map{
 			"SearchMsg": searchMsgParam,
 			"Logs":      logs,
 			"Filter":    filter,
+			"Settings":  map[string]string{"Level": getLevelName(slog.Level(settingLevel.MustInt()))},
 		}
 
 		if len(logs) == 0 {
 			vals["LastLogTime"] = time.Now()
 		}
 
-		return c.Render(http.StatusOK, "=>logs.show", lc.p.MustMapDefaultBasePage(c.Request().Context(), "Logs", vals))
+		return c.Render(http.StatusOK, "logs.show", lc.p.MustMapDefaultBasePage(c.Request().Context(), "Logs", vals))
 	}).Name = "admin.logs"
+}
+
+func (lc *LogsController) SettingLogs() {
+	lc.r.GET("/setting", func(c echo.Context) error {
+		levelParam := c.QueryParam("level")
+
+		level, err := strconv.Atoi(levelParam)
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		err = lc.settings.Save(c.Request().Context(), alog.SettingLogLevel, setting.NewValue(level))
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		return c.Render(http.StatusOK, "logs.show#level-setting", echo.Map{
+			"Level": getLevelName(slog.Level(level)),
+		})
+	})
+}
+
+func getLevelName(leveler slog.Leveler) string {
+	return map[slog.Leveler]string{
+		slog.LevelInfo:  "INFO",
+		slog.LevelDebug: "DEBUG",
+		alog.LevelInfo:  "ARROWER:INFO",
+		alog.LevelDebug: "ARROWER:DEBUG",
+	}[leveler]
 }

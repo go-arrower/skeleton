@@ -162,8 +162,9 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 
 	adminContext := &AdminContext{}
 
-	jc := web.NewLogsController(di.Logger, models3.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings))
+	jc := web.NewLogsController(di.Logger, di.Settings, models3.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings))
 	jc.ShowLogs()
+	jc.SettingLogs()
 
 	return adminContext, nil
 }
