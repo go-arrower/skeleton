@@ -42,6 +42,7 @@ func main() {
 		panic(err)
 	}
 
+	//err = di.Settings.Save(ctx, alog.SettingLogLevel, setting.NewValue(int(slog.LevelDebug)))
 	//alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
 	//alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
 

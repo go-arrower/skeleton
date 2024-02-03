@@ -74,8 +74,7 @@ func (c *Container) EnsureAllDependenciesPresent() error {
 
 func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*Container, func(ctx context.Context) error, error) {
 	container := &Container{
-		Config:   conf,
-		Settings: setting.NewInMemorySettings(),
+		Config: conf,
 	}
 
 	{ // observability
@@ -154,6 +153,8 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		container.db = pg
 	}
 
+	container.Settings = setting.NewPostgresSettings(container.PGx)
+
 	// todo which of the two loggers? Or update the debug one
 	//logger := alog.NewDevelopment()
 	container.Logger = alog.New(
@@ -165,6 +166,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		})),
 		alog.WithHandler(alog.NewLokiHandler(nil)),
 		alog.WithHandler(alog.NewPostgresHandler(container.PGx, nil)),
+		alog.WithSettings(container.Settings),
 	)
 	// todo !conf.Debug: prod logger
 
@@ -257,7 +259,7 @@ func serveMetrics(ctx context.Context, logger alog.Logger, port int) {
 
 	addr := fmt.Sprintf(":%d", port)
 
-	logger.DebugContext(ctx, "serving metrics",
+	logger.DebugContext(ctx, "serving metrics", // todo move to into level
 		slog.String("addr", addr),
 		slog.String("path", path),
 	)
