@@ -126,7 +126,10 @@ func (lc *LogsController) ShowLogs() {
 			"SearchMsg": searchMsgParam,
 			"Logs":      logs,
 			"Filter":    filter,
-			"Settings":  map[string]string{"Level": getLevelName(slog.Level(settingLevel.MustInt()))},
+			"Settings": map[string]any{
+				"Enabled": alog.Unwrap(lc.logger).UsesSettings(), // !!! assumes all loggers in all replicas are configured the same -.-
+				"Level":   getLevelName(slog.Level(settingLevel.MustInt())),
+			},
 		}
 
 		if len(logs) == 0 {

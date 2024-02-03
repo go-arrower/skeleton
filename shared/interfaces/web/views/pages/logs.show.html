@@ -3,6 +3,7 @@
     <script src="/js/behaviors/logs-autoscroll.js"></script>
 {{ end }}
 
+{{ if .Settings.Enabled }}
 <div class="flex border p-2">
     <div class="m-2 relative">
         <select name="level" class="w-full rounded border-t-transparent bg-transparent text-sm focus:border-2 focus:border-green-200 focus:border-t-transparent focus:outline-0" autocomplete="off"
@@ -26,6 +27,7 @@
                hx-trigger="keyup delay:100ms changed"/>
     </div>
 </div>
+{{ end }}
 
 <div class="my-4 mx-64 flex p-2 border border-orange-400">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-orange-400">
