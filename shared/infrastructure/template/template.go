@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -58,7 +59,7 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 	logger = logger.WithGroup("arrower.renderer")
 	tracer := traceProvider.Tracer("arrower.renderer")
 
-	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(logger, viewFS)
+	componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(context.Background(), logger, viewFS)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func getDefaultLayout(rawLayouts map[string]string) string {
 	return defaultLayout
 }
 
-func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
+func prepareRenderer(ctx context.Context, logger alog.Logger, viewFS fs.FS) (*template.Template, map[string]*template.Template, map[string]string, map[string]string, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
@@ -122,7 +123,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 		}
 	}
 
-	logger.LogAttrs(nil, alog.LevelDebug,
+	logger.LogAttrs(ctx, alog.LevelDebug,
 		"loaded components",
 		slog.Int("component_count", len(componentTemplates.Templates())),
 		slog.Any("component_templates", templateNames(componentTemplates)),
@@ -157,7 +158,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 		}
 	}
 
-	logger.LogAttrs(nil, alog.LevelDebug,
+	logger.LogAttrs(ctx, alog.LevelDebug,
 		"loaded pages",
 		slog.Int("page_count", len(pageTemplates)),
 		slog.Any("page_templates", rawTemplateNames(rawPages)),
@@ -180,7 +181,7 @@ func prepareRenderer(logger alog.Logger, viewFS fs.FS) (*template.Template, map[
 		rawLayouts[ln] = file
 	}
 
-	logger.LogAttrs(nil, alog.LevelDebug,
+	logger.LogAttrs(ctx, alog.LevelDebug,
 		"loaded layouts",
 		slog.Int("layout_count", len(rawLayouts)),
 		slog.Any("layout_templates", rawTemplateNames(rawLayouts)),
@@ -248,8 +249,15 @@ func readFile(sfs fs.FS, name string) (string, error) {
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	_, span := r.tracer.Start(c.Request().Context(), "render")
-	defer span.End()
+	ctx := c.Request().Context()
+
+	span := trace.SpanFromContext(ctx)
+
+	_, innerSpan := span.TracerProvider().Tracer("arrower.renderer").Start(ctx, "render")
+	defer innerSpan.End()
+
+	//_, span := r.tracer.Start(ctx, "render")
+	//defer span.End()
 
 	origName := name
 	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
@@ -267,7 +275,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		cleanedName = page
 	}
 
-	r.logger.LogAttrs(nil, alog.LevelInfo,
+	r.logger.LogAttrs(ctx, alog.LevelInfo,
 		"render template",
 		slog.String("called_template", name),
 		slog.String("actual_template", cleanedName),
@@ -277,9 +285,9 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	defer r.mu.Unlock()
 
 	if r.hotReload {
-		r.logger.LogAttrs(nil, alog.LevelDebug, "hot reload all templates")
+		r.logger.LogAttrs(ctx, alog.LevelDebug, "hot reload all templates")
 
-		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(r.logger, r.viewFS)
+		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(ctx, r.logger, r.viewFS)
 		if err != nil {
 			return err
 		}
@@ -302,7 +310,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	templ, found := r.templates[cleanedName]
 	if !found || r.hotReload {
-		r.logger.LogAttrs(nil, alog.LevelDebug,
+		r.logger.LogAttrs(ctx, alog.LevelDebug,
 			"template not cached",
 			slog.String("called_template", name),
 			slog.String("layout", layout),
@@ -339,7 +347,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			"reverse": c.Echo().Reverse,
 		})
 
-		r.logger.LogAttrs(nil, alog.LevelInfo,
+		r.logger.LogAttrs(ctx, alog.LevelInfo,
 			"template cached",
 			slog.String("called_template", name),
 			slog.String("actual_template", cleanedName),
