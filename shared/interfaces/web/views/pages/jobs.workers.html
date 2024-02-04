@@ -1,31 +1,58 @@
-{{ define "admin.title" }}Active Worker Pools{{ end }}
+{{ define "admin.title" }}Worker Pools{{ end }}
 
 
-<table hx-get="/admin/jobs/workers"
-       hx-trigger="every 10s"
-       hx-target="tbody"
-       hx-swap="outerHTML"
-       hx-select="tbody"
-       hx-disinherit="hx-target hx-swap hx-select"
-       class="table-auto border border-collapse text-left">
-    <thead class="bg-gray-100">
-    <tr>
-        <th scope="col" class="p-1 border border-slate-300">Instance name</th>
-        <th scope="col" class="p-1 border border-slate-300">Queue</th>
-        <th scope="col" class="p-1 border border-slate-300">Workers</th>
-        <th scope="col" class="p-1 border border-slate-300">Last seen at</th>
-    </tr>
-    </thead>
-    <tbody>
-    {{ range .workers }}
-        <tr class="odd:bg-white even:bg-slate-50" title="Last seen {{ .NotSeenSince }} ago">
-            <td class="p-1">{{ .ID }}</td>
-            <td class="p-1">
-                <a href="/admin/jobs/{{ .Queue }}">{{ .Queue }}</a>
-            </td>
-            <td class="p-1">{{ .Workers }}</td>
-            <td class="p-1 {{ .LastSeenAtColour }}">{{ .LastSeenAt }}</td>
+<div class="w-full max-w-5xl overflow-x-auto">
+    <table class="table"
+           hx-get="/admin/jobs/workers"
+           hx-trigger="every 10s"
+           hx-target="#worker-list"
+           hx-swap="outerHTML"
+           hx-select="#worker-list"
+           hx-disinherit="hx-target hx-swap hx-select"
+    >
+        <thead>
+        <tr>
+            <th>Instance Name</th>
+            <th>Queue</th>
+            <th>Workers</th>
+            <th>Last seen</th>
         </tr>
-    {{ end }}
-    </tbody>
-</table>
+        </thead>
+        <tbody id="worker-list">
+        {{ range .workers }}
+            <tr data-js-worker-jobTypes data-worker="{{ .ID }}{{ .Queue }}">
+                <td>{{ .ID }}</td> <!--rowspan="2"-->
+                <td>
+                    <a href="/admin/jobs/{{ .Queue }}">{{ .Queue }}</a>
+                </td>
+                <td>{{ .Workers }}</td>
+                <td class="{{ .LastSeenAtColour }}">{{ .NotSeenSince }}</td>
+            </tr>
+            <tr class="hidden text-xs border-none">
+                <td></td>
+                <td class="font-extrabold align-top">Version</td>
+                <td colspan="2">{{ .Version }}</td>
+            </tr>
+            <tr class="hidden text-xs border-none">
+                <td></td>
+                <td class="font-extrabold align-top">Job Types</td>
+                <td colspan="2">
+                    {{ range .JobTypes }}
+                        {{ . }}<br />
+                    {{ end }}
+                </td>
+            </tr>
+            <tr class="hidden"><td>&nbsp;</td></tr><!-- this is a spacer row -->
+        {{ else }}
+            <tr class="border-none">
+                <td colspan="4" class="text-center">No workers registered</td>
+            </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+
+
+{{ define "page.js" }}
+    <script src="/js/behaviors/worker-jobTypes.js"></script>
+{{ end }}

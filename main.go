@@ -22,6 +22,7 @@ func main() {
 		&infrastructure.Config{
 			OrganisationName: "arrower",
 			ApplicationName:  "skeleton",
+			InstanceName:     "",
 			Debug:            true,
 			Postgres: infrastructure.Postgres{
 				User:     "arrower",

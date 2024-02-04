@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -159,7 +161,7 @@ func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "=>jobs.workers", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Worker", echo.Map{
+		return c.Render(http.StatusOK, "jobs.workers", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Worker", echo.Map{
 			"workers": presentWorkers(res.Pool),
 		}))
 	}
@@ -433,30 +435,48 @@ func presentWorkers(pool []jobs.WorkerPool) []pages.JobWorker {
 		jobWorkers[i].ID = pool[i].ID
 		jobWorkers[i].Queue = pool[i].Queue
 		jobWorkers[i].Workers = pool[i].Workers
-		jobWorkers[i].LastSeenAt = pool[i].LastSeen.Format(time.TimeOnly)
+		jobWorkers[i].Version = pool[i].Version
+		jobWorkers[i].JobTypes = pool[i].JobTypes
 
-		var warningTimeWorkerPoolNotSeenSince time.Duration = 30
+		sort.Slice(jobWorkers[i].JobTypes, func(ii, ij int) bool {
+			return jobWorkers[i].JobTypes[ii] <= jobWorkers[i].JobTypes[ij]
+		})
 
-		jobWorkers[i].LastSeenAtColour = "text-green-600"
-		if time.Since(pool[i].LastSeen)/time.Second > warningTimeWorkerPoolNotSeenSince {
-			jobWorkers[i].LastSeenAtColour = "text-orange-600"
+		var warningSecondsWorkerPoolNotSeenSince time.Duration = 30
+
+		jobWorkers[i].LastSeenAtColour = "text-success"
+		if time.Since(pool[i].LastSeen)/time.Second >= warningSecondsWorkerPoolNotSeenSince {
+			jobWorkers[i].LastSeenAtColour = "text-warning"
 		}
 
-		jobWorkers[i].NotSeenSince = notSeenSinceTimeString(pool[i].LastSeen)
+		jobWorkers[i].NotSeenSince = notSeenSinceTimeString(pool[i].LastSeen, warningSecondsWorkerPoolNotSeenSince)
 	}
+
+	sort.Slice(jobWorkers, func(i, j int) bool {
+		return jobWorkers[i].ID <= jobWorkers[j].ID
+	})
 
 	return jobWorkers
 }
 
-func notSeenSinceTimeString(t time.Time) string {
+func notSeenSinceTimeString(t time.Time, warningSecondsWorkerPoolNotSeenSince time.Duration) string {
 	seconds := time.Since(t).Seconds()
 
-	secondsPerMinute := 60
-	if seconds > float64(secondsPerMinute) {
-		return fmt.Sprintf("%d m %d sec", int(seconds/float64(secondsPerMinute)), int(seconds)%secondsPerMinute)
+	if time.Duration(seconds) >= warningSecondsWorkerPoolNotSeenSince && seconds < 60 {
+		return "recently"
 	}
 
-	return fmt.Sprintf("%d sec", int(seconds))
+	secondsPerMinute := 60.0
+	if seconds > secondsPerMinute {
+		minutes := int(math.Round(seconds / secondsPerMinute))
+		if minutes == 1 {
+			return fmt.Sprintf("%d minute ago", minutes)
+		}
+
+		return fmt.Sprintf("%d minutes ago", minutes)
+	}
+
+	return "now"
 }
 
 type (

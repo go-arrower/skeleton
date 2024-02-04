@@ -90,7 +90,7 @@ func (q *Queries) GetQueues(ctx context.Context) ([]string, error) {
 }
 
 const getWorkerPools = `-- name: GetWorkerPools :many
-SELECT id, queue, workers, created_at, updated_at
+SELECT id, queue, workers, version, job_types, created_at, updated_at
 FROM arrower.gue_jobs_worker_pool
 WHERE updated_at > NOW() - INTERVAL '2 minutes'
 ORDER BY queue, id
@@ -109,6 +109,8 @@ func (q *Queries) GetWorkerPools(ctx context.Context) ([]ArrowerGueJobsWorkerPoo
 			&i.ID,
 			&i.Queue,
 			&i.Workers,
+			&i.Version,
+			&i.JobTypes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

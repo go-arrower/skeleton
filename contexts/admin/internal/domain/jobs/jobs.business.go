@@ -53,6 +53,8 @@ type (
 		ID       string
 		Queue    string
 		Workers  int
+		Version  string
+		JobTypes []string
 	}
 
 	// Repository manages the data access to the underlying Jobs implementation.

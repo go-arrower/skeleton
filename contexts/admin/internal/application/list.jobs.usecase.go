@@ -100,7 +100,7 @@ func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (
 	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
 		wp, _ := repo.WorkerPools(ctx)
 
-		for i, _ := range wp {
+		for i, _ := range wp { // todo move to repo
 			if wp[i].Queue == "" {
 				wp[i].Queue = defaultQueueName
 			}

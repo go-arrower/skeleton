@@ -25,6 +25,8 @@ type ArrowerGueJobsWorkerPool struct {
 	ID        string
 	Queue     string
 	Workers   int16
+	Version   string
+	JobTypes  []string
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 }
