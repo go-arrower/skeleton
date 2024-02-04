@@ -1,24 +1,47 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-100">
+<html lang="en" data-theme="emerald" class="h-full bg-gray-100">
 <head>
     <title>{{ with .Title }}{{ . }}{{ else }}Hello, Arrower!{{ end }}</title>
 
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="description" content="" />
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content=""/>
 
     <script src="js/htmx.org/1.9.5/htmx.min.js"></script>
     <script src="js/htmx.org/1.9.5/head-support.js"></script>
     <script src="js/htmx.org/1.9.5/preload.js"></script>
     <script src="js/htmx.org/1.9.5/multi-swap.js"></script>
 
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.1/dist/full.min.css" rel="stylesheet" type="text/css"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
     <script>
         tailwind.config = {
-            theme: {},
+            theme: {
+                extend: {
+                    colors: {
+                        customColour: '#da373d',
+                    }
+                }
+            },
             plugins: [
-                require('@tailwindcss/forms'),
+                // !!! only works on node
+                // require('@tailwindcss/forms'),
+                // require('@tailwindcss/typography'),
+                // require('@tailwindcss/aspect-ratio'),
+                // require("daisyui"),
             ],
+            // daisyUI config (optional - here are the default values)
+            // !!! only works on node
+            daisyui: {
+                themes: false, // false: only light + dark | true: all themes | array: specific themes like this ["light", "dark", "cupcake"]
+                darkTheme: "dark", // name of one of the included themes for dark mode
+                base: true, // applies background color and foreground color for root element by default
+                styled: true, // include daisyUI colors and design decisions for all components
+                utils: true, // adds responsive and modifier utility classes
+                prefix: "", // prefix for daisyUI classnames (components, modifiers and responsive class names. Not colors)
+                logs: true, // Shows info about daisyUI version and used config in the console when building your CSS
+                themeRoot: ":root", // The element that receives theme color CSS variables
+            },
         }
     </script>
     <link rel="stylesheet" href="css/main.css">
@@ -151,9 +174,9 @@
                 </header>
                 <div class="w-full grow bg-white p-6 rounded-t-lg rounded-l-lg">
                     <main class="bg-white">
-                            {{block "content" .}}
-                                Fallback, if "content" is not defined elsewhere
-                            {{end}}
+                        {{block "content" .}}
+                            Fallback, if "content" is not defined elsewhere
+                        {{end}}
                     </main>
                 </div>
             </div>
