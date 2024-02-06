@@ -12,80 +12,65 @@
 {{ end }}
 
 
-<div id="statistics" class="flex">
-    <div class="max-w-md grow flex flex-col justify-center"> <!-- wrap, so the chart can be centered vertically -->
-        <div data-js-pending-jobs-by-queue class="h-52"></div>
-    </div>
-    <div class="max-w-md grow"> <!-- wrap, so the echart uses the full width and height when rendering -->
-        <div data-js-processed-jobs data-interval="hour" class="h-96"></div>
-    </div>
-    <div class="max-w-md grow">
-        <div data-js-processed-jobs data-interval="week" class="h-96"></div>
-    </div>
+<div id="statistics" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 justify-between">
+    <div data-js-pending-jobs-by-queue class="h-96"></div>
+    <div class="hidden md:block xl:hidden"></div><!-- artificial gap to keep the two charts below in one row in 2 cols layout -->
+    <div data-js-processed-jobs data-interval="hour" class="h-96"></div>
+    <div data-js-processed-jobs data-interval="week" class="h-96"></div>
 </div>
 
 
-<table hx-get="/admin/jobs"
-       hx-trigger="every 4.5s"
-       hx-swap="outerHTML"
-       hx-select="#queue-list"
-       hx-target="#queue-list"
-       hx-disinherit="hx-target hx-select hx-swap"
-       class="table-auto w-full border border-collapse text-left">
-    <!-- todo add #statistics BUT js will not redraw the charts -->
-    <thead class="bg-gray-100">
-    <tr>
-        <th scope="col" class="p-1 border border-slate-300">Queue</th>
-        <th scope="col" class="p-1 border border-slate-300">State</th>
-        <th scope="col" class="p-1 border border-slate-300">Pending</th>
-        <th scope="col" class="p-1 border border-slate-300">Processed</th>
-        <th scope="col" class="p-1 border border-slate-300">Failed</th>
-        <th scope="col" class="p-1 border border-slate-300">Pending Error Rate</th>
-    </tr>
-    </thead>
-    <tbody id="queue-list">
-    {{ range .Queues }}
-        {{ template "queue" . }}
-    {{ end }}
-    </tbody>
-</table>
-
-
-
-
-{{ define "queue"}}
-    <tr class="odd:bg-white even:bg-slate-50">
-        <td class="p-1">
-            <a href="/admin/jobs/{{ .QueueName }}" class="font-medium">{{ .QueueName }}</a>
-        </td>
-        <td class="p-1">
-            {{ if eq 0 .PendingJobs }}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                     stroke="currentColor" class="w-6 h-6 text-green-600">
-                    <title>No jobs, waiting</title>
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            {{ else if eq 0 .AvailableWorkers }}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                     class="w-6 h-6 text-orange-600">
-                    <title>No workers</title>
-                    <path fill-rule="evenodd"
-                          d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM9 8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75H9zm5.25 0a.75.75 0 00-.75.75v6c0 .414.336.75.75.75H15a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75h-.75z"
-                          clip-rule="evenodd"/>
-                </svg>
-            {{ else }}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                     stroke="currentColor" class="w-6 h-6 text-green-600">
-                    <title>Processing</title>
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"/>
-                </svg>
-            {{ end }}
-        </td>
-        <td class="p-1">{{ .PendingJobs }}</td>
-        <td class="p-1">{{ .ProcessedJobs }}</td>
-        <td class="p-1">{{ .FailedJobs }}</td>
-        <td class="p-1">{{ .PendingJobsErrorRate }}%</td>
-    </tr>
-{{ end }}
+<div class="md:mt-8 xl:mt-16 overflow-x-auto">
+    <table hx-get="/admin/jobs"
+           hx-trigger="every 4.5s"
+           hx-swap="outerHTML"
+           hx-select="#queue-list"
+           hx-target="#queue-list"
+           hx-disinherit="hx-target hx-select hx-swap"
+           class="table{{ if ge ( len .Queues) 4 }} table-zebra{{ end }}">
+        <!-- todo add #statistics BUT js will not redraw the charts -->
+        <thead>
+        <tr>
+            <th scope="col">Queue</th>
+            <th scope="col">State</th>
+            <th scope="col">Pending</th>
+            <th scope="col">Processed</th>
+            <th scope="col">Failed</th>
+            <th scope="col">Pending Errors</th>
+        </tr>
+        </thead>
+        <tbody id="queue-list">
+        {{ range .Queues }}
+            <tr>
+                <td>
+                    <a href="/admin/jobs/{{ .QueueName }}">{{ .QueueName }}</a>
+                </td>
+                <td>
+                    {{ if eq 0 .PendingJobs }}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                             class="w-6 h-6 text-success">
+                            <title>Waiting for jobs</title>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    {{ else if eq 0 .AvailableWorkers }}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                             class="w-6 h-6 text-warning">
+                            <title>No workers</title>
+                            <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM9 8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75H9zm5.25 0a.75.75 0 00-.75.75v6c0 .414.336.75.75.75H15a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75h-.75z" clip-rule="evenodd"/>
+                        </svg>
+                    {{ else }}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-success">
+                            <title>Processing...</title>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"/>
+                        </svg>
+                    {{ end }}
+                </td>
+                <td>{{ .PendingJobs }}</td>
+                <td>{{ .ProcessedJobs }}</td>
+                <td>{{ .FailedJobs }}</td>
+                <td>{{ .PendingJobsErrorRate }}%</td>
+            </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
