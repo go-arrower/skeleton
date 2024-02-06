@@ -444,9 +444,9 @@ func presentWorkers(pool []jobs.WorkerPool) []pages.JobWorker {
 
 		var warningSecondsWorkerPoolNotSeenSince time.Duration = 30
 
-		jobWorkers[i].LastSeenAtColour = "text-success"
+		jobWorkers[i].LastSeenAtColourSuccess = true
 		if time.Since(pool[i].LastSeen)/time.Second >= warningSecondsWorkerPoolNotSeenSince {
-			jobWorkers[i].LastSeenAtColour = "text-warning"
+			jobWorkers[i].LastSeenAtColourSuccess = false
 		}
 
 		jobWorkers[i].NotSeenSince = notSeenSinceTimeString(pool[i].LastSeen, warningSecondsWorkerPoolNotSeenSince)

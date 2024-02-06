@@ -26,7 +26,7 @@
                     <a href="/admin/jobs/{{ .Queue }}">{{ .Queue }}</a>
                 </td>
                 <td>{{ .Workers }}</td>
-                <td class="{{ .LastSeenAtColour }}">{{ .NotSeenSince }}</td>
+                <td class="{{ if .LastSeenAtColourSuccess }}text-success{{ else }}text-warning{{ end }}">{{ .NotSeenSince }}</td>
             </tr>
             <tr class="hidden text-xs border-none">
                 <td></td>
