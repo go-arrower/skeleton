@@ -288,7 +288,8 @@ func (q *Queries) PruneHistory(ctx context.Context, createdAt pgtype.Timestamptz
 
 const pruneHistoryPayload = `-- name: PruneHistoryPayload :exec
 UPDATE arrower.gue_jobs_history
-SET args = ''::BYTEA
+SET args      = ''::BYTEA,
+    pruned_at = NOW()
 WHERE queue = $1
   AND created_at <= $2
 `
