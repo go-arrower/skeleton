@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="emerald" class="h-full">
 <head>
     <title>{{ with .Title }}{{ . }}{{ else }}Hello, Arrower!{{ end }}</title>
@@ -12,38 +12,6 @@
     <script src="js/htmx.org/1.9.5/preload.js"></script>
     <script src="js/htmx.org/1.9.5/multi-swap.js"></script>
 
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.1/dist/full.min.css" rel="stylesheet" type="text/css"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        customColour: '#da373d',
-                    }
-                }
-            },
-            plugins: [
-                // !!! only works on node
-                // require('@tailwindcss/forms'),
-                // require('@tailwindcss/typography'),
-                // require('@tailwindcss/aspect-ratio'),
-                // require("daisyui"),
-            ],
-            // daisyUI config (optional - here are the default values)
-            // !!! only works on node
-            daisyui: {
-                themes: false, // false: only light + dark | true: all themes | array: specific themes like this ["light", "dark", "cupcake"]
-                darkTheme: "dark", // name of one of the included themes for dark mode
-                base: true, // applies background color and foreground color for root element by default
-                styled: true, // include daisyUI colors and design decisions for all components
-                utils: true, // adds responsive and modifier utility classes
-                prefix: "", // prefix for daisyUI classnames (components, modifiers and responsive class names. Not colors)
-                logs: true, // Shows info about daisyUI version and used config in the console when building your CSS
-                themeRoot: ":root", // The element that receives theme color CSS variables
-            },
-        }
-    </script>
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body hx-boost="true" hx-ext="head-support,preload" class="h-full">

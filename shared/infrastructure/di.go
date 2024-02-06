@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labstack/echo/v4/middleware"
+
 	"github.com/go-arrower/arrower/setting"
 
 	"github.com/go-arrower/arrower/alog"
@@ -21,7 +23,6 @@ import (
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -179,7 +180,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		router.IPExtractor = echo.ExtractIPFromXFFHeader()                                                          // see: https://echo.labstack.com/docs/ip-address
 		router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(container.TraceProvider))) // todo set servername
 		router.Use(echoprometheus.NewMiddleware(conf.ApplicationName))
-		router.Use(middleware.Static("public"))
+		router.Use(middleware.Static("public")) // todo use fs instead
 
 		hotReload := false
 		if conf.Debug {
