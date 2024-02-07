@@ -1,13 +1,14 @@
 {{ define "admin.title" }}Schedule a Job{{ end }}
 
-<div class="grid grid-cols-1 sm:grid-cols-2">
-    <form autocomplete="off" method="post" action="{{ reverse "admin.jobs.new" }}" class="flex flex-wrap space-y-2">
-        <div class="w-4/12">
-            <label for="queues">Queue</label>
-        </div>
-        <div class="w-8/12">
-            <!-- todo make default a var -->
-            <input id="queues" list="known-queues" name="queue" value="Default"
+
+<div class="flex flex-col lg:flex-row">
+    <form autocomplete="off" method="post" action="{{ reverse "admin.jobs.new" }}"
+          class="space-y-8">
+        <div class="join flex items-center">
+            <label class="join-item w-32" for="queues">Queue</label>
+            <!-- todo make default value a var -->
+            <input class="join-item input"
+                   id="queues" list="known-queues" name="queue" value="Default"
                    hx-get="/admin/jobs/jobTypes"
                    hx-trigger="input"
                    hx-target="#known-job-types" />
@@ -18,11 +19,9 @@
             </datalist>
         </div>
 
-        <div class="w-4/12">
-            <label for="job-type">Job Type</label>
-        </div>
-        <div class="w-8/12">
-            <input id="job-type" name="job-type" list="known-job-types" />
+        <div class="join flex items-center">
+            <label class="join-item w-32" for="job-type">Job Type</label>
+            <input class="join-item input" id="job-type" name="job-type" list="known-job-types" />
             <datalist id="known-job-types">
                 {{ block "known-job-types" . }}
                     {{ range .JobTypes }}
@@ -32,11 +31,9 @@
             </datalist>
         </div>
 
-        <div class="w-4/12">
-            <label for="priority">Priority</label>
-        </div>
-        <div class="w-8/12">
-            <input type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
+        <div class="join flex items-center">
+            <label class="join-items w-32" for="priority">Priority</label>
+            <input class="join-items" type="range" list="priorities" min="-1000" max="1000" id="priority" name="priority" />
             <datalist id="priorities">
                 <option value="-1000"></option>
                 <option value="-500"></option>
@@ -50,35 +47,31 @@
             </datalist>
         </div>
 
-        <div class="w-4/12">
-            <label for="payload">Payload</label>
-        </div>
-        <div class="w-8/12">
-            <textarea id="payload" name="payload" class="h-64" onchange="
-                let data = {};
-                try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
-                    document.getElementById('payload-error').classList.remove('invisible');
-                    return;
-                }
-                document.getElementById('payload').value = JSON.stringify(data, undefined, 2);
-                document.getElementById('payload-error').classList.add('invisible');
-            ">{}</textarea>
-            <br/>
-            <span id="payload-error" class="invisible text-red-500">The payload is not valid JSON</span>
-        </div>
-
-        <div class="w-4/12">
-            <label for="count">Amount</label>
-        </div>
-        <div class="w-8/12">
-            <input type="number" id="count" name="count" min="1" max="1000000000" value="1" />
+        <div class="join flex items-start">
+            <label class="join-item w-32" for="payload">Payload</label>
+            <div class="join-item">
+                <textarea class="join-item input h-64 bg-neutral text-neutral-content rounded-3xl" id="payload" name="payload" onchange="
+                    let data = {};
+                    try {data = JSON.parse(document.getElementById('payload').value)}catch (e) {
+                        document.getElementById('payload-error').classList.remove('invisible');
+                        return;
+                    }
+                    document.getElementById('payload').value = JSON.stringify(data, undefined, 2);
+                    document.getElementById('payload-error').classList.add('invisible');
+                ">{}</textarea>
+                <br />
+                <span id="payload-error" class="join-item invisible text-error">The payload is not valid JSON</span>
+            </div>
         </div>
 
-        <div class="w-4/12">
-            <label for="runAt">Run At time</label>
+        <div class="join flex items-center">
+            <label class="join-item w-32" for="count">Amount</label>
+            <input class="join-item input" type="number" id="count" name="count" min="1" max="1000000000" value="1" />
         </div>
-        <div class="w-8/12">
-            <input type="datetime-local"
+
+        <div class="join flex items-center">
+            <label class="join-item w-32" for="runAt">Run At time</label>
+            <input class="join-item input" type="datetime-local"
                    id="runAt"
                    name="runAt-time"
                    value="{{ .RunAt }}"
@@ -86,30 +79,30 @@
                    required />
         </div>
 
-        <div class="w-4/12"></div>
-        <div class="w-8/12">
-            <button type="submit" class="w-56 py-2 px-4 bg-green-200 rounded">Schedule</button>
-        </div>
+        <button type="submit" class="w-full py-2 px-4 bg-primary rounded">Schedule</button>
     </form>
+
+
     {{ block "payload-examples" .Payloads }}
     <table id="payload-examples"
+           class="table mt-16 lg:mt-0 lg:ml-16"
            hx-get="/admin/jobs/payloads"
            hx-include="#queues, #job-type"
            hx-trigger="input from:#job-type delay:200ms"
            hx-swap="outerHTML">
         {{ if .Payloads }}{{/* only render this, if payloads are present. If not he hx-triggers are still firing */}}
-        <thead class="bg-gray-100">
+        <thead>
             <tr>
                 <th>{{ .Queue }}: {{ .JobType }} - past payloads </th>
             </tr>
         </thead>
         <tbody>
             {{ range .Payloads }}
-                <tr class="odd:bg-white even:bg-slate-50" onclick="
+                <tr onclick="
                 document.getElementById('payload').value = this.firstElementChild.firstElementChild.innerHTML;
                 document.getElementById('payload-error').classList.add('invisible');
                 ">
-                    <td><pre>{{ . }}</pre></td>
+                    <td><pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ . }}</pre></td>
                 </tr>
             {{ end }}
         </tbody>
