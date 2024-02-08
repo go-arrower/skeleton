@@ -15,7 +15,7 @@ import (
 	mnoop "go.opentelemetry.io/otel/metric/noop"
 	tnoop "go.opentelemetry.io/otel/trace/noop"
 
-	jobs2 "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
+	jobs_domain "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/testdata"
 )
@@ -79,14 +79,14 @@ func TestPostgresJobsRepository_PendingJobs(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		pendingJobs, err := repo.PendingJobs(ctx, "")
+		pendingJobs, err := repo.PendingJobs(ctx, string(jobs_domain.DefaultQueueName))
 		assert.NoError(t, err)
 		assert.Empty(t, pendingJobs, "queue needs to be empty, as no jobs got enqueued yet")
 
 		jq, _ := jobs.NewPostgresJobs(logger, mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
-		pendingJobs, err = repo.PendingJobs(ctx, "")
+		pendingJobs, err = repo.PendingJobs(ctx, string(jobs_domain.DefaultQueueName))
 		assert.NoError(t, err)
 		assert.Len(t, pendingJobs, 1, "one Job is enqueued")
 	})
@@ -102,7 +102,7 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		stats, err := repo.QueueKPIs(context.Background(), "")
+		stats, err := repo.QueueKPIs(context.Background(), jobs_domain.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, stats.PendingJobs)
 		assert.Equal(t, 0, stats.FailedJobs)
@@ -119,7 +119,7 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		stats, err := repo.QueueKPIs(context.Background(), "")
+		stats, err := repo.QueueKPIs(context.Background(), jobs_domain.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, stats.PendingJobs)
 		assert.Equal(t, 1, stats.FailedJobs)
@@ -181,7 +181,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 
 		err := repo.Delete(ctx, pending[0].ID)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, jobs2.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs_domain.ErrJobLockedAlready)
 
 		pending, _ = repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1, "delete should fail, as the job is currently processed and thus locked by the db")
@@ -240,6 +240,6 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		err := repo.RunJobAt(ctx, pending[0].ID, newJobTime)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, jobs2.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs_domain.ErrJobLockedAlready)
 	})
 }

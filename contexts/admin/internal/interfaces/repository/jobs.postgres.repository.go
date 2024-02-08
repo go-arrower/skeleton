@@ -47,6 +47,10 @@ func (repo *PostgresJobsRepository) Queues(ctx context.Context) (jobs.QueueNames
 }
 
 func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) {
+	if jobs.QueueName(queue) == jobs.DefaultQueueName {
+		queue = ""
+	}
+
 	jobs, err := repo.Conn().GetPendingJobs(ctx, queue)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not get pending jobs: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
@@ -82,6 +86,10 @@ func jobToDomain(job models.ArrowerGueJob) jobs.PendingJob {
 
 func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.QueueName) (jobs.QueueKPIs, error) { //nolint:funlen
 	var kpis jobs.QueueKPIs
+
+	if queue == jobs.DefaultQueueName {
+		queue = ""
+	}
 
 	group, newCtx := errgroup.WithContext(ctx)
 
