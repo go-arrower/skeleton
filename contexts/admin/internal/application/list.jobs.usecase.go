@@ -4,17 +4,13 @@ import (
 	"context"
 	crand "crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
-	"math/rand"
 	"time"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 
 	"go.opentelemetry.io/otel/propagation"
 
-	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/oklog/ulid/v2"
 
@@ -201,47 +197,6 @@ func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.
 	}
 
 	return jobs
-}
-
-type (
-	SomeJob        struct{}
-	NamedJob       struct{ Name string }
-	LongRunningJob struct{}
-)
-
-func ProcessSomeJob(logger alog.Logger) func(context.Context, SomeJob) error {
-	return func(ctx context.Context, job SomeJob) error {
-		logger.InfoContext(ctx, "LOG ASYNC SIMPLE JOB")
-		//panic("SOME JOB PANICS")
-
-		time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
-
-		if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd
-			return errors.New("some error") //nolint:goerr113
-		}
-
-		return nil
-	}
-}
-
-func ProcessNamedJob(logger alog.Logger) func(context.Context, NamedJob) error {
-	return func(ctx context.Context, job NamedJob) error {
-		logger.InfoContext(ctx, "named job", slog.String("name", job.Name))
-
-		return nil
-	}
-}
-
-func ProcessLongRunningJob() func(context.Context, LongRunningJob) error {
-	return func(ctx context.Context, job LongRunningJob) error {
-		time.Sleep(time.Duration(rand.Intn(5)) * time.Minute) //nolint:gosec,gomnd // weak numbers are ok, it is wait time
-
-		if rand.Intn(100) > 95 { //nolint:gosec,gomnd
-			return errors.New("some error") //nolint:goerr113
-		}
-
-		return nil
-	}
 }
 
 type (

@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/brianvoe/gofakeit/v6 v6.26.3
 	github.com/go-arrower/arrower v0.0.0
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/uuid v1.5.0

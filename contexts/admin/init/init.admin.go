@@ -92,43 +92,6 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		),
 	}
 
-	_ = di.DefaultQueue.RegisterJobFunc(
-		mw.TracedU(
-			di.TraceProvider,
-			mw.MetricU(
-				di.MeterProvider,
-				mw.LoggedU(
-					di.Logger.(*slog.Logger),
-					application.ProcessSomeJob(di.Logger),
-				),
-			),
-		),
-	)
-	_ = di.DefaultQueue.RegisterJobFunc(
-		mw.TracedU(
-			di.TraceProvider,
-			mw.MetricU(
-				di.MeterProvider,
-				mw.LoggedU(
-					di.Logger.(*slog.Logger),
-					application.ProcessNamedJob(di.Logger),
-				),
-			),
-		),
-	)
-	_ = di.DefaultQueue.RegisterJobFunc(
-		mw.TracedU(
-			di.TraceProvider,
-			mw.MetricU(
-				di.MeterProvider,
-				mw.LoggedU(
-					di.Logger.(*slog.Logger),
-					application.ProcessLongRunningJob(),
-				),
-			),
-		),
-	)
-
 	{
 		settingsCont := web.NewSettingsController(di.AdminRouter)
 		settingsCont.List()

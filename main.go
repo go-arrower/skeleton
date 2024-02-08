@@ -2,8 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
+	"math/rand"
 	"net/http"
+	"time"
+
+	"github.com/brianvoe/gofakeit/v6"
+
+	"github.com/go-arrower/arrower/mw"
 
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 	"github.com/labstack/echo-contrib/session"
@@ -88,6 +96,7 @@ func main() {
 
 	//
 	// start app
+	initRegularExampleQueueLoad(ctx, di)
 	di.WebRouter.Logger.Fatal(di.WebRouter.Start(fmt.Sprintf(":%d", di.Config.Web.Port)))
 
 	//
@@ -96,4 +105,82 @@ func main() {
 	_ = shutdown(ctx)
 	_ = authContext.Shutdown(ctx)
 	_ = adminContext.Shutdown(ctx)
+}
+
+func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Container) {
+	type (
+		SomeJob        struct{}
+		NamedJob       struct{ Name string }
+		LongRunningJob struct{}
+	)
+
+	_ = di.DefaultQueue.RegisterJobFunc(
+		mw.TracedU(di.TraceProvider, mw.MetricU(di.MeterProvider, mw.LoggedU(di.Logger.(*slog.Logger),
+			func(ctx context.Context, job SomeJob) error {
+				di.Logger.InfoContext(ctx, "LOG ASYNC SIMPLE JOB")
+				//panic("SOME JOB PANICS")
+
+				time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
+
+				if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd
+					return errors.New("some error") //nolint:goerr113
+				}
+
+				return nil
+			},
+		))),
+	)
+
+	_ = di.DefaultQueue.RegisterJobFunc(
+		mw.TracedU(di.TraceProvider, mw.MetricU(di.MeterProvider, mw.LoggedU(di.Logger.(*slog.Logger),
+			func(ctx context.Context, job NamedJob) error {
+				di.Logger.InfoContext(ctx, "named job", slog.String("name", job.Name))
+
+				time.Sleep(time.Duration(rand.Intn(4)) * time.Second)
+
+				return nil
+			},
+		))),
+	)
+
+	_ = di.DefaultQueue.RegisterJobFunc(
+		mw.TracedU(di.TraceProvider, mw.MetricU(di.MeterProvider, mw.LoggedU(di.Logger.(*slog.Logger),
+			func(ctx context.Context, job LongRunningJob) error {
+				time.Sleep(time.Duration(rand.Intn(5)) * time.Minute) //nolint:gosec,gomnd // weak numbers are ok, it is wait time
+
+				if rand.Intn(100) > 95 { //nolint:gosec,gomnd
+					return errors.New("some error") //nolint:goerr113
+				}
+
+				return nil
+			},
+		))),
+	)
+
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				r := rand.Intn(100)
+
+				if r%5 == 0 {
+					_ = di.DefaultQueue.Enqueue(ctx, SomeJob{})
+				}
+
+				if r%12 == 0 {
+					for i := 0; i < r; i++ {
+						// for i := range r { // fixme use new go1.22 style
+						_ = di.DefaultQueue.Enqueue(ctx, NamedJob{Name: gofakeit.Name()})
+					}
+				}
+
+				if r == 0 {
+					_ = di.DefaultQueue.Enqueue(ctx, LongRunningJob{})
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
