@@ -24,7 +24,7 @@ import (
 const (
 	defaultQueueName = "Default" // todo remove
 
-	historyTableSizeChanged = "arrower:admin.jobs.history.deleted"
+	historyTableSizeChangedJSEvent = "arrower:admin.jobs.history.deleted"
 
 	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
@@ -240,7 +240,7 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 		// reload the dashboard badges with the size, by using htmx's oob technique
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
-		c.Response().Header().Set("HX-Trigger", historyTableSizeChanged)
+		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
 
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
@@ -264,7 +264,7 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
 		})
 
-		c.Response().Header().Set("HX-Trigger", historyTableSizeChanged)
+		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
 
 		return c.NoContent(http.StatusOK)
 	}
@@ -502,10 +502,6 @@ type (
 )
 
 func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) QueuePage {
-	if queue == "" {
-		queue = defaultQueueName
-	}
-
 	jobs = prettyFormatPayload(jobs)
 
 	return QueuePage{
@@ -524,11 +520,7 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 		data, _ := json.MarshalIndent(m.JobData, "", "  ") //nolint:errchkjson // trust the type checks to work for simplicity
 		jobs[i].Payload = string(data)
 		jobs[i].Payload = m.JobData
-
-		if jobs[i].Queue == "" {
-			jobs[i].Queue = defaultQueueName
-			jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
-		}
+		jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
 	}
 
 	return jobs
@@ -546,10 +538,6 @@ func fmtRunAtTime(t time.Time) string {
 }
 
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
-	if queue == "" {
-		queue = defaultQueueName
-	}
-
 	var errorRate float64
 
 	if kpis.FailedJobs != 0 {
