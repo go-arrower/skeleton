@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultQueueName = "Default"
+	defaultQueueName = "Default" // todo remove
 
 	historyTableSizeChanged = "arrower:admin.jobs.history.deleted"
 

@@ -12,15 +12,17 @@
 {{ end }}
 
 
+{{ if .Queues }}
 <div id="statistics" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 justify-between">
     <div data-js-pending-jobs-by-queue class="h-96"></div>
     <div class="hidden md:block xl:hidden"></div><!-- artificial gap to keep the two charts below in one row in 2 cols layout -->
     <div data-js-processed-jobs data-interval="hour" class="h-96"></div>
     <div data-js-processed-jobs data-interval="week" class="h-96"></div>
 </div>
+{{ end }}
 
 
-<div class="md:mt-8 xl:mt-16 overflow-x-auto">
+<div class="{{ if .Queues }}md:mt-8 xl:mt-16{{ end }} overflow-x-auto">
     <table hx-get="/admin/jobs"
            hx-trigger="every 4.5s"
            hx-swap="outerHTML"
@@ -46,7 +48,7 @@
                     <a href="/admin/jobs/{{ .QueueName }}">{{ .QueueName }}</a>
                 </td>
                 <td>
-                    {{ if eq 0 .PendingJobs }}
+                    {{ if and (eq 0 .PendingJobs) (ne 0 .AvailableWorkers) }}
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
                              class="w-6 h-6 text-success">
                             <title>Waiting for jobs</title>
@@ -69,6 +71,12 @@
                 <td>{{ .ProcessedJobs }}</td>
                 <td>{{ .FailedJobs }}</td>
                 <td>{{ .PendingJobsErrorRate }}%</td>
+            </tr>
+        {{ else }}
+            <tr class="border-none">
+                <td colspan="6" class="text-center">
+                    No Queues.
+                </td>
             </tr>
         {{ end }}
         </tbody>

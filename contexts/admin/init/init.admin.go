@@ -2,6 +2,7 @@ package init
 
 import (
 	"context"
+	"log/slog"
 
 	alogmodels "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
@@ -23,7 +24,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings)),
 	}
 
-	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, web2.NewDefaultPresenter(di.Settings), application.NewJobsApplication(di.PGx))
+	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, web2.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
 	jobsController.Queries = models.New(di.PGx)
 	adminContext.jobsController = jobsController
 

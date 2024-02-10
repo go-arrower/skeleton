@@ -388,9 +388,10 @@ func (q *Queries) StatsPendingJobsPerType(ctx context.Context, queue string) ([]
 }
 
 const statsProcessedJobs = `-- name: StatsProcessedJobs :one
-SELECT COUNT(*)
+SELECT COUNT(DISTINCT job_id)
 FROM arrower.gue_jobs_history
 WHERE queue = $1
+  AND success = true
 `
 
 func (q *Queries) StatsProcessedJobs(ctx context.Context, queue string) (int64, error) {

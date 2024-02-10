@@ -17,6 +17,7 @@ import (
 
 var ErrVacuumFailed = errors.New("VACUUM failed")
 
+//go:generate go run github.com/hexdigest/gowrap/cmd/gowrap gen -p github.com/go-arrower/skeleton/contexts/admin/internal/application -g -i JobsApplication -t ./templates/slog.html -o jobs.log.usecase.go
 type JobsApplication interface {
 	Queues(ctx context.Context) (jobs.QueueNames, error)
 	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)

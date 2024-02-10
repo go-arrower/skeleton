@@ -103,9 +103,10 @@ WHERE queue = $1
 GROUP BY job_type;
 
 -- name: StatsProcessedJobs :one
-SELECT COUNT(*)
+SELECT COUNT(DISTINCT job_id)
 FROM arrower.gue_jobs_history
-WHERE queue = $1;
+WHERE queue = $1
+  AND success = true;
 
 -- name: StatsQueueWorkerPoolSize :one
 SELECT COALESCE(SUM(workers), 0)::INTEGER
