@@ -557,7 +557,7 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		ProcessedJobs:        kpis.ProcessedJobs,
 		AvailableWorkers:     kpis.AvailableWorkers,
 		PendingJobsErrorRate: errorRate,
-		AverageTimePerJob:    kpis.AverageTimePerJob.Truncate(time.Millisecond),
-		EstimateUntilEmpty:   duration.Truncate(time.Millisecond),
+		AverageTimePerJob:    kpis.AverageTimePerJob.Truncate(time.Second),
+		EstimateUntilEmpty:   duration.Truncate(time.Second),
 	}
 }
