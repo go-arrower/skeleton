@@ -185,7 +185,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			hotReload = true
 		}
 
-		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/interfaces/web/views"), hotReload)
+		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload)
 		router.Renderer = r
 
 		// router.Use(session.Middleware())

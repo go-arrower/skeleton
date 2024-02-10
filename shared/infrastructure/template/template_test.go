@@ -10,12 +10,13 @@ import (
 	"sync"
 	"testing"
 
+	views2 "github.com/go-arrower/skeleton/shared/views"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/go-arrower/skeleton/shared/infrastructure/template/testdata"
-	"github.com/go-arrower/skeleton/shared/interfaces/web/views"
 )
 
 func TestNewRenderer(t *testing.T) {
@@ -24,7 +25,7 @@ func TestNewRenderer(t *testing.T) {
 	t.Run("construct renderer", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), views.SharedViews, false)
+		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), views2.SharedViews, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, r)
 	})

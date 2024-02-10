@@ -10,16 +10,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
-	"github.com/go-arrower/skeleton/shared/interfaces/web/views/pages"
+	"github.com/go-arrower/skeleton/shared/views/pages"
 )
 
 const (
