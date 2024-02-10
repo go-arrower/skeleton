@@ -107,14 +107,19 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 				return nil, nil, err
 			}
 
-			traceProvider := trace.NewTracerProvider( // todo conf.Debug: dev & prod config
-				// trace.WithBatcher(traceExporter), // prod
-				trace.WithSyncer(traceExporter), // dev
+			traceProvider := trace.NewTracerProvider(
+				trace.WithBatcher(traceExporter), // prod
 				trace.WithResource(resource),
 				// set the sampling rate based on the parent span to 60%
-				// trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))), // prod
-				trace.WithSampler(trace.AlwaysSample()), // dev
+				trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.6))),
 			)
+			if conf.Debug {
+				traceProvider = trace.NewTracerProvider(
+					trace.WithSyncer(traceExporter),
+					trace.WithResource(resource),
+					trace.WithSampler(trace.AlwaysSample()),
+				)
+			}
 
 			container.TraceProvider = traceProvider
 			// otel.SetTracerProvider(traceProvider)
@@ -156,20 +161,11 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 	container.Settings = setting.NewPostgresSettings(container.PGx)
 
-	// todo which of the two loggers? Or update the debug one
-	//logger := alog.NewDevelopment()
-	container.Logger = alog.New(
-		alog.WithLevel(slog.LevelDebug),
-		alog.WithHandler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-			AddSource:   true,
-			Level:       nil, // this level is ignored, ArrowerLogger's level is used for all handlers.
-			ReplaceAttr: alog.MapLogLevelsToName,
-		})),
-		alog.WithHandler(alog.NewLokiHandler(nil)),
-		alog.WithHandler(alog.NewPostgresHandler(container.PGx, nil)),
-		alog.WithSettings(container.Settings),
-	)
-	// todo !conf.Debug: prod logger
+	container.Logger = alog.New()
+	if conf.Debug {
+		container.Logger = alog.NewDevelopment(container.PGx, container.Settings)
+	}
+	// slog.SetDefault(container.Logger.(*slog.Logger)) // todo test if this works even if the cast works
 
 	{ // echo router
 		// todo extract echo setup to main arrower repo, ones it is "ready" and can be abstracted for easier use
@@ -177,8 +173,8 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		router.HideBanner = true
 		router.Logger.SetOutput(io.Discard)
 		router.Validator = &CustomValidator{validator: validator.New()}
-		router.IPExtractor = echo.ExtractIPFromXFFHeader()                                                          // see: https://echo.labstack.com/docs/ip-address
-		router.Use(otelecho.Middleware("www.servername.tld", otelecho.WithTracerProvider(container.TraceProvider))) // todo set servername
+		router.IPExtractor = echo.ExtractIPFromXFFHeader() // see: https://echo.labstack.com/docs/ip-address
+		router.Use(otelecho.Middleware(conf.Web.Hostname, otelecho.WithTracerProvider(container.TraceProvider)))
 		router.Use(echoprometheus.NewMiddleware(conf.ApplicationName))
 		router.Use(middleware.Static("public")) // todo use fs instead
 
@@ -219,7 +215,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		}
 
 		arrowerQueue, err := jobs.NewPostgresJobs(container.Logger, container.MeterProvider, container.TraceProvider, container.PGx,
-			jobs.WithQueue("arrower"),
+			jobs.WithQueue("Arrower"),
 			jobs.WithPoolName(name),
 		)
 		if err != nil {
@@ -241,7 +237,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 func shutdown(di *Container) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		di.Logger.InfoContext(ctx, "shutdown...") // todo add app name
+		di.Logger.InfoContext(ctx, "shutdown...")
 
 		_ = di.WebRouter.Shutdown(ctx)
 		_ = di.DefaultQueue.Shutdown(ctx)
@@ -260,7 +256,7 @@ func serveMetrics(ctx context.Context, logger alog.Logger, port int) {
 
 	addr := fmt.Sprintf(":%d", port)
 
-	logger.DebugContext(ctx, "serving metrics", // todo move to into level
+	logger.InfoContext(ctx, "serving metrics",
 		slog.String("addr", addr),
 		slog.String("path", path),
 	)

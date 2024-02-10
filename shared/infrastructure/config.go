@@ -26,6 +26,7 @@ type (
 	Web struct {
 		Secret             []byte `mapstructure:"secret"`
 		Port               int    `mapstructure:"port"`
+		Hostname           string `mapstructure:"hostname"`
 		StatusEndpoint     bool   `mapstructure:"status_endpoint"`
 		StatusEndpointPort int    `mapstructure:"status_endpoint_port"`
 	}

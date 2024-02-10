@@ -26,7 +26,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	di, shutdown, err := infrastructure.InitialiseDefaultArrowerDependencies(ctx,
+	arrower, shutdown, err := infrastructure.InitialiseDefaultArrowerDependencies(ctx,
 		&infrastructure.Config{
 			OrganisationName: "arrower",
 			ApplicationName:  "skeleton",
@@ -43,6 +43,7 @@ func main() {
 			Web: infrastructure.Web{
 				Secret:             []byte("secret"),
 				Port:               8080,
+				Hostname:           "www.servername.tld",
 				StatusEndpoint:     true,
 				StatusEndpointPort: 2223,
 			},
@@ -51,18 +52,18 @@ func main() {
 		panic(err)
 	}
 
-	//err = di.Settings.Save(ctx, alog.SettingLogLevel, setting.NewValue(int(slog.LevelDebug)))
-	//alog.Unwrap(di.Logger).SetLevel(slog.LevelDebug)
-	//alog.Unwrap(di.Logger).SetLevel(alog.LevelDebug)
+	//err = arrower.Settings.Save(ctx, alog.SettingLogLevel, setting.NewValue(int(slog.LevelDebug)))
+	//alog.Unwrap(arrower.Logger).SetLevel(slog.LevelDebug)
+	//alog.Unwrap(arrower.Logger).SetLevel(alog.LevelDebug)
 
 	//
 	// load and initialise optional contexts provided by arrower
-	adminContext, _ := admin_init.NewAdminContext(di)
-	authContext, _ := auth_init.NewAuthContext(di)
+	adminContext, _ := admin_init.NewAdminContext(arrower)
+	authContext, _ := auth_init.NewAuthContext(arrower)
 
 	//
 	// example route for a simple one-file setup
-	di.WebRouter.GET("/", func(c echo.Context) error {
+	arrower.WebRouter.GET("/", func(c echo.Context) error {
 		sess, err := session.Get(auth.SessionName, c)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -80,7 +81,7 @@ func main() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		presenter := web.NewDefaultPresenter(di.Settings)
+		presenter := web.NewDefaultPresenter(arrower.Settings)
 		p, _ := presenter.MapDefaultBasePage(c.Request().Context(), "", map[string]interface{}{
 			"userID": userID,
 		})
@@ -96,8 +97,8 @@ func main() {
 
 	//
 	// start app
-	initRegularExampleQueueLoad(ctx, di)
-	di.WebRouter.Logger.Fatal(di.WebRouter.Start(fmt.Sprintf(":%d", di.Config.Web.Port)))
+	// initRegularExampleQueueLoad(ctx, arrower)
+	arrower.WebRouter.Logger.Fatal(arrower.WebRouter.Start(fmt.Sprintf(":%d", arrower.Config.Web.Port)))
 
 	//
 	// shutdown app
@@ -158,7 +159,7 @@ func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Contain
 	)
 
 	go func() {
-		ticker := time.NewTicker(2 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		for {
 			select {
 			case <-ticker.C:
@@ -169,7 +170,7 @@ func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Contain
 				}
 
 				if r%12 == 0 {
-					for i := 0; i < r; i++ {
+					for i := 0; i/2 < r; i++ {
 						// for i := range r { // fixme use new go1.22 style
 						_ = di.DefaultQueue.Enqueue(ctx, NamedJob{Name: gofakeit.Name()})
 					}

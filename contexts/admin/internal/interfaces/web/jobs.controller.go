@@ -193,7 +193,7 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
-		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{}) // fixme: don't call existing use case, create own or call domain model
 
 		var queues []string
 		for q, _ := range res.QueueStats {
