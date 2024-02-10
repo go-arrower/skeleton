@@ -51,7 +51,7 @@ type (
 	WorkerPool struct {
 		LastSeen time.Time
 		ID       string
-		Queue    string
+		Queue    string // todo change type
 		Workers  int
 		Version  string
 		JobTypes []string

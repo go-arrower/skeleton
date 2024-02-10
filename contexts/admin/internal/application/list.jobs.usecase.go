@@ -15,13 +15,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
-const defaultQueueName = "Default"
-
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) jobs.QueueStats {
-	if queue == "" {
-		queue = defaultQueueName // todo move to repo
-	}
-
 	var errorRate float64
 
 	if kpis.FailedJobs != 0 {

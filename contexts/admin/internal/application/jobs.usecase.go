@@ -18,7 +18,7 @@ import (
 var ErrVacuumFailed = errors.New("VACUUM failed")
 
 type JobsApplication interface {
-	Queues(_ context.Context) (jobs.QueueNames, error)
+	Queues(ctx context.Context) (jobs.QueueNames, error)
 	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	GetQueue(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error)
@@ -32,8 +32,8 @@ type JobsApplication interface {
 
 func NewJobsApplication(db *pgxpool.Pool) *JobsUsecase {
 	return &JobsUsecase{
-		db:      db,
-		queries: models.New(db),
+		db:      db,             // todo remove and use repo instead?
+		queries: models.New(db), // todo remove and use repo instead?
 
 		repo: repository.NewPostgresJobsRepository(db),
 	}
@@ -43,8 +43,10 @@ type JobsUsecase struct {
 	db      *pgxpool.Pool
 	queries *models.Queries
 
-	repo *repository.PostgresJobsRepository // todo use the interface instead of the implementation
+	repo jobs.Repository
 }
+
+var _ JobsApplication = (*JobsUsecase)(nil)
 
 // Queues returns a list of all known Queues.
 func (app *JobsUsecase) Queues(ctx context.Context) (jobs.QueueNames, error) {
@@ -91,13 +93,8 @@ type (
 
 // GetQueue returns a Queue.
 func (app *JobsUsecase) GetQueue(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
-	queue := in.QueueName
-	if queue == defaultQueueName { // todo move to repo
-		queue = ""
-	}
-
-	kpis, _ := app.repo.QueueKPIs(ctx, jobs.QueueName(queue))
-	jobs, _ := app.repo.PendingJobs(ctx, queue)
+	kpis, _ := app.repo.QueueKPIs(ctx, jobs.QueueName(in.QueueName))
+	jobs, _ := app.repo.PendingJobs(ctx, in.QueueName)
 
 	return GetQueueResponse{
 		Jobs: jobs,
@@ -114,12 +111,6 @@ type (
 
 func (app *JobsUsecase) GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
 	wp, _ := app.repo.WorkerPools(ctx)
-
-	for i, _ := range wp { // todo move to repo
-		if wp[i].Queue == "" {
-			wp[i].Queue = defaultQueueName
-		}
-	}
 
 	return GetWorkersResponse{Pool: wp}, nil
 }

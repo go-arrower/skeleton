@@ -46,7 +46,7 @@ func (repo *PostgresJobsRepository) Queues(ctx context.Context) (jobs.QueueNames
 	return queueNames, nil
 }
 
-func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) {
+func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) { // todo change signature to use queename type
 	if jobs.QueueName(queue) == jobs.DefaultQueueName {
 		queue = ""
 	}
@@ -226,6 +226,11 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 	workers := make([]jobs.WorkerPool, len(w))
 
 	for i, w := range w {
+		queue := w.Queue
+		if queue == "" {
+			queue = string(jobs.DefaultQueueName)
+		}
+
 		workers[i] = jobs.WorkerPool{
 			ID:       w.ID,
 			Queue:    w.Queue,
