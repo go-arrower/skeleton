@@ -29,7 +29,7 @@ const (
 	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
 
-func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter, app *application.JobsApplication) *JobsController {
+func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter, app application.JobsApplication) *JobsController {
 	return &JobsController{
 		logger: logger,
 		repo:   repo,
@@ -43,14 +43,13 @@ type JobsController struct {
 	repo   jobs.Repository
 	p      *web.DefaultPresenter
 
-	Cmds    application.JobsCommandContainer
 	Queries *models.Queries
-	app     *application.JobsApplication
+	app     application.JobsApplication
 }
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -69,7 +68,7 @@ func (jc *JobsController) PendingJobsPieChartData() func(echo.Context) error {
 	}
 
 	return func(c echo.Context) error {
-		res, err := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -136,7 +135,7 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.Param("queue")
 
-		res, err := jc.Cmds.GetQueue(c.Request().Context(), application.GetQueueRequest{
+		res, err := jc.app.GetQueue(c.Request().Context(), application.GetQueueRequest{
 			QueueName: queue,
 		})
 		if err != nil {
@@ -155,7 +154,7 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 
 func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := jc.Cmds.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
+		res, err := jc.app.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -171,7 +170,7 @@ func (jc *JobsController) DeleteJob() func(c echo.Context) error {
 		q := c.Param("queue")
 		jobID := c.Param("job_id")
 
-		_ = jc.Cmds.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+		_ = jc.app.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
 
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
@@ -182,7 +181,7 @@ func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 		q := c.Param("queue")
 		jobID := c.Param("job_id")
 
-		_ = jc.Cmds.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
+		_ = jc.app.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
 
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}
@@ -192,7 +191,7 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		size, _ := jc.Queries.JobTableSize(c.Request().Context())
 
-		res, _ := jc.Cmds.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{}) // fixme: don't call existing use case, create own or call domain model
+		res, _ := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{}) // fixme: don't call existing use case, create own or call domain model
 
 		var queues []string
 		for q, _ := range res.QueueStats {
@@ -411,7 +410,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 
 		runAt, _ := time.Parse(htmlDatetimeLayout, t)
 
-		err = jc.Cmds.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
+		err = jc.app.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
 			Queue:    jq,
 			JobType:  jt,
 			Priority: int16(priority),

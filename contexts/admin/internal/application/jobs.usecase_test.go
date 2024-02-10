@@ -15,7 +15,10 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )
 
-var pgHandler *tests.PostgresDocker
+var (
+	ctx       = context.Background()
+	pgHandler *tests.PostgresDocker
+)
 
 func TestMain(m *testing.M) {
 	pgHandler = tests.GetPostgresDockerForIntegrationTestingInstance()

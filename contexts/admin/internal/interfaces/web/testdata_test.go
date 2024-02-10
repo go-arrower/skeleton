@@ -1,13 +1,10 @@
 package web_test
 
 import (
-	"errors"
 	"io"
 
 	"github.com/labstack/echo/v4"
 )
-
-var errUCFailed = errors.New("use case error")
 
 type emptyRenderer struct{}
 

@@ -1,10 +1,8 @@
 package application
 
 import (
-	"context"
 	crand "crypto/rand"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
@@ -19,96 +17,9 @@ import (
 
 const defaultQueueName = "Default"
 
-type JobsCommandContainer struct {
-	ListAllQueues func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error)
-	GetQueue      func(context.Context, GetQueueRequest) (GetQueueResponse, error)
-	GetWorkers    func(context.Context, GetWorkersRequest) (GetWorkersResponse, error)
-	ScheduleJobs  func(context.Context, ScheduleJobsRequest) error
-	DeleteJob     func(context.Context, DeleteJobRequest) error
-	RescheduleJob func(context.Context, RescheduleJobRequest) error
-}
-
-type (
-	ListAllQueuesRequest  struct{}
-	ListAllQueuesResponse struct {
-		QueueStats map[jobs.QueueName]jobs.QueueStats
-	}
-)
-
-// ListAllQueues returns all Queues.
-func ListAllQueues(repo jobs.Repository) func(context.Context, ListAllQueuesRequest) (ListAllQueuesResponse, error) {
-	return func(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
-		queues, err := repo.Queues(ctx)
-		if err != nil {
-			return ListAllQueuesResponse{}, fmt.Errorf("could not get queues: %w", err)
-		}
-
-		qWithStats := make(map[jobs.QueueName]jobs.QueueStats)
-		for _, q := range queues {
-			s, err := repo.QueueKPIs(ctx, q)
-			if err != nil {
-				return ListAllQueuesResponse{}, fmt.Errorf("could not get kpis for queue: %s: %w", q, err)
-			}
-
-			qWithStats[q] = queueKpiToStats(string(q), s)
-		}
-
-		return ListAllQueuesResponse{QueueStats: qWithStats}, nil
-	}
-}
-
-type (
-	GetQueueRequest struct {
-		QueueName string // todo type QueueName?
-	}
-	GetQueueResponse struct {
-		Jobs []jobs.PendingJob
-		Kpis jobs.QueueKPIs
-	}
-)
-
-// GetQueue returns a Queue.
-func GetQueue(repo jobs.Repository) func(context.Context, GetQueueRequest) (GetQueueResponse, error) {
-	return func(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
-		queue := in.QueueName
-		if queue == defaultQueueName {
-			queue = ""
-		}
-
-		kpis, _ := repo.QueueKPIs(ctx, jobs.QueueName(queue))
-		jobs, _ := repo.PendingJobs(ctx, queue)
-
-		return GetQueueResponse{
-			Jobs: jobs,
-			Kpis: kpis,
-		}, nil
-	}
-}
-
-type (
-	GetWorkersRequest  struct{}
-	GetWorkersResponse struct {
-		Pool []jobs.WorkerPool
-	}
-)
-
-func GetWorkers(repo jobs.Repository) func(context.Context, GetWorkersRequest) (GetWorkersResponse, error) {
-	return func(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
-		wp, _ := repo.WorkerPools(ctx)
-
-		for i, _ := range wp { // todo move to repo
-			if wp[i].Queue == "" {
-				wp[i].Queue = defaultQueueName
-			}
-		}
-
-		return GetWorkersResponse{Pool: wp}, nil
-	}
-}
-
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) jobs.QueueStats {
 	if queue == "" {
-		queue = defaultQueueName
+		queue = defaultQueueName // todo move to repo
 	}
 
 	var errorRate float64
@@ -132,34 +43,6 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) jobs.QueueStats {
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob,
 		EstimateUntilEmpty:   duration,
-	}
-}
-
-type (
-	ScheduleJobsRequest struct {
-		Queue    string
-		JobType  string
-		Priority int16
-		Payload  string
-		Count    int
-		RunAt    time.Time
-	}
-	ScheduleJobsResponse struct{}
-)
-
-func ScheduleJobs(queries *models.Queries) func(context.Context, ScheduleJobsRequest) error {
-	return func(ctx context.Context, in ScheduleJobsRequest) error {
-		carrier := propagation.MapCarrier{}
-		propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
-
-		propagator.Inject(ctx, carrier)
-
-		_, err := queries.ScheduleJobs(ctx, buildJobs(in, carrier))
-		if err != nil {
-			return fmt.Errorf("%w", err)
-		}
-
-		return nil
 	}
 }
 
@@ -197,32 +80,4 @@ func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.
 	}
 
 	return jobs
-}
-
-type (
-	DeleteJobRequest struct {
-		JobID string
-	}
-)
-
-func DeleteJob(repo jobs.Repository) func(context.Context, DeleteJobRequest) error {
-	return func(ctx context.Context, in DeleteJobRequest) error {
-		err := repo.Delete(ctx, in.JobID)
-
-		return fmt.Errorf("%w", err)
-	}
-}
-
-type (
-	RescheduleJobRequest struct {
-		JobID string
-	}
-)
-
-func RescheduleJob(repo jobs.Repository) func(context.Context, RescheduleJobRequest) error {
-	return func(ctx context.Context, in RescheduleJobRequest) error {
-		err := repo.RunJobAt(ctx, in.JobID, time.Now())
-
-		return fmt.Errorf("%w", err)
-	}
 }
