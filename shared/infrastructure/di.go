@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4/middleware"
 
@@ -144,7 +146,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	{ // postgres
 		pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 			User:       conf.Postgres.User,
-			Password:   conf.Postgres.Password,
+			Password:   string(conf.Postgres.Password),
 			Database:   conf.Postgres.Database,
 			Host:       conf.Postgres.Host,
 			Port:       conf.Postgres.Port,
@@ -229,7 +231,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	//
 	// Start the prometheus HTTP server and pass the exporter Collector to it
 	if conf.Web.StatusEndpoint {
-		go serveMetrics(ctx, container.Logger, conf.Web.StatusEndpointPort)
+		go serveMetrics(ctx, container)
 	}
 
 	return container, shutdown(container), nil
@@ -251,27 +253,43 @@ func shutdown(di *Container) func(ctx context.Context) error {
 	}
 }
 
-func serveMetrics(ctx context.Context, logger alog.Logger, port int) {
-	const path = "/metrics"
+func serveMetrics(ctx context.Context, di *Container) {
+	const (
+		metricPath = "/metrics"
+		statusPath = "/status"
+	)
 
-	addr := fmt.Sprintf(":%d", port)
+	serverStartedAt := time.Now()
 
-	logger.InfoContext(ctx, "serving metrics",
+	addr := fmt.Sprintf(":%d", di.Config.Web.StatusEndpointPort)
+
+	di.Logger.InfoContext(ctx, "serving status endpoint",
 		slog.String("addr", addr),
-		slog.String("path", path),
+		slog.String("metric_path", metricPath),
+		slog.String("status_path", statusPath),
 	)
 
 	// http.Handle("/metrics", promhttp.Handler())
-	http.Handle(path, promhttp.HandlerFor(
+	http.Handle(metricPath, promhttp.HandlerFor(
 		prometheus2.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true, // to enable Examplars in the export format
 		},
 	))
 
+	http.HandleFunc(statusPath, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK) // todo in case of error: 500 code
+		// TODO disable cache
+
+		statusData := getSystemStatus(di, serverStartedAt)
+
+		_ = json.NewEncoder(w).Encode(statusData)
+	})
+
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
-		logger.DebugContext(ctx, "error serving http", slog.String("err", err.Error()))
+		di.Logger.DebugContext(ctx, "error serving http", slog.String("err", err.Error()))
 
 		return
 	}
