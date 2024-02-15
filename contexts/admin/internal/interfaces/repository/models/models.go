@@ -21,6 +21,22 @@ type ArrowerGueJob struct {
 	UpdatedAt  pgtype.Timestamptz
 }
 
+type ArrowerGueJobsHistory struct {
+	JobID      string
+	Priority   int16
+	RunAt      pgtype.Timestamptz
+	JobType    string
+	Args       []byte
+	Queue      string
+	RunCount   int32
+	RunError   string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	Success    bool
+	FinishedAt pgtype.Timestamptz
+	PrunedAt   pgtype.Timestamptz
+}
+
 type ArrowerGueJobsWorkerPool struct {
 	ID        string
 	Queue     string

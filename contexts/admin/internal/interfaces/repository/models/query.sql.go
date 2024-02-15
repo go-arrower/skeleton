@@ -22,6 +22,48 @@ func (q *Queries) DeleteJob(ctx context.Context, jobID string) error {
 	return err
 }
 
+const getFinishedJobs = `-- name: GetFinishedJobs :many
+SELECT DISTINCT job_id, priority, run_at, job_type, args, queue, run_count, run_error, created_at, updated_at, success, finished_at, pruned_at
+FROM arrower.gue_jobs_history
+WHERE finished_at IS NOT NULL
+ORDER BY finished_at DESC
+LIMIT 100
+`
+
+func (q *Queries) GetFinishedJobs(ctx context.Context) ([]ArrowerGueJobsHistory, error) {
+	rows, err := q.db.Query(ctx, getFinishedJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ArrowerGueJobsHistory
+	for rows.Next() {
+		var i ArrowerGueJobsHistory
+		if err := rows.Scan(
+			&i.JobID,
+			&i.Priority,
+			&i.RunAt,
+			&i.JobType,
+			&i.Args,
+			&i.Queue,
+			&i.RunCount,
+			&i.RunError,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Success,
+			&i.FinishedAt,
+			&i.PrunedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPendingJobs = `-- name: GetPendingJobs :many
 SELECT job_id, priority, run_at, job_type, args, error_count, last_error, queue, created_at, updated_at
 FROM arrower.gue_jobs

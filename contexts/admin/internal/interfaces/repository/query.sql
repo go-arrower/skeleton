@@ -69,6 +69,13 @@ WHERE queue = $1
 ORDER BY priority, run_at ASC
 LIMIT 100;
 
+-- name: GetFinishedJobs :many
+SELECT DISTINCT *
+FROM arrower.gue_jobs_history
+WHERE finished_at IS NOT NULL
+ORDER BY finished_at DESC
+LIMIT 100;
+
 -- name: DeleteJob :exec
 DELETE
 FROM arrower.gue_jobs

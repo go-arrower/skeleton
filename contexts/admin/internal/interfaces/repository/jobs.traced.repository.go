@@ -83,3 +83,13 @@ func (repo *TracedJobsRepository) WorkerPools(ctx context.Context) ([]jobs.Worke
 
 	return repo.repo.WorkerPools(ctx) //nolint:wrapcheck // this is decorator
 }
+
+func (repo *TracedJobsRepository) FinishedJobs(ctx context.Context) ([]jobs.PendingJob, error) {
+	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("arrower.jobs").
+		Start(ctx, "repo", trace.WithAttributes(
+			attribute.String("method", "FinishedJobs"),
+		))
+	defer span.End()
+
+	return repo.repo.FinishedJobs(ctx) //nolint:wrapcheck // this is decorator
+}

@@ -49,7 +49,7 @@ func registerAdminRoutes(di *AdminContext) {
 		jobs.GET("/", di.jobsController.ListQueues())
 		jobs.GET("/data/pending", di.jobsController.PendingJobsPieChartData())                // todo better htmx fruednly data URL
 		jobs.GET("/data/processed/:interval", di.jobsController.ProcessedJobsLineChartData()) // todo better htmx fruednly data URL
-		jobs.GET("/:queue", di.jobsController.ShowQueue())
+		jobs.GET("/:queue", di.jobsController.ShowQueue()).Name = "admin.jobs.queue"
 		jobs.GET("/:queue/delete/:job_id", di.jobsController.DeleteJob())
 		jobs.GET("/:queue/reschedule/:job_id", di.jobsController.RescheduleJob())
 		jobs.GET("/schedule", di.jobsController.CreateJobs()).Name = "admin.jobs.schedule"
@@ -63,5 +63,6 @@ func registerAdminRoutes(di *AdminContext) {
 		jobs.POST("/history/prune", di.jobsController.PruneHistory())
 		jobs.GET("/history/size/", di.jobsController.EstimateHistorySize())
 		jobs.GET("/history/payload/size/", di.jobsController.EstimateHistoryPayloadSize())
+		jobs.GET("/finished", di.jobsController.FinishedJobs()).Name = "admin.jobs.finished"
 	}
 }

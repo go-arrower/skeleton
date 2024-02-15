@@ -243,3 +243,42 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 
 	return workers
 }
+
+func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context) ([]jobs.PendingJob, error) {
+	jobs, err := repo.Conn().GetFinishedJobs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get finished jobs: %v", err)
+	}
+
+	return historyJobsToDomain(jobs), nil
+}
+
+func historyJobsToDomain(j []models.ArrowerGueJobsHistory) []jobs.PendingJob {
+	jobs := make([]jobs.PendingJob, len(j))
+
+	for i := 0; i < len(j); i++ {
+		jobs[i] = historyJobToDomain(j[i])
+	}
+
+	return jobs
+}
+
+func historyJobToDomain(job models.ArrowerGueJobsHistory) jobs.PendingJob {
+	queue := job.Queue
+	if queue == "" {
+		queue = string(jobs.DefaultQueueName)
+	}
+
+	return jobs.PendingJob{
+		ID:         job.JobID,
+		Priority:   job.Priority,
+		RunAt:      job.RunAt.Time,
+		Type:       job.JobType,
+		Payload:    string(job.Args),
+		ErrorCount: job.RunCount,
+		LastError:  job.RunError,
+		Queue:      queue,
+		CreatedAt:  job.CreatedAt.Time,
+		UpdatedAt:  job.UpdatedAt.Time,
+	}
+}

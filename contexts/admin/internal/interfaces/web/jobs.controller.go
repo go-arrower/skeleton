@@ -144,7 +144,7 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
-		return c.Render(http.StatusOK, "=>jobs.queue", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
+		return c.Render(http.StatusOK, "jobs.queue", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
 			"QueueName": page.QueueName,
 			"Jobs":      page.Jobs,
 			"Stats":     page.Stats,
@@ -517,8 +517,6 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 		var m application.JobPayload
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
-		data, _ := json.MarshalIndent(m.JobData, "", "  ") //nolint:errchkjson // trust the type checks to work for simplicity
-		jobs[i].Payload = string(data)
 		jobs[i].Payload = m.JobData
 		jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
 	}
@@ -559,5 +557,41 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 		PendingJobsErrorRate: errorRate,
 		AverageTimePerJob:    kpis.AverageTimePerJob.Truncate(time.Second),
 		EstimateUntilEmpty:   duration.Truncate(time.Second),
+	}
+}
+
+func (jc *JobsController) FinishedJobs() func(echo.Context) error {
+	type finishedJob struct {
+		EnqueuedAtFmt string
+		FinishedAtFmt string
+		ID            string
+		Type          string
+		Queue         string
+		Payload       string
+	}
+
+	return func(c echo.Context) error {
+		jobs, err := jc.repo.FinishedJobs(c.Request().Context())
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		fjobs := make([]finishedJob, len(jobs))
+		for i := 0; i < len(jobs); i++ {
+			var m application.JobPayload
+			_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
+
+			fjobs[i].Payload = m.JobData
+
+			fjobs[i].EnqueuedAtFmt = notSeenSinceTimeString(jobs[i].CreatedAt, time.Minute)
+			fjobs[i].FinishedAtFmt = notSeenSinceTimeString(jobs[i].UpdatedAt, time.Minute) // todo use finished at
+			fjobs[i].ID = jobs[i].ID
+			fjobs[i].Type = jobs[i].Type
+			fjobs[i].Queue = jobs[i].Queue
+		}
+
+		return c.Render(http.StatusOK, "jobs.finished", echo.Map{
+			"Jobs": fjobs,
+		})
 	}
 }
