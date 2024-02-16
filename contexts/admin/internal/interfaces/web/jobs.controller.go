@@ -606,3 +606,16 @@ func (jc *JobsController) FinishedJobsTotal() func(ctx echo.Context) error {
 		return c.String(http.StatusOK, strconv.FormatInt(total, 10))
 	}
 }
+
+func (jc *JobsController) ShowJob() func(ctx echo.Context) error {
+	return func(c echo.Context) error {
+		jobs, err := jc.Queries.GetJobHistory(c.Request().Context(), c.Param("job_id"))
+		if err != nil {
+			return fmt.Errorf("%v", err)
+		}
+
+		return c.Render(http.StatusOK, "jobs.job", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Job", echo.Map{
+			"Jobs": jobs,
+		}))
+	}
+}

@@ -1,0 +1,115 @@
+{{ define "admin.title" }}
+<div class="flex items-center">
+    {{ if gt (len .Jobs) 0 }}
+        {{ with (index .Jobs 0)}}
+            Job: {{ .JobType }}
+            {{ if .Success }}
+                <span class="ml-5 badge badge-primary">finished</span>
+            {{ else }}
+                <span class="ml-5 badge badge-info text-info-content">pending</span>
+            {{ end }}
+        {{end}}
+    {{ end }}
+</div>
+{{ end }}
+
+
+{{ if gt (len .Jobs) 0 }}
+{{ with index .Jobs 0 }}
+    <div class="space-y-1">
+        <div class="flex space-x-2">
+            <div class="w-32 font-bold">Job ID</div>
+            <div class="indicator">
+                <span class="indicator-item badge badge-info text-info-content hidden">copied</span>
+                <div onclick="
+                        let that = this;
+                        navigator.clipboard.writeText(this.innerHTML).then(function() {
+                            that.previousElementSibling.classList.toggle('hidden');
+                            setTimeout(function() {
+                                that.previousElementSibling.classList.toggle('hidden');
+                            }, 1000); // time in milliseconds
+                        }, function(err) {
+                            console.error('Could not copy job id to clipboard: ', err);
+                        });
+                     "
+                >{{ .JobID }}</div>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <div class="w-32 font-bold">Queue</div>
+            <div>
+                {{ if eq .Queue "" }}
+                    <a href="{{ reverse "admin.jobs.queue" "Default" }}">Default</a>
+                {{else}}
+                    <a href="{{ reverse "admin.jobs.queue" .Queue }}">{{ .Queue }}</a>
+                {{end}}
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <div class="w-32 font-bold">Enqueued</div>
+            <div>{{ ago .CreatedAt.Time }} ago</div>
+        </div>
+        <div class="flex space-x-2">
+            <div class="w-32 font-bold">Priority</div>
+            <div>{{ .Priority }}</div>
+        </div>
+        <div class="flex space-x-2">
+            <div class="w-32 font-bold">Finished</div>
+            <div>{{ ago .FinishedAt.Time }} ago</div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ toString .Args }}</pre>
+    </div>
+{{ end }}
+{{ end }}
+
+{{ if gt (len .Jobs) 1 }}
+    <ul class="mt-8 w-48 timeline timeline-vertical">
+        {{ if not ((index .Jobs 0).Success) }} {{/* if job is not finished yet: add indicator to continue */}}
+        <li>
+            <div class="timeline-end timeline-box invisible"></div>
+            <hr class="bg-error"/>
+        </li>
+        {{ end }}
+        {{ range $i, $DOT := .Jobs }}
+            {{ if .Success }}
+                <li>
+                    <div class="timeline-start">{{ .CreatedAt.Time | date "2006.01.02 03:04" }}</div>
+                    <div class="timeline-middle text-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="min-w-64 timeline-end timeline-box invisible"></div>
+                    <hr class="bg-success"/>
+                </li>
+            {{ else }}
+                <li class="group">
+                    <hr class="bg-error"/>
+                    <div class="timeline-start">{{ .CreatedAt.Time | date "2006.01.02 03:04" }}</div>
+                    <div class="timeline-middle text-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="min-w-64 timeline-end timeline-box group-hover:bg-error group-hover:text-error-content indicator">
+                        <span class="indicator-item badge badge-info text-info-content hidden">copied</span>
+                        <div title="{{ .RunCount }}"
+                             onclick="
+                                let that = this;
+                                navigator.clipboard.writeText(this.innerHTML).then(function() {
+                                    that.previousElementSibling.classList.toggle('hidden');
+                                    setTimeout(function() {
+                                        that.previousElementSibling.classList.toggle('hidden');
+                                    }, 1000); // time in milliseconds
+                                }, function(err) {
+                                    console.error('Could not copy error to clipboard: ', err);
+                                });
+                             "
+                        >{{ .RunError }}</div>
+                    </div>
+                    {{ if ne $i (sub (len $.Jobs) 1) }}
+                        <hr class="bg-error"/>
+                    {{ end }}
+                </li>
+            {{ end }}
+        {{ end }}
+    </ul>
+{{ end }}

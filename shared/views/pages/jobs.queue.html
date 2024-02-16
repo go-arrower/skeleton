@@ -54,7 +54,9 @@
     <tbody id="jobs">
     {{ range .Jobs }}
         <tr hx-disinherit="*">
-            <td class="{{ if ge .ErrorCount 16 }}bg-warning text-warning-content{{ end }}">{{ .ID }}</td>
+            <td class="{{ if ge .ErrorCount 16 }}bg-warning text-warning-content{{ end }}">
+                <a href="{{ reverse "admin.jobs.job" .ID }}">{{ .ID }}</a>
+            </td>
             <td class="{{ if ge .ErrorCount 16 }}bg-warning text-warning-content{{ end }}">{{ .Type }}</td>
             <td class="{{ if ge .ErrorCount 16 }}bg-warning text-warning-content{{ end }}">{{ .Priority }}</td>
             <td class="{{ if ge .ErrorCount 16 }}bg-warning text-warning-content {{ end }}break-all">

@@ -137,3 +137,9 @@ ON CONFLICT (id, queue) DO UPDATE SET updated_at = STATEMENT_TIMESTAMP(),
 -- name: TotalFinishedJobs :one
 SELECT COUNT(DISTINCT (job_id))
 FROM arrower.gue_jobs_history;
+
+-- name: GetJobHistory :many
+SELECT *
+FROM arrower.gue_jobs_history
+WHERE job_id = $1
+ORDER BY created_at DESC;

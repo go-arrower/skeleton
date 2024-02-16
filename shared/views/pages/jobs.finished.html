@@ -24,7 +24,7 @@
                 <td>
                     <div>
                         <span class="text-lg text-primary">
-                            <a href="#">{{ .Type }}</a>
+                            <a href="{{ reverse "admin.jobs.job" .ID }}">{{ .Type }}</a>
                         </span><br>
                         <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ .Payload }}</pre>
                         <span class="text-xs">Enqueued {{ .EnqueuedAtFmt }}</span>
