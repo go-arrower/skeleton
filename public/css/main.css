@@ -3266,6 +3266,11 @@ html {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
 
+.bg-warning-content {
+  --tw-bg-opacity: 1;
+  background-color: var(--fallback-wac,oklch(var(--wac)/var(--tw-bg-opacity)));
+}
+
 .fill-current {
   fill: currentColor;
 }

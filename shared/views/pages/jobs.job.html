@@ -47,7 +47,10 @@
         </div>
         <div class="flex space-x-2">
             <div class="w-32 font-bold">Enqueued</div>
-            <div>{{ ago .CreatedAt.Time }} ago</div>
+            <div>
+                {{ $firstTry := index $.Jobs (sub (len $.Jobs) 1 )}}
+                {{ ago $firstTry.CreatedAt.Time }} ago
+            </div>
         </div>
         <div class="flex space-x-2">
             <div class="w-32 font-bold">Priority</div>
@@ -56,19 +59,29 @@
         <div class="flex space-x-2">
             <div class="w-32 font-bold">Finished</div>
             <div>
-                {{ if (index $.Jobs (sub (len $.Jobs) 1)).Success }}
+                {{ if (index $.Jobs 0).Success }}
                     {{ ago .FinishedAt.Time }} ago
                 {{ end }}
             </div>
         </div>
     </div>
     <div class="mt-4">
-        <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ toString .Args }}</pre>
+        {{ if not .PrunedAt.Valid }}
+            <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ toString .Args }}</pre>
+        {{ else}}
+            <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">Job data pruned {{ ago .PrunedAt.Time }} ago</pre>
+        {{ end }}
     </div>
 {{ end }}
 {{ end }}
 
-{{ if gt (len .Jobs) 1 }}
+{{ $hasFailed := gt (len .Jobs) 1 }}
+{{ $lastJobFailed := false }}
+{{ if gt (len .Jobs) 0 }}
+    {{ $lastJobFailed = not ((index .Jobs 0).Success) }}
+{{ end }}
+
+{{ if or $hasFailed $lastJobFailed }}
     <ul class="mt-8 w-48 timeline timeline-vertical">
         {{ if not ((index .Jobs 0).Success) }} {{/* if job is not finished yet: add indicator to continue */}}
         <li>
