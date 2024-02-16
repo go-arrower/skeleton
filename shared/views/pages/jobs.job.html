@@ -55,7 +55,11 @@
         </div>
         <div class="flex space-x-2">
             <div class="w-32 font-bold">Finished</div>
-            <div>{{ ago .FinishedAt.Time }} ago</div>
+            <div>
+                {{ if (index $.Jobs (sub (len $.Jobs) 1)).Success }}
+                    {{ ago .FinishedAt.Time }} ago
+                {{ end }}
+            </div>
         </div>
     </div>
     <div class="mt-4">
