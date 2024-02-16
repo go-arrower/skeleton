@@ -23,7 +23,7 @@
             <tr data-js-worker-jobTypes data-worker="{{ .ID }}{{ .Queue }}">
                 <td>{{ .ID }}</td> <!--rowspan="2"-->
                 <td>
-                    <a href="/admin/jobs/{{ .Queue }}">{{ .Queue }}</a>
+                    <a class="text-secondary" href="/admin/jobs/{{ .Queue }}">{{ .Queue }}</a>
                 </td>
                 <td>{{ .Workers }}</td>
                 <td class="{{ if .LastSeenAtColourSuccess }}text-success{{ else }}text-warning{{ end }}">{{ .NotSeenSince }}</td>

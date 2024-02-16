@@ -39,9 +39,9 @@
             <div class="w-32 font-bold">Queue</div>
             <div>
                 {{ if eq .Queue "" }}
-                    <a href="{{ reverse "admin.jobs.queue" "Default" }}">Default</a>
+                    <a class="text-secondary" href="{{ reverse "admin.jobs.queue" "Default" }}">Default</a>
                 {{else}}
-                    <a href="{{ reverse "admin.jobs.queue" .Queue }}">{{ .Queue }}</a>
+                    <a class="text-secondary" href="{{ reverse "admin.jobs.queue" .Queue }}">{{ .Queue }}</a>
                 {{end}}
             </div>
         </div>

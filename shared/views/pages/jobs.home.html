@@ -45,7 +45,7 @@
         {{ range .Queues }}
             <tr>
                 <td>
-                    <a href="/admin/jobs/{{ .QueueName }}">{{ .QueueName }}</a>
+                    <a class="text-secondary" href="/admin/jobs/{{ .QueueName }}">{{ .QueueName }}</a>
                 </td>
                 <td>
                     {{ if and (eq 0 .PendingJobs) (ne 0 .AvailableWorkers) }}
