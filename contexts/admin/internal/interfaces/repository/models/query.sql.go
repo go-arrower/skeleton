@@ -457,6 +457,18 @@ func (q *Queries) StatsQueueWorkerPoolSize(ctx context.Context, queue string) (i
 	return column_1, err
 }
 
+const totalFinishedJobs = `-- name: TotalFinishedJobs :one
+SELECT COUNT(DISTINCT (job_id))
+FROM arrower.gue_jobs_history
+`
+
+func (q *Queries) TotalFinishedJobs(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalFinishedJobs)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateRunAt = `-- name: UpdateRunAt :exec
 UPDATE arrower.gue_jobs
 SET run_at = $1

@@ -1,4 +1,12 @@
-{{ define "admin.title" }}Finished Jobs{{ end }}
+{{ define "admin.title" }}
+<div class="indicator">
+    <span class="indicator-item badge badge-accent text-accent-content"
+          hx-get="{{ reverse "admin.jobs.finished_total" }}"
+          hx-trigger="load, every 10s"
+    ></span>
+    Finished Jobs
+</div>
+{{ end }}
 
 
 <div class="overflow-x-auto">

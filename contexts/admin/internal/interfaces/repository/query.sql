@@ -133,3 +133,7 @@ INSERT INTO arrower.gue_jobs_worker_pool (id, queue, workers, created_at, update
 VALUES ($1, $2, $3, STATEMENT_TIMESTAMP(), $4)
 ON CONFLICT (id, queue) DO UPDATE SET updated_at = STATEMENT_TIMESTAMP(),
                                       workers    = $3;
+
+-- name: TotalFinishedJobs :one
+SELECT COUNT(DISTINCT (job_id))
+FROM arrower.gue_jobs_history;

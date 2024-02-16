@@ -64,5 +64,6 @@ func registerAdminRoutes(di *AdminContext) {
 		jobs.GET("/history/size/", di.jobsController.EstimateHistorySize())
 		jobs.GET("/history/payload/size/", di.jobsController.EstimateHistoryPayloadSize())
 		jobs.GET("/finished", di.jobsController.FinishedJobs()).Name = "admin.jobs.finished"
+		jobs.GET("/finished/total", di.jobsController.FinishedJobsTotal()).Name = "admin.jobs.finished_total"
 	}
 }

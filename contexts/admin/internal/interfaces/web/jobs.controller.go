@@ -595,3 +595,14 @@ func (jc *JobsController) FinishedJobs() func(echo.Context) error {
 		})
 	}
 }
+
+func (jc *JobsController) FinishedJobsTotal() func(ctx echo.Context) error {
+	return func(c echo.Context) error {
+		total, err := jc.Queries.TotalFinishedJobs(c.Request().Context())
+		if err != nil {
+			return fmt.Errorf("%v", err)
+		}
+
+		return c.String(http.StatusOK, strconv.FormatInt(total, 10))
+	}
+}
