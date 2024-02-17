@@ -614,6 +614,9 @@ func (jc *JobsController) ShowJob() func(ctx echo.Context) error {
 			return fmt.Errorf("%v", err)
 		}
 
+		//return c.Render(http.StatusOK, "empty=>jobs.job", pages2.Job{Jobs:jobs})
+		//return c.Render(http.StatusOK, "empty=>jobs.job", pages2.NewJob(jobs))
+
 		return c.Render(http.StatusOK, "jobs.job", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Job", echo.Map{
 			"Jobs": jobs,
 		}))
