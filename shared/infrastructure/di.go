@@ -57,6 +57,7 @@ type Container struct {
 	PGx    *pgxpool.Pool
 	db     *postgres.Handler
 
+	WebRenderer *template.Renderer
 	WebRouter   *echo.Echo
 	APIRouter   *echo.Group
 	AdminRouter *echo.Group
@@ -187,8 +188,9 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			hotReload = true
 		}
 
-		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload)
+		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload) // todo disable hotreload in prod
 		router.Renderer = r
+		container.WebRenderer = r
 
 		// router.Use(session.Middleware())
 		ss, _ := auth.NewPGSessionStore(container.PGx, conf.Web.Secret)

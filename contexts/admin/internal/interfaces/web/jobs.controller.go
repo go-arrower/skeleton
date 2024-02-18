@@ -17,8 +17,8 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/views/pages"
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
-	"github.com/go-arrower/skeleton/shared/views/pages"
 )
 
 const (

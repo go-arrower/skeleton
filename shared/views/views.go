@@ -4,5 +4,5 @@ import (
 	"embed"
 )
 
-//go:embed *.html components/*.html pages/*.html
+//go:embed **/*.html
 var SharedViews embed.FS

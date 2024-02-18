@@ -29,7 +29,10 @@ var (
 	ErrTemplateNotExists  = fmt.Errorf("%w: template does not exist", ErrRenderFailed)
 )
 
-const separator = "=>"
+const (
+	templateSeparator = "=>"
+	fragmentSeparator = "#"
+)
 
 type Renderer struct {
 	logger alog.Logger
@@ -38,6 +41,8 @@ type Renderer struct {
 	viewFS     fs.FS
 	rawLayouts map[string]string
 	rawPages   map[string]string
+
+	contextViewFS map[string]fs.FS
 
 	templates     map[string]*template.Template
 	components    *template.Template
@@ -78,6 +83,7 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 		viewFS:            viewFS,
 		rawLayouts:        rawLayouts,
 		rawPages:          rawPages,
+		contextViewFS:     map[string]fs.FS{},
 		isContextRenderer: false,
 		components:        componentTemplates,
 		defaultLayout:     defaultLayout,
@@ -250,14 +256,13 @@ func readFile(sfs fs.FS, name string) (string, error) {
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	ctx := c.Request().Context()
-
 	span := trace.SpanFromContext(ctx)
 
 	_, innerSpan := span.TracerProvider().Tracer("arrower.renderer").Start(ctx, "render")
 	defer innerSpan.End()
 
-	//_, span := r.tracer.Start(ctx, "render")
-	//defer span.End()
+	isContextView, isAdmin, contextName := r.isRegisteredContext(c)
+	fmt.Println("is context view:", isContextView, "isAdmin", isAdmin, ":>", contextName)
 
 	origName := name
 	layout, page := parseLayoutAndPage(strings.Split(name, "#")[0])
@@ -279,6 +284,8 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		"render template",
 		slog.String("called_template", name),
 		slog.String("actual_template", cleanedName),
+		slog.Bool("is_context_view", isContextView),
+		slog.String("context_view", contextName),
 	)
 
 	r.mu.Lock()
@@ -329,9 +336,13 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 		if _, ok := r.rawPages[page]; !ok {
 			newTemplate = r.components.Lookup(page)
-			if newTemplate == nil {
+			if newTemplate == nil && !isContextView { // TODO
 				return fmt.Errorf("%w", ErrTemplateNotExists)
 			}
+		}
+
+		if isContextView { // TODO
+			goto outside
 		}
 
 		_, err = newTemplate.New("content").Parse(r.rawPages[page])
@@ -355,6 +366,53 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			slog.String("page", page),
 			slog.Any("templates", templateNames(templ)),
 		)
+	}
+
+outside:
+	if isContextView {
+		fmt.Println("load context templates (force reload, as of debugging)")
+
+		componentTemplates, pageTemplates, rawPages, rawLayouts, err := prepareRenderer(ctx, r.logger, r.contextViewFS[contextName])
+		_ = componentTemplates
+		_ = pageTemplates
+		_ = rawPages
+		_ = rawLayouts
+		_ = err
+		//fmt.Println(componentTemplates, pageTemplates, rawPages, rawLayouts)
+
+		if layout == "" {
+			layout = "default" // todo
+		}
+		cleanedName = layout + "=>default=>" + page
+		fmt.Println(cleanedName)
+
+		newTemplate, _ := r.components.Clone()
+
+		// global layout
+		_, err = newTemplate.New(cleanedName).Parse(r.rawLayouts[layout])
+		//fmt.Println("load layout", err, r.rawLayouts[layout])
+
+		// context layout
+		if isAdmin {
+			_, _, _, rawLayouts, _ := prepareRenderer(ctx, r.logger, r.contextViewFS["admin"])
+			_, err = newTemplate.New(cleanedName).Parse(rawLayouts["default"]) // todo extract from template name
+			fmt.Println("load context layout", isAdmin, err, rawLayouts["default"])
+		} else {
+			_, err = newTemplate.New(cleanedName).Parse(rawLayouts["default"]) // todo extract from template name
+			fmt.Println("load context layout", isAdmin, err, rawLayouts["default"])
+		}
+
+		// page
+		_, err = newTemplate.New("content").Parse(rawPages[page])
+		//fmt.Println("load context page", err)
+
+		r.templates[cleanedName] = newTemplate
+		templ = newTemplate // "found" the template
+
+		//
+		templ.Funcs(template.FuncMap{
+			"reverse": c.Echo().Reverse,
+		})
 	}
 
 	renderTemplate := cleanedName
@@ -386,6 +444,39 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return nil
 }
 
+// isRegisteredContext returns if a call is to be rendered for a context registered via AddContext.
+// If false => it is a shared view.
+func (r *Renderer) isRegisteredContext(c echo.Context) (bool, bool, string) {
+	paths := strings.Split(c.Path(), "/")
+
+	isAdmin := false
+
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+
+		if p == "admin" {
+			isAdmin = true
+			continue
+		}
+
+		_, exists := r.contextViewFS[p]
+		if exists {
+			if isAdmin {
+				return true, true, p
+			}
+			return true, false, p
+		}
+	}
+
+	if isAdmin {
+		return true, true, "admin"
+	}
+
+	return false, false, ""
+}
+
 // parseLayoutAndPage accepts:
 // - page
 // - layout=>page
@@ -394,7 +485,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 func parseLayoutAndPage(name string) (string, string) {
 	const maxCompositionSegments = 3 // how many segments after separated by the separator
 
-	elem := strings.Split(name, separator)
+	elem := strings.Split(name, templateSeparator)
 
 	length := len(elem)
 
@@ -408,24 +499,101 @@ func parseLayoutAndPage(name string) (string, string) {
 
 	l := strings.TrimSpace(elem[0])
 	if length == maxCompositionSegments {
-		l = l + separator + strings.TrimSpace(elem[1])
+		l = l + templateSeparator + strings.TrimSpace(elem[1])
 	}
 
 	return l, strings.TrimSpace(elem[length-1])
 }
 
+type parsedTemplate struct {
+	layout        string
+	contextLayout string
+	template      string
+	fragment      string
+}
+
+func parseTemplateName(name string) (parsedTemplate, error) {
+	const ( // todo combine with templateSeparator and fragmentSeparator
+		maxCompositionSegments = 3 // how many segments after separated by the separator
+		maxFragmentSegments    = 2
+	)
+
+	elem := strings.Split(name, templateSeparator)
+	length := len(elem)
+
+	if length > maxCompositionSegments { // invalid pattern
+		return parsedTemplate{}, fmt.Errorf("%w", ErrRenderFailed)
+	}
+
+	var (
+		layout        string
+		contextLayout string
+		tmpl          string
+		fragment      string
+	)
+
+	if length == 1 {
+		tmpl = strings.TrimSpace(elem[0])
+	}
+
+	if length == 2 {
+		contextLayout = strings.TrimSpace(elem[0])
+		tmpl = strings.TrimSpace(elem[1])
+	}
+
+	if length == 3 {
+		layout = strings.TrimSpace(elem[0])
+		contextLayout = strings.TrimSpace(elem[1])
+		tmpl = strings.TrimSpace(elem[2])
+	}
+
+	fragments := strings.Split(tmpl, fragmentSeparator)
+	if len(fragments) > maxFragmentSegments { // invalid pattern
+		return parsedTemplate{}, fmt.Errorf("%w", ErrRenderFailed)
+	}
+
+	if len(fragments) == 2 {
+		tmpl = strings.TrimSpace(fragments[0])
+		fragment = strings.TrimSpace(fragments[1])
+
+		if fragment == "" { // invalid pattern
+			return parsedTemplate{}, fmt.Errorf("%w", ErrRenderFailed)
+		}
+	}
+
+	isInvalid := func(s string) bool {
+		return strings.Contains(s, templateSeparator) || strings.Contains(s, fragmentSeparator)
+	}
+	if isInvalid(layout) || isInvalid(contextLayout) || isInvalid(tmpl) || isInvalid(fragment) {
+		return parsedTemplate{}, fmt.Errorf("%w", ErrRenderFailed)
+	}
+
+	return parsedTemplate{
+		layout:        layout,
+		contextLayout: contextLayout,
+		template:      tmpl,
+		fragment:      fragment,
+	}, nil
+}
+
 // Layout returns the default layout of this renderer.
-func (r *Renderer) Layout() string {
+func (r *Renderer) Layout() string { // todo can be private
 	return r.defaultLayout
 }
 
 // SetDefaultLayout sets the default layout.
-func (r *Renderer) SetDefaultLayout(l string) error {
+func (r *Renderer) SetDefaultLayout(l string) error { // todo can be private (?)
 	if _, ok := r.rawLayouts[l]; !ok {
 		return ErrNotExistsLayout
 	}
 
 	r.defaultLayout = l
+
+	return nil
+}
+
+func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
+	r.contextViewFS[name] = viewFS
 
 	return nil
 }

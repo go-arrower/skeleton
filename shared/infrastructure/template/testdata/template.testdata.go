@@ -36,6 +36,7 @@ var TemplateFiles = fstest.MapFS{
 	"global.layout.html": {Data: []byte(LOtherContent)},
 }
 
+// TODO "otherLayout" might be a mistake below, as it is in global layout file
 var LayoutsPagesAndComponents = fstest.MapFS{
 	"components/c0.html": {Data: []byte(C0Content)},
 	"components/c1.html": {Data: []byte(C1Content)},

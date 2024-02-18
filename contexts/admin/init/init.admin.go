@@ -3,6 +3,7 @@ package init
 import (
 	"context"
 	"log/slog"
+	"os"
 
 	alogmodels "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
@@ -23,6 +24,8 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		settingsController: web.NewSettingsController(di.AdminRouter),
 		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings)),
 	}
+
+	_ = di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views")) // todo build path automatically, as it is a convention (?)
 
 	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, web2.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
 	jobsController.Queries = models.New(di.PGx)

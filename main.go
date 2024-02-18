@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/arrower/alog"
+
 	"github.com/brianvoe/gofakeit/v6"
 
 	"github.com/go-arrower/arrower/mw"
@@ -54,7 +56,7 @@ func main() {
 
 	//err = arrower.Settings.Save(ctx, alog.SettingLogLevel, setting.NewValue(int(slog.LevelDebug)))
 	//alog.Unwrap(arrower.Logger).SetLevel(slog.LevelDebug)
-	//alog.Unwrap(arrower.Logger).SetLevel(alog.LevelDebug)
+	alog.Unwrap(arrower.Logger).SetLevel(alog.LevelDebug)
 
 	//
 	// load and initialise optional contexts provided by arrower
@@ -97,7 +99,7 @@ func main() {
 
 	//
 	// start app
-	initRegularExampleQueueLoad(ctx, arrower)
+	//initRegularExampleQueueLoad(ctx, arrower)
 	arrower.WebRouter.Logger.Fatal(arrower.WebRouter.Start(fmt.Sprintf(":%d", arrower.Config.Web.Port)))
 
 	//
@@ -123,7 +125,7 @@ func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Contain
 
 				time.Sleep(time.Duration(rand.Intn(10)) * time.Second) //nolint:gosec,gomnd,lll // weak numbers are ok, it is wait time
 
-				if rand.Intn(100) > 70 { //nolint:gosec,gomndworkers,gomnd
+				if rand.Intn(100) > 30 { //nolint:gosec,gomndworkers,gomnd
 					return errors.New("some error") //nolint:goerr113
 				}
 

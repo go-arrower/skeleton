@@ -1,6 +1,8 @@
 package init
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/auth"
@@ -16,4 +18,9 @@ func (c *AuthContext) registerWebRoutes(router *echo.Group) {
 	router.GET("/:userID/verify/:token", c.userController.Verify()).Name = auth.RouteVerifyUser
 
 	router.GET("/profile", nil, auth.EnsureUserIsLoggedInMiddleware)
+	router.GET("/", nil, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			return c.Render(http.StatusOK, "home", nil)
+		}
+	})
 }

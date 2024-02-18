@@ -6,17 +6,17 @@ package template
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
-
-	views2 "github.com/go-arrower/skeleton/shared/views"
 
 	"github.com/go-arrower/arrower/alog"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/go-arrower/skeleton/shared/infrastructure/template/testdata"
+	views2 "github.com/go-arrower/skeleton/shared/views"
 )
 
 func TestNewRenderer(t *testing.T) {
@@ -373,6 +373,41 @@ func TestRenderer_Render(t *testing.T) {
 	})
 }
 
+// white box test. if it fails, feel free to delete it
+func TestParsedTemplate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		template string
+		parsed   parsedTemplate
+		err      error
+	}{
+		"empty":                    {"", parsedTemplate{}, nil},
+		"component or page":        {"p", parsedTemplate{template: "p"}, nil},
+		"page with fragment":       {"p#f", parsedTemplate{template: "p", fragment: "f"}, nil},
+		"page with empty fragment": {"p#", parsedTemplate{}, ErrRenderFailed},
+		"context layout":           {"cl=>p", parsedTemplate{contextLayout: "cl", template: "p"}, nil},
+		"full layout":              {"gl =>cl=> p", parsedTemplate{layout: "gl", contextLayout: "cl", template: "p"}, nil},
+		"complete template name":   {"gl=>cl=>p #f ", parsedTemplate{layout: "gl", contextLayout: "cl", template: "p", fragment: "f"}, nil},
+		"too many separators":      {"=>=>=>", parsedTemplate{}, ErrRenderFailed},
+		"too many fragments":       {"p#p#", parsedTemplate{}, ErrRenderFailed},
+		"separator after fragment": {"gl=>cl=>p#f=>", parsedTemplate{}, ErrRenderFailed},
+		"fragment in layouts":      {"gl#=>cl=>p#f", parsedTemplate{}, ErrRenderFailed},
+	}
+
+	for name, tt := range tests {
+		tt := tt
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			template, err := parseTemplateName(tt.template)
+			assert.ErrorIs(t, err, tt.err)
+			assert.Equal(t, tt.parsed, template)
+		})
+	}
+}
+
 func TestRenderer_Layout(t *testing.T) {
 	t.Parallel()
 
@@ -482,4 +517,69 @@ func TestParseLayoutAndPage(t *testing.T) {
 			assert.Equal(t, tt.expectedPage, p)
 		})
 	}
+}
+
+func TestRenderer_AddContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("add context", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.EmptyFiles, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, r)
+
+		err = r.AddContext(testdata.ExampleContext, testdata.EmptyFiles)
+		assert.NoError(t, err)
+	})
+
+	// build path automatically, as it is a convention (?)
+	// err on nil files
+	// err on empty context
+	// err if context is already loaded
+	// assert list of loaded contexts
+}
+
+func TestRenderer_RenderContext(t *testing.T) {
+	t.Parallel()
+
+	/*
+		render shared page as before
+		render context page
+		render context page with fragment
+		detect context layouts
+		context page and sahred page can have same name
+		context components: coexist or overwrite shared components
+	*/
+
+	t.Run("page", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, true)
+		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+		assert.NoError(t, err)
+
+		buf := &bytes.Buffer{}
+		err = renderer.Render(buf, "p0", nil, testdata.NewEchoContext(t))
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), testdata.P0Content)
+		assert.Contains(t, buf.String(), "defaultLayout")
+		assert.Contains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder")
+		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
+
+		buf.Reset()
+		c := testdata.NewEchoContext(t)
+		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+		err = renderer.Render(buf, "p0", nil, c)
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), "context p0")
+		// todo assert on context component => overwrite
+		assert.Contains(t, buf.String(), "defaultLayout")
+		assert.Contains(t, buf.String(), "contextLayout")
+		assert.NotContains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder")
+		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
+		assert.NotContains(t, buf.String(), "contextPlaceholder")
+	})
 }

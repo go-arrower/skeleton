@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/go-arrower/arrower/setting"
 	"github.com/go-arrower/skeleton/contexts/admin"
@@ -36,6 +37,8 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	tracer := di.TraceProvider.Tracer(fmt.Sprintf("%s/%s", di.Config.ApplicationName, contextName))
 	_ = meter
 	_ = tracer
+
+	_ = di.WebRenderer.AddContext("auth", os.DirFS("contexts/auth/internal/views")) // todo build path automatically, as it is a convention (?)
 
 	{ // register default auth settings
 		_ = di.Settings.Save(context.Background(), admin.SettingRegistration, setting.NewValue(true))
