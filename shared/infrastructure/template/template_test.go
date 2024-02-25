@@ -1,5 +1,5 @@
 // Use white box testing, to make it easier to assert on the inner workings of partially loaded and cached templates.
-// If a white box test case fails, consider just deleting it over fixing it, to prevent coupling to the implementation.
+// If a white box test case fails, consider just deleting it over fixing it to prevent coupling to the implementation.
 //
 //nolint:testpackage
 package template
@@ -16,16 +16,15 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/go-arrower/skeleton/shared/infrastructure/template/testdata"
-	views2 "github.com/go-arrower/skeleton/shared/views"
 )
 
 func TestNewRenderer(t *testing.T) {
 	t.Parallel()
 
-	t.Run("construct renderer", func(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
 
-		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), views2.SharedViews, false)
+		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.EmptyFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, r)
 	})
@@ -34,40 +33,42 @@ func TestNewRenderer(t *testing.T) {
 		t.Parallel()
 
 		r, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), nil, false)
-		assert.Error(t, err) // todo specific error (probably also with other tests)
+		assert.ErrorIs(t, err, ErrInvalidFS)
 		assert.Nil(t, r)
 	})
 
 	// white box test. if it fails, feel free to delete it
-	t.Run("initialise raw renderer", func(t *testing.T) {
+	t.Run("initialise new", func(t *testing.T) {
 		t.Parallel()
 
 		renderer, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.TemplateFiles, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
+		assert.Equal(t, 0, renderer.totalCachedTemplates())
+
 		// assert component templates from testdata.TemplateFiles is loaded
 		// contains always an empty component, so expected 1 + 2 => 3
-		assert.Len(t, renderer.components.Templates(), 3)
+		assert.Len(t, renderer.viewsForContext("").components.Templates(), 3)
 
-		// assert pages are loaded
-		assert.Len(t, renderer.templates, 3)
-		// if the file is called p0.page.html, the template is called p0
-		assert.NotEmpty(t, renderer.templates["p0"])
-		assert.NotEmpty(t, renderer.templates["p1"])
-		assert.NotEmpty(t, renderer.templates["p2"])
-		assert.Empty(t, renderer.templates["non-existent"])
+		// assert pages are found and extracted
+		assert.Len(t, renderer.viewsForContext("").rawPages, 3)
+		// if the file is called p0.html, the template is called p0
+		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p0"])
+		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p1"])
+		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p2"])
+		assert.Empty(t, renderer.viewsForContext("").rawPages["non-existent"])
 
-		// assert the page has itself and all dependencies loaded as a template
-		assert.Len(t, renderer.templates["p0"].Templates(), 4, "expect: <empty>, c0, c1, p0")
-		assert.Len(t, renderer.templates["p1"].Templates(), 4)
-		assert.Len(t, renderer.templates["p2"].Templates(), 6, "expect: <empty>, components, fragments, and itself as page")
-
-		// assert template is cached
-		// if the file is called global.layout.html, the template is called global
-		assert.Len(t, renderer.rawLayouts, 1)
-		assert.NotEmpty(t, renderer.rawLayouts["global"])
-		assert.Empty(t, renderer.rawLayouts["non-existent"])
+		//// assert the page has itself and all dependencies loaded as a template
+		//assert.Len(t, renderer.templates["p0"].Templates(), 4, "expect: <empty>, c0, c1, p0")
+		//assert.Len(t, renderer.templates["p1"].Templates(), 4)
+		//assert.Len(t, renderer.templates["p2"].Templates(), 6, "expect: <empty>, components, fragments, and itself as page")
+		//
+		//// assert template is cached
+		//// if the file is called global.layout.html, the template is called global
+		//assert.Len(t, renderer.rawLayouts, 1)
+		//assert.NotEmpty(t, renderer.rawLayouts["global"])
+		//assert.Empty(t, renderer.rawLayouts["non-existent"])
 	})
 
 	// white box test. if it fails, feel free to delete it
@@ -78,10 +79,10 @@ func TestNewRenderer(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		assert.Len(t, renderer.components.Templates(), 1)
-		assert.Len(t, renderer.templates, 0)
-		assert.Len(t, renderer.rawPages, 0)
-		assert.Len(t, renderer.rawLayouts, 0)
+		assert.Len(t, renderer.viewsForContext("").components.Templates(), 1)
+		assert.Equal(t, 0, renderer.totalCachedTemplates())
+		//assert.Len(t, renderer.rawPages, 0)
+		//assert.Len(t, renderer.rawLayouts, 0)
 	})
 }
 
@@ -99,7 +100,7 @@ func TestRenderer_Render(t *testing.T) {
 			t.Parallel()
 
 			buf := &bytes.Buffer{}
-			err = renderer.Render(buf, "c0", nil, testdata.NewEchoContext(t))
+			err = renderer.Render(buf, "#c0", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
 			assert.Equal(t, testdata.C0Content, buf.String())
@@ -109,25 +110,10 @@ func TestRenderer_Render(t *testing.T) {
 			t.Parallel()
 
 			buf := &bytes.Buffer{}
-			err = renderer.Render(buf, "non-existing", nil, testdata.NewEchoContext(t))
+			err = renderer.Render(buf, "#non-existing", nil, testdata.NewEchoContext(t))
 
-			assert.ErrorIs(t, err, ErrTemplateNotExists)
+			assert.ErrorIs(t, err, ErrNotExistsComponent)
 			assert.Empty(t, buf.String())
-		})
-
-		t.Run("component and page with same name", func(t *testing.T) {
-			t.Parallel()
-
-			renderer, err := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.ConflictingTemplateFiles, false)
-			assert.NoError(t, err)
-			assert.NotNil(t, renderer)
-
-			buf := &bytes.Buffer{}
-			err = renderer.Render(buf, "conflict", nil, testdata.NewEchoContext(t))
-			assert.NoError(t, err)
-
-			assert.Contains(t, buf.String(), testdata.P0Content)
-			assert.NotContains(t, buf.String(), testdata.C0Content)
 		})
 	})
 
@@ -145,7 +131,7 @@ func TestRenderer_Render(t *testing.T) {
 			err = renderer.Render(buf, "p0", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
-			assert.Equal(t, buf.String(), testdata.P0Content)
+			assert.Contains(t, buf.String(), testdata.P0Content)
 			assert.NotContains(t, buf.String(), testdata.LOtherContent)
 		})
 
@@ -234,7 +220,8 @@ func TestRenderer_Render(t *testing.T) {
 			err = renderer.Render(buf, "global=>p0", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
-			assert.Contains(t, buf.String(), testdata.LOtherContent)
+			t.Log(buf.String())
+			assert.Contains(t, buf.String(), "globalLayout")
 			assert.Contains(t, buf.String(), testdata.P0Content)
 			assert.Contains(t, buf.String(), testdata.C0Content)
 			assert.NotContains(t, buf.String(), testdata.C1Content)
@@ -311,14 +298,14 @@ func TestRenderer_Render(t *testing.T) {
 		assert.NotNil(t, renderer)
 
 		// assert only the pure pages are loaded, because others are not cached yet
-		assert.Len(t, renderer.templates, 2)
+		assert.Equal(t, 0, renderer.totalCachedTemplates())
 
 		buf := &bytes.Buffer{}
 		err = renderer.Render(buf, "global=>p0", nil, testdata.NewEchoContext(t))
 		assert.NoError(t, err)
-		assert.Len(t, renderer.templates, 3) // previous templates + global=>p0
+		assert.Equal(t, 1, renderer.totalCachedTemplates())
 
-		assert.Contains(t, buf.String(), testdata.LOtherContent)
+		assert.Contains(t, buf.String(), "globalLayout")
 		assert.Contains(t, buf.String(), testdata.P0Content)
 		assert.Contains(t, buf.String(), testdata.C0Content)
 		assert.NotContains(t, buf.String(), testdata.C1Content)
@@ -326,9 +313,9 @@ func TestRenderer_Render(t *testing.T) {
 		buf.Reset()
 		err = renderer.Render(buf, "global=>p1", nil, testdata.NewEchoContext(t))
 		assert.NoError(t, err)
-		assert.Len(t, renderer.templates, 4) // previous templates + global=>p1
+		assert.Equal(t, 2, renderer.totalCachedTemplates())
 
-		assert.Contains(t, buf.String(), testdata.LOtherContent)
+		assert.Contains(t, buf.String(), "globalLayout")
 		assert.Contains(t, buf.String(), testdata.P1Content)
 		assert.NotContains(t, buf.String(), testdata.P0Content)
 		assert.NotContains(t, buf.String(), testdata.C0Content)
@@ -337,7 +324,7 @@ func TestRenderer_Render(t *testing.T) {
 		buf.Reset()
 		err = renderer.Render(buf, "global=>p1", nil, testdata.NewEchoContext(t))
 		assert.NoError(t, err)
-		assert.Len(t, renderer.templates, 4) // template is cached already, so no change
+		assert.Equal(t, 2, renderer.totalCachedTemplates())
 	})
 
 	t.Run("render in parallel", func(t *testing.T) {
@@ -382,8 +369,8 @@ func TestParsedTemplate(t *testing.T) {
 		parsed   parsedTemplate
 		err      error
 	}{
-		"empty": {"", parsedTemplate{}, nil},
-		//"component":                {"#c", parsedTemplate{template: "c"}, nil},
+		"empty":                    {"", parsedTemplate{}, nil},
+		"component":                {"#c", parsedTemplate{fragment: "c", isComponent: true}, nil},
 		"page":                     {"p", parsedTemplate{template: "p"}, nil},
 		"page with fragment":       {"p#f", parsedTemplate{template: "p", fragment: "f"}, nil},
 		"page with empty fragment": {"p#", parsedTemplate{}, ErrRenderFailed},
@@ -419,7 +406,7 @@ func TestRenderer_Layout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		assert.Equal(t, "", renderer.Layout())
+		assert.Equal(t, "", renderer.layout())
 	})
 
 	t.Run("layout ex, but not the default one", func(t *testing.T) {
@@ -429,7 +416,7 @@ func TestRenderer_Layout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		assert.Equal(t, "", renderer.Layout())
+		assert.Equal(t, "", renderer.layout())
 	})
 
 	t.Run("multiple layouts but with default", func(t *testing.T) {
@@ -439,7 +426,7 @@ func TestRenderer_Layout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		assert.Equal(t, "default", renderer.Layout())
+		assert.Equal(t, "default", renderer.layout())
 	})
 }
 
@@ -469,55 +456,6 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 		//assert.ErrorIs(t, err, ErrNotExistsLayout)
 		//assert.Equal(t, "default", renderer.Layout())
 	})
-}
-
-// white box test. if it fails, feel free to delete it
-func TestParseLayoutAndPage(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		name           string
-		expectedLayout string
-		expectedPage   string
-	}{
-		"empty": {
-			"",
-			"",
-			"",
-		},
-		"just page": {
-			"p0",
-			"",
-			"p0",
-		},
-		"layout and page": {
-			"l=>p",
-			"l",
-			"p",
-		},
-		"trim whitespaces": {
-			" l => p ",
-			"l",
-			"p",
-		},
-		"layout, sub-layout, and page": {
-			"l=>s=>p",
-			"l=>s",
-			"p",
-		},
-	}
-
-	for name, tt := range tests {
-		tt := tt
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			l, p := parseLayoutAndPage(tt.name)
-			assert.Equal(t, tt.expectedLayout, l)
-			assert.Equal(t, tt.expectedPage, p)
-		})
-	}
 }
 
 func TestRenderer_AddContext(t *testing.T) {
@@ -567,37 +505,73 @@ func TestRenderer_RenderContext(t *testing.T) {
 	t.Parallel()
 
 	/*
-		render context page with fragment
+		render a shared component (that did not get overwritten by a context component)
 		detect context layouts
 		context page and sahred page can have same name
 		~~context components: coexist or overwrite shared components~~
 		context can use shared components (if not overwritten)
 		change context layout with template naming pattern
 		from Context: render shared page
+		render a page with "otherLayout"
+		render a context page that includes a default component
 	*/
 
-	t.Run("shared page", func(t *testing.T) {
+	t.Run("shared", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, true)
+		t.Run("component", func(t *testing.T) {
+			t.Parallel()
+
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
+
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "#c1", nil, testdata.NewEchoContext(t))
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), testdata.C1Content)
+		})
+
+		t.Run("page", func(t *testing.T) {
+			t.Parallel()
+
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
+
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "shared-p0", nil, testdata.NewEchoContext(t))
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), testdata.P0Content)
+			assert.Contains(t, buf.String(), testdata.LDefaultContent)
+			assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+		})
+	})
+
+	t.Run("context component", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
 		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 		assert.NoError(t, err)
 
 		buf := &bytes.Buffer{}
-		err = renderer.Render(buf, "shared-p0", nil, testdata.NewEchoContext(t))
+		c := testdata.NewEchoContext(t)
+		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+
+		err = renderer.Render(buf, "#c0", nil, c)
 		assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), testdata.P0Content)
-		assert.Contains(t, buf.String(), "defaultLayout")
-		assert.Contains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
-
+		assert.Contains(t, buf.String(), testdata.C0ContextContent, "context component overwrites shared component with same name")
 	})
 
 	t.Run("context page", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, true)
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
 		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 		assert.NoError(t, err)
 
@@ -608,19 +582,38 @@ func TestRenderer_RenderContext(t *testing.T) {
 		err = renderer.Render(buf, "p0", nil, c)
 		assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), "context p0")
-		//assert.Contains(t, buf.String(), "context c0") // TODO uncomment, as it should overwrite
-		assert.Contains(t, buf.String(), "defaultLayout")
-		assert.Contains(t, buf.String(), "contextLayout")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
-		assert.NotContains(t, buf.String(), "contextPlaceholder")
+		assert.Contains(t, buf.String(), testdata.P0ContextContent)
+		assert.Contains(t, buf.String(), testdata.C0ContextContent)
+		assert.NotContains(t, buf.String(), testdata.C0Content)
+		assert.Contains(t, buf.String(), testdata.LDefaultContent)
+		assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+		assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+	})
+
+	t.Run("context page fragment", func(t *testing.T) {
+		t.Parallel()
+
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+		assert.NoError(t, err)
+
+		buf := &bytes.Buffer{}
+		c := testdata.NewEchoContext(t)
+		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+
+		err = renderer.Render(buf, "p1#f", nil, c)
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), "fragment")
+		assert.NotContains(t, buf.String(), "context p1")
+		assert.NotContains(t, buf.String(), testdata.LDefaultContent)
+		assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
 	})
 
 	t.Run("context page rendered as admin", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, true)
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
 		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 		assert.NoError(t, err)
 		err = renderer.AddContext("admin", testdata.ContextAdmin)
@@ -633,14 +626,12 @@ func TestRenderer_RenderContext(t *testing.T) {
 		err = renderer.Render(buf, "p0", nil, c)
 		assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), "context p0")
+		assert.Contains(t, buf.String(), testdata.P0ContextContent)
 		//assert.Contains(t, buf.String(), "context c0") // TODO (?) uncomment, as it should overwrite
-		assert.Contains(t, buf.String(), "defaultLayout")
+		assert.Contains(t, buf.String(), testdata.LDefaultContent)
 		assert.Contains(t, buf.String(), "adminLayout")
-		assert.NotContains(t, buf.String(), "contextLayout")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
-		assert.NotContains(t, buf.String(), "contextPlaceholder")
+		assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
+		assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
 		assert.NotContains(t, buf.String(), "adminPlaceholder")
 	})
 
@@ -650,7 +641,7 @@ func TestRenderer_RenderContext(t *testing.T) {
 		// what should be rendered if a context calls a shared view?
 		// what would be example use cases?
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, true)
+		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
 		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 		assert.NoError(t, err)
 

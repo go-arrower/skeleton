@@ -2,6 +2,12 @@ package testdata
 
 import "testing/fstest"
 
+const (
+	LDefaultContextContent = "defaultContextLayout"
+	C0ContextContent       = "context component 0"
+	P0ContextContent       = "context p0"
+)
+
 var ExampleContext = "example"
 
 var SharedViews = fstest.MapFS{
@@ -13,40 +19,40 @@ var SharedViews = fstest.MapFS{
 <html lang="en">
 <body>
 	defaultLayout
-    {{ block "layout" . }}
-		defaultLayoutContextLayoutPlaceholder
+    {{block "layout" .}}
+		defaultContextLayout
         {{block "content" .}}
-			defaultLayoutContextContentPlaceholder
+			contentPlaceholder
         {{end}}
     {{end}}
 </body>
 </html>`)},
 	"other.layout.html": {Data: []byte(`otherLayout
-    {{ block "layout" . }}
+    {{block "layout" .}}
         {{block "content" .}}
-            Fallback, if "content" is not defined elsewhere
+            contentPlaceholder
         {{end}}
     {{end}}`)},
 }
 
 var ContextViews = fstest.MapFS{
-	"components/c0.html": {Data: []byte(`context c0`)},
-	"pages/p0.html":      {Data: []byte(`context p0 {{template "c0" .}}`)},
-	"pages/p1.html":      {Data: []byte(`context p1`)},
+	"components/c0.html": {Data: []byte(C0ContextContent)},
+	"pages/p0.html":      {Data: []byte(P0ContextContent + ` {{template "c0" .}}`)},
+	"pages/p1.html":      {Data: []byte(`context p1 {{block "f" . }}fragment{{end}}`)},
 	"default.layout.html": {Data: []byte(`
-    {{ define "layout" }}
-		contextLayout
-        {{block "content" . }}
-			contextPlaceholder
+    {{define "layout"}}
+		defaultContextLayout
+        {{block "content" .}}
+			contentPlaceholder
         {{end}}
     {{end}}`)},
 }
 
 var ContextAdmin = fstest.MapFS{
 	"default.layout.html": {Data: []byte(`
-    {{ define "layout" }}
+    {{define "layout"}}
 		adminLayout
-        {{block "content" . }}
+        {{block "content" .}}
 			adminPlaceholder
         {{end}}
     {{end}}`)},

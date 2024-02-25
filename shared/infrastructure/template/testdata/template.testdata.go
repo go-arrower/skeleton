@@ -1,4 +1,3 @@
-// the template package uses white-box tests, so this is not a _test package.
 package testdata
 
 import (
@@ -14,15 +13,16 @@ import (
 )
 
 const (
-	C0Content       = "c0"
-	C1Content       = "c1"
-	P0Content       = "p0"
-	P1Content       = "p1"
-	P2Content       = "p2"
-	F0Content       = "f0"
-	F1Content       = "f1"
-	LDefaultContent = "defaultLayout"
-	LOtherContent   = "otherLayout"
+	C0Content           = "c0"
+	C1Content           = "c1"
+	P0Content           = "p0"
+	P1Content           = "p1"
+	P2Content           = "p2"
+	F0Content           = "f0"
+	F1Content           = "f1"
+	LDefaultContent     = "defaultLayout"
+	LOtherContent       = "otherLayout"
+	LContentPlaceholder = "contentPlaceholder"
 )
 
 var EmptyFiles = fstest.MapFS{}
@@ -33,7 +33,12 @@ var TemplateFiles = fstest.MapFS{
 	"pages/p0.html":      {Data: []byte(P0Content)},
 	"pages/p1.html":      {Data: []byte(P1Content + ` {{template "c0" .}}`)},
 	"pages/p2.html":      {Data: []byte(P2Content + fmt.Sprintf(`{{block "f0" .}}%s{{end}} {{block "f1" .}}%s{{end}}`, F0Content, F1Content))},
-	"global.layout.html": {Data: []byte(LOtherContent)},
+	"global.layout.html": {Data: []byte(`otherLayout
+    {{block "layout" .}}
+        {{block "content" .}}
+            contentPlaceholder
+        {{end}}
+    {{end}}`)},
 }
 
 // TODO "otherLayout" might be a mistake below, as it is in global layout file
@@ -45,18 +50,18 @@ var LayoutsPagesAndComponents = fstest.MapFS{
 	"global.layout.html": {Data: []byte(`<!DOCTYPE html>
 <html lang="en">
 <body>
-	otherLayout
-    {{ block "layout" . }}
+	globalLayout
+    {{block "layout" .}}
         {{block "content" .}}
-            Fallback, if "content" is not defined elsewhere
+            contentPlaceholder
         {{end}}
     {{end}}
 </body>
 </html>`)},
 	"other.layout.html": {Data: []byte(`otherLayout
-    {{ block "layout" . }}
+    {{block "layout" .}}
         {{block "content" .}}
-            Fallback, if "content" is not defined elsewhere
+            contentPlaceholder
         {{end}}
     {{end}}`)},
 }
@@ -71,11 +76,6 @@ var MultipleLayoutsWithDefaultLayout = fstest.MapFS{
 	"global.layout.html":  {Data: []byte(LOtherContent)},
 	"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
-}
-
-var ConflictingTemplateFiles = fstest.MapFS{
-	"components/conflict.html": {Data: []byte(C0Content)},
-	"pages/conflict.html":      {Data: []byte(P0Content)},
 }
 
 func NewEchoContext(t *testing.T) echo.Context {
