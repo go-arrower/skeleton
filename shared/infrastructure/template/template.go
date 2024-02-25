@@ -31,6 +31,8 @@ var (
 )
 
 const (
+	sharedViews = ""
+
 	templateSeparator = "=>"
 	fragmentSeparator = "#"
 )
@@ -39,12 +41,11 @@ type Renderer struct {
 	logger alog.Logger
 	tracer trace.Tracer
 
-	views map[string]viewTemplates
-
-	hotReload bool
-
-	mu    sync.Mutex // todo remove or protect views (?)
 	cache sync.Map
+
+	mu        sync.Mutex
+	views     map[string]viewTemplates
+	hotReload bool
 }
 
 type viewTemplates struct {
@@ -67,26 +68,26 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 	logger = logger.WithGroup("arrower.renderer")
 	tracer := traceProvider.Tracer("arrower.renderer")
 
-	view := map[string]viewTemplates{}
-	view[""], _ = prepareView(context.Background(), logger, viewFS) // todo err check
+	views := map[string]viewTemplates{}
+	views[sharedViews], _ = prepareViewTemplates(context.Background(), logger, viewFS) // todo err check
 
 	logger.LogAttrs(nil, alog.LevelInfo,
 		"renderer created",
 		slog.Bool("hot_reload", hotReload),
-		slog.String("default_layout", view[""].defaultLayout),
+		slog.String("default_layout", views[sharedViews].defaultLayout),
 	)
 
 	return &Renderer{
 		logger:    logger,
 		tracer:    tracer,
-		hotReload: hotReload,
-		mu:        sync.Mutex{},
 		cache:     sync.Map{},
-		views:     view,
+		mu:        sync.Mutex{},
+		views:     views,
+		hotReload: hotReload,
 	}, nil
 }
 
-func prepareView(ctx context.Context, logger alog.Logger, viewFS fs.FS) (viewTemplates, error) {
+func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS) (viewTemplates, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
 		return viewTemplates{}, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
@@ -171,10 +172,6 @@ func prepareView(ctx context.Context, logger alog.Logger, viewFS fs.FS) (viewTem
 		}
 	}
 
-	//if len(layouts) == 1 {
-	//	defaultLayout = layoutName(layouts[0])
-	//} // FIXME: decide if a default template should be set or not, both has it's advantages, but maybe be less "magic" and only accept it as default if it is called "default" to prevent breking, old pages, ones a default layout get's created
-
 	logger.LogAttrs(ctx, alog.LevelDebug,
 		"loaded layouts",
 		slog.Int("layout_count", len(rawLayouts)),
@@ -251,81 +248,25 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		parsedTempl.contextLayout = ""
 	}
 
-	isComponent := parsedTempl.isComponent
-	if isComponent { // todo cache and check cache first (?)
-		fmt.Println("IS COMPONENT", parsedTempl.key())
-		t := r.views[parsedTempl.context].components.Lookup(parsedTempl.fragment)
-		if t == nil {
-			return ErrNotExistsComponent
-		}
-
-		t.AddParseTree(parsedTempl.key(), t.Tree)
-		r.cache.Store(parsedTempl.key(), t)
-	}
-	if !isComponent && parsedTempl.layout == "" {
-		parsedTempl.layout = r.views[""].defaultLayout
+	if !parsedTempl.isComponent && parsedTempl.layout == "" {
+		parsedTempl.layout = r.views[sharedViews].defaultLayout
 	}
 
-	fmt.Printf("RENDER TEMPLATE %+v %s \n", parsedTempl, parsedTempl.key())
+	r.logger.LogAttrs(nil, alog.LevelInfo,
+		"render template",
+		slog.String("original_name", name),
+		slog.String("cache_key", parsedTempl.key()),
+	)
+
 	var templ *template.Template
-	_, found := r.cache.Load(parsedTempl.key())
-	if !found {
-		fmt.Println("template not found => generate it")
-		/*
-			if component => already handled above
-			if page with layout(s) => build template
-			if page without layouts => build template by using a default layout
-		*/
 
-		var err error
-		r.views[parsedTempl.context], err = prepareView(ctx, r.logger, r.views[parsedTempl.context].viewFS)
-
-		newTemplate, err := r.views[parsedTempl.context].components.Clone()
+	t, found := r.cache.Load(parsedTempl.key())
+	if found {
+		templ = t.(*template.Template)
+	} else {
+		newTemplate, err := r.buildPageTemplate(parsedTempl)
 		if err != nil {
-			return fmt.Errorf("%w", ErrTemplateNotExists)
-		}
-
-		//isPageWithoutLayout := parsedTempl.layout == "" && parsedTempl.contextLayout == ""
-
-		if "" == r.views[""].rawLayouts[parsedTempl.layout] {
-			return fmt.Errorf("%w: default", ErrNotExistsLayout)
-		}
-
-		newTemplate, err = newTemplate.New(parsedTempl.key()).Parse(r.views[""].rawLayouts[parsedTempl.layout])
-		if err != nil {
-			return fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err)
-		}
-
-		if parsedTempl.renderAsAdminPage {
-			if "" == r.views["admin"].rawLayouts[parsedTempl.layout] {
-				return ErrNotExistsLayout
-			}
-
-			newTemplate, err = newTemplate.New("layout").Parse(r.views["admin"].rawLayouts[parsedTempl.contextLayout])
-			if err != nil {
-				return fmt.Errorf("%w: could not parse admin layout: %v", ErrRenderFailed, err)
-			}
-		} else {
-			if parsedTempl.isComponent {
-				if "" == r.views[parsedTempl.context].rawLayouts[parsedTempl.layout] {
-					return ErrNotExistsLayout
-				}
-
-				newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
-				if err != nil {
-					return fmt.Errorf("%w: could not parse context layout: %v", ErrRenderFailed, err)
-				}
-			}
-		}
-
-		pageExists := r.views[parsedTempl.context].rawPages[parsedTempl.template] != ""
-		if !pageExists {
-			return ErrTemplateNotExists
-		}
-
-		newTemplate, err = newTemplate.New("content").Parse(r.views[parsedTempl.context].rawPages[parsedTempl.template])
-		if err != nil {
-			return fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err)
+			return err
 		}
 
 		newTemplate.Funcs(template.FuncMap{
@@ -333,32 +274,23 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		})
 
 		r.cache.Store(parsedTempl.key(), newTemplate)
-		templ = newTemplate // "found" the template // todo set t instead to save second lookup from the sync.Map
+		templ = newTemplate
 
 		r.logger.LogAttrs(ctx, alog.LevelInfo,
 			"template cached",
-			slog.String("called_template", name),
-			//slog.String("actual_template", cleanedName),
-			//slog.String("layout", layout),
-			//slog.String("page", page),
+			slog.String("original_name", name),
+			slog.String("cache_key", parsedTempl.key()),
 			slog.Any("templates", templateNames(templ)),
 		)
 	}
 
 	/*
 		check if cached or hot reload is on
-		cache: context/gl=>cl=>p CALL key() on parsedTemplate
-		generate template and cache
-
-		render template or fragment
 		(?) htmx support for partial rendering
 	*/
 
-	t, _ := r.cache.Load(parsedTempl.key())
-	templ = t.(*template.Template)
-
-	dumpAllNamedTemplatesRenderedWithData(templ, data)
-	fmt.Println("RENDER FOR", parsedTempl.templateName())
+	//dumpAllNamedTemplatesRenderedWithData(templ, data)
+	//fmt.Println("RENDER FOR", parsedTempl.templateName())
 
 	if nil == templ.Lookup(parsedTempl.templateName()) {
 		return ErrNotExistsFragment
@@ -370,6 +302,75 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	}
 
 	return nil
+}
+
+func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Template, error) {
+	//r.mu.Lock()
+	//defer r.mu.Unlock()
+
+	if parsedTempl.isComponent {
+		newTemplate := r.views[parsedTempl.context].components.Lookup(parsedTempl.fragment)
+		if newTemplate == nil {
+			return nil, ErrNotExistsComponent
+		}
+
+		newTemplate, _ = newTemplate.AddParseTree(parsedTempl.key(), newTemplate.Tree)
+
+		return newTemplate, nil
+	}
+
+	newTemplate, err := r.views[parsedTempl.context].components.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("%w", ErrTemplateNotExists)
+	}
+
+	isPageWithoutLayout := parsedTempl.layout == "" && parsedTempl.contextLayout == ""
+	if isPageWithoutLayout {
+		newTemplate, _ = newTemplate.New(parsedTempl.key()).Parse(`{{block "content" .}}{{end}}`)
+	} else {
+		if "" == r.views[sharedViews].rawLayouts[parsedTempl.layout] {
+			return nil, fmt.Errorf("%w: default", ErrNotExistsLayout)
+		}
+
+		newTemplate, err = newTemplate.New(parsedTempl.key()).Parse(r.views[sharedViews].rawLayouts[parsedTempl.layout])
+		if err != nil {
+			return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err)
+		}
+
+		if parsedTempl.renderAsAdminPage {
+			if "" == r.views["admin"].rawLayouts[parsedTempl.layout] {
+				return nil, ErrNotExistsLayout
+			}
+
+			newTemplate, err = newTemplate.New("layout").Parse(r.views["admin"].rawLayouts[parsedTempl.contextLayout])
+			if err != nil {
+				return nil, fmt.Errorf("%w: could not parse admin layout: %v", ErrRenderFailed, err)
+			}
+		} else {
+			if parsedTempl.isComponent {
+				if "" == r.views[parsedTempl.context].rawLayouts[parsedTempl.layout] {
+					return nil, ErrNotExistsLayout
+				}
+
+				newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
+				if err != nil {
+					return nil, fmt.Errorf("%w: could not parse context layout: %v", ErrRenderFailed, err)
+				}
+			}
+		}
+	}
+
+	pageExists := r.views[parsedTempl.context].rawPages[parsedTempl.template] != ""
+	if !pageExists {
+		return nil, ErrTemplateNotExists
+	}
+
+	newTemplate, err = newTemplate.New("content").Parse(r.views[parsedTempl.context].rawPages[parsedTempl.template])
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err)
+	}
+
+	return newTemplate, nil
 }
 
 // isRegisteredContext returns if a call is to be rendered for a context registered via AddContext.
@@ -438,8 +439,11 @@ func (r *Renderer) getParsedTemplate(c echo.Context, name string) (parsedTemplat
 	parsedTempl.renderAsAdminPage = isAdmin
 	parsedTempl.context = contextName
 
+	// todo: this logic is unclear and hard to understand why
 	if isContext {
-		parsedTempl.contextLayout = r.views[contextName].defaultLayout // todo: only if it's a page and not component?
+		parsedTempl.contextLayout = r.views[contextName].defaultLayout
+	} else { // isShared view
+		parsedTempl.layout = parsedTempl.contextLayout
 	}
 
 	return parsedTempl, nil
@@ -529,9 +533,9 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	}
 
 	// todo clean
-	r.views[name], _ = prepareView(context.Background(), r.logger, viewFS)
+	r.views[name], _ = prepareViewTemplates(context.Background(), r.logger, viewFS)
 	m := r.views[name]
-	cc, _ := r.views[""].components.Clone()
+	cc, _ := r.views[sharedViews].components.Clone()
 
 	for _, t := range m.components.Templates() {
 		cc, _ = m.components.AddParseTree(t.Name(), t.Tree)
@@ -554,7 +558,7 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 
 // layout returns the default layout of this renderer.
 func (r *Renderer) layout() string {
-	return r.views[""].defaultLayout
+	return r.views[sharedViews].defaultLayout
 }
 
 func (r *Renderer) viewsForContext(name string) viewTemplates {
