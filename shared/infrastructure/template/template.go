@@ -321,7 +321,7 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 
 	newTemplate, err := r.views[parsedTempl.context].components.Clone()
 	if err != nil {
-		return nil, fmt.Errorf("%w", ErrTemplateNotExists)
+		return nil, fmt.Errorf("%w", ErrRenderFailed)
 	}
 
 	isPageWithoutLayout := parsedTempl.layout == "" && parsedTempl.contextLayout == ""
@@ -360,15 +360,27 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 		}
 	}
 
-	pageExists := r.views[parsedTempl.context].rawPages[parsedTempl.template] != ""
+	page := r.views[parsedTempl.context].rawPages[parsedTempl.template]
+	pageExists := page != ""
 	if !pageExists {
-		return nil, ErrTemplateNotExists
+		pageExists := r.views[sharedViews].rawPages[parsedTempl.template] != ""
+		if !pageExists {
+			return nil, ErrNotExistsPage
+		} else {
+			page = r.views[sharedViews].rawPages[parsedTempl.template]
+		}
 	}
 
-	newTemplate, err = newTemplate.New("content").Parse(r.views[parsedTempl.context].rawPages[parsedTempl.template])
+	newTemplate, err = newTemplate.New("content").Parse(page)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err)
 	}
+
+	//r.logger.LogAttrs(context.Background(), alog.LevelDebug, // todo add ctx
+	//	"build new page",
+	//	slog.String("template_name", newTemplate.Name()),
+	//	slog.Any("layout_templates", rawTemplateNames(newTemplate)),
+	//)
 
 	return newTemplate, nil
 }
@@ -538,7 +550,7 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	cc, _ := r.views[sharedViews].components.Clone()
 
 	for _, t := range m.components.Templates() {
-		cc, _ = m.components.AddParseTree(t.Name(), t.Tree)
+		cc, _ = cc.AddParseTree(t.Name(), t.Tree)
 	}
 
 	m.components = cc

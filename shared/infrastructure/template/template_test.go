@@ -140,7 +140,7 @@ func TestRenderer_Render(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 			err = renderer.Render(buf, "non-existing", nil, testdata.NewEchoContext(t))
-			assert.ErrorIs(t, err, ErrTemplateNotExists)
+			assert.ErrorIs(t, err, ErrNotExistsPage)
 			assert.Empty(t, buf.String())
 		})
 
@@ -505,15 +505,12 @@ func TestRenderer_RenderContext(t *testing.T) {
 	t.Parallel()
 
 	/*
-		render a shared component (that did not get overwritten by a context component)
 		detect context layouts
-		context page and sahred page can have same name
-		~~context components: coexist or overwrite shared components~~
-		context can use shared components (if not overwritten)
 		change context layout with template naming pattern
-		from Context: render shared page
 		render a page with "otherLayout"
 		render a context page that includes a default component
+		context has template but no global template => create placeholder gloabl to make it work anyway
+		change "defaultContextLayout" in the context layout to be different from the gloabl layout, so it can be asserted on which one is used
 	*/
 
 	t.Run("shared", func(t *testing.T) {
@@ -551,115 +548,134 @@ func TestRenderer_RenderContext(t *testing.T) {
 		})
 	})
 
-	t.Run("context component", func(t *testing.T) {
+	t.Run("render from context", func(t *testing.T) {
 		t.Parallel()
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
-		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
-		assert.NoError(t, err)
+		t.Run("shared component", func(t *testing.T) {
+			t.Parallel()
 
-		buf := &bytes.Buffer{}
-		c := testdata.NewEchoContext(t)
-		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
 
-		err = renderer.Render(buf, "#c0", nil, c)
-		assert.NoError(t, err)
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "#c1", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), testdata.C0ContextContent, "context component overwrites shared component with same name")
-	})
+			assert.Contains(t, buf.String(), testdata.C1Content)
+		})
 
-	t.Run("context page", func(t *testing.T) {
-		t.Parallel()
+		t.Run("overwrite shared component", func(t *testing.T) {
+			t.Parallel()
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
-		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
-		assert.NoError(t, err)
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
 
-		buf := &bytes.Buffer{}
-		c := testdata.NewEchoContext(t)
-		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "#c0", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
 
-		err = renderer.Render(buf, "p0", nil, c)
-		assert.NoError(t, err)
+			assert.Contains(t, buf.String(), testdata.C0ContextContent, "context component overwrites shared component with same name")
+		})
 
-		assert.Contains(t, buf.String(), testdata.P0ContextContent)
-		assert.Contains(t, buf.String(), testdata.C0ContextContent)
-		assert.NotContains(t, buf.String(), testdata.C0Content)
-		assert.Contains(t, buf.String(), testdata.LDefaultContent)
-		assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
-		assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
-	})
+		t.Run("context page", func(t *testing.T) {
+			t.Parallel()
 
-	t.Run("context page fragment", func(t *testing.T) {
-		t.Parallel()
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
-		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
-		assert.NoError(t, err)
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "p0", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
 
-		buf := &bytes.Buffer{}
-		c := testdata.NewEchoContext(t)
-		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+			assert.Contains(t, buf.String(), testdata.P0ContextContent)
+			assert.Contains(t, buf.String(), testdata.C0ContextContent)
+			assert.NotContains(t, buf.String(), testdata.C0Content)
+			assert.Contains(t, buf.String(), testdata.LDefaultContent)
+			assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+		})
 
-		err = renderer.Render(buf, "p1#f", nil, c)
-		assert.NoError(t, err)
+		t.Run("context page fragment", func(t *testing.T) {
+			t.Parallel()
 
-		assert.Contains(t, buf.String(), "fragment")
-		assert.NotContains(t, buf.String(), "context p1")
-		assert.NotContains(t, buf.String(), testdata.LDefaultContent)
-		assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
-	})
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
 
-	t.Run("context page rendered as admin", func(t *testing.T) {
-		t.Parallel()
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "p1#f", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
-		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
-		assert.NoError(t, err)
-		err = renderer.AddContext("admin", testdata.ContextAdmin)
-		assert.NoError(t, err)
+			assert.Contains(t, buf.String(), "fragment")
+			assert.NotContains(t, buf.String(), "context p1")
+			assert.NotContains(t, buf.String(), testdata.LDefaultContent)
+			assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
+		})
 
-		buf := &bytes.Buffer{}
-		c := testdata.NewEchoContext(t)
-		c.SetPath(fmt.Sprintf("/admin/%s", testdata.ExampleContext))
+		t.Run("context page rendered as admin", func(t *testing.T) {
+			t.Parallel()
 
-		err = renderer.Render(buf, "p0", nil, c)
-		assert.NoError(t, err)
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
+			err = renderer.AddContext("admin", testdata.ContextAdmin)
+			assert.NoError(t, err)
 
-		assert.Contains(t, buf.String(), testdata.P0ContextContent)
-		//assert.Contains(t, buf.String(), "context c0") // TODO (?) uncomment, as it should overwrite
-		assert.Contains(t, buf.String(), testdata.LDefaultContent)
-		assert.Contains(t, buf.String(), "adminLayout")
-		assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
-		assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
-		assert.NotContains(t, buf.String(), "adminPlaceholder")
-	})
+			buf := &bytes.Buffer{}
+			c := testdata.NewEchoContext(t)
+			c.SetPath(fmt.Sprintf("/admin/%s", testdata.ExampleContext))
 
-	t.Run("shared page from context", func(t *testing.T) {
-		t.Parallel()
-		t.Skip() // TODO specs unclear:
-		// what should be rendered if a context calls a shared view?
-		// what would be example use cases?
+			err = renderer.Render(buf, "p0", nil, c)
+			assert.NoError(t, err)
 
-		renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
-		err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
-		assert.NoError(t, err)
+			assert.Contains(t, buf.String(), testdata.P0ContextContent)
+			//assert.Contains(t, buf.String(), "context c0") // TODO (?) uncomment, as it should overwrite
+			assert.Contains(t, buf.String(), testdata.LDefaultContent)
+			assert.Contains(t, buf.String(), "adminLayout")
+			assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
+			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+			assert.NotContains(t, buf.String(), "adminPlaceholder")
+		})
 
-		buf := &bytes.Buffer{}
-		c := testdata.NewEchoContext(t)
-		c.SetPath(fmt.Sprintf("/%s", testdata.ExampleContext))
+		t.Run("shared page", func(t *testing.T) {
+			t.Parallel()
 
-		err = renderer.Render(buf, "shared-p0", nil, c)
-		assert.NoError(t, err)
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
 
-		//assert.Contains(t, buf.String(), "context p0")
-		assert.Contains(t, buf.String(), testdata.P0Content)
-		assert.Contains(t, buf.String(), testdata.C0Content)
-		assert.Contains(t, buf.String(), "defaultLayout")
-		assert.Contains(t, buf.String(), "defaultLayoutContextLayoutPlaceholder", "a shared page does not load a context layout")
-		assert.NotContains(t, buf.String(), "defaultLayoutContextContentPlaceholder")
-		assert.NotContains(t, buf.String(), "contextLayout")
-		assert.NotContains(t, buf.String(), "contextPlaceholder")
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "shared-p0", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), testdata.P0Content)
+			assert.Contains(t, buf.String(), testdata.C0ContextContent, "shared component got overwritten")
+			assert.Contains(t, buf.String(), testdata.LDefaultContent)
+			assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+		})
+
+		//t.Run("page overwrites shared page with same name", func(t *testing.T) {
+		t.Run("overwrite shared page", func(t *testing.T) {
+			t.Parallel()
+
+			renderer, _ := NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.SharedViews, false)
+			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
+			assert.NoError(t, err)
+
+			buf := &bytes.Buffer{}
+			err = renderer.Render(buf, "conflict-page", nil, testdata.NewExampleContextEchoContext(t))
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), `context conflict`)
+			assert.NotContains(t, buf.String(), testdata.P1Content)
+			assert.Contains(t, buf.String(), testdata.LDefaultContent)
+			assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
+		})
 	})
 }
 

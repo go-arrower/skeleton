@@ -87,6 +87,15 @@ func NewEchoContext(t *testing.T) echo.Context {
 	return echo.New().NewContext(req, rec)
 }
 
+func NewExampleContextEchoContext(t *testing.T) echo.Context {
+	t.Helper()
+
+	c := NewEchoContext(t)
+	c.SetPath(fmt.Sprintf("/%s", ExampleContext))
+
+	return c
+}
+
 func GenRandomPages(numPages int) (fstest.MapFS, []string) {
 	fs := fstest.MapFS{
 		"default.layout.html": {Data: []byte(LDefaultContent + ` {{template "content" .}}`)},

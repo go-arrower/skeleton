@@ -11,10 +11,11 @@ const (
 var ExampleContext = "example"
 
 var SharedViews = fstest.MapFS{
-	"components/c0.html":   {Data: []byte(C0Content)},
-	"components/c1.html":   {Data: []byte(C1Content)},
-	"pages/shared-p0.html": {Data: []byte(P0Content + ` {{template "c0" .}}`)},
-	"pages/shared-p1.html": {Data: []byte(P1Content)},
+	"components/c0.html":       {Data: []byte(C0Content)},
+	"components/c1.html":       {Data: []byte(C1Content)},
+	"pages/shared-p0.html":     {Data: []byte(P0Content + ` {{template "c0" .}}`)},
+	"pages/shared-p1.html":     {Data: []byte(P1Content)},
+	"pages/conflict-page.html": {Data: []byte(P1Content)},
 	"default.layout.html": {Data: []byte(`<!DOCTYPE html>
 <html lang="en">
 <body>
@@ -36,9 +37,10 @@ var SharedViews = fstest.MapFS{
 }
 
 var ContextViews = fstest.MapFS{
-	"components/c0.html": {Data: []byte(C0ContextContent)},
-	"pages/p0.html":      {Data: []byte(P0ContextContent + ` {{template "c0" .}}`)},
-	"pages/p1.html":      {Data: []byte(`context p1 {{block "f" . }}fragment{{end}}`)},
+	"components/c0.html":       {Data: []byte(C0ContextContent)},
+	"pages/p0.html":            {Data: []byte(P0ContextContent + ` {{template "c0" .}}`)},
+	"pages/p1.html":            {Data: []byte(`context p1 {{block "f" . }}fragment{{end}}`)},
+	"pages/conflict-page.html": {Data: []byte("context conflict")},
 	"default.layout.html": {Data: []byte(`
     {{define "layout"}}
 		defaultContextLayout
