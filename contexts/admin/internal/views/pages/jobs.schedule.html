@@ -102,7 +102,11 @@
                 document.getElementById('payload').value = this.firstElementChild.firstElementChild.innerHTML;
                 document.getElementById('payload-error').classList.add('invisible');
                 ">
-                    <td><pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ . }}</pre></td>
+                    <td>
+                        <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">
+                            {{- . -}}
+                        </pre>
+                    </td>
                 </tr>
             {{ end }}
         </tbody>

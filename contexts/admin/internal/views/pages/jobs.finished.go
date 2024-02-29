@@ -27,6 +27,7 @@ func NewFinishedJobs(jobs []jobs.PendingJob) echo.Map {
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
 		fjobs[i].Payload = m.JobData
+		//fjobs[i].Payload = prettyJobPayloadDataAsFormattedJSON(m)
 
 		fjobs[i].EnqueuedAtFmt = timeAgo(jobs[i].CreatedAt)
 		fjobs[i].FinishedAtFmt = timeAgo(jobs[i].UpdatedAt) // todo use finished at

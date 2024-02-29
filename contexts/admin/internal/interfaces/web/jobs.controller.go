@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -354,33 +353,9 @@ func (jc *JobsController) PayloadExamples() func(_ echo.Context) error {
 			JobType: jobType,
 		})
 
-		pJson := make([]string, len(payloads))
-		for i, p := range payloads {
-			var jobPayload application.JobPayload
-			_ = json.Unmarshal(p, &jobPayload)
-
-			pJson[i] = prettyString(jobPayload.JobData)
-		}
-
-		if queue == "" {
-			queue = defaultQueueName
-		}
-
-		return c.Render(http.StatusOK, "jobs.schedule#payload-examples", echo.Map{
-			"Payloads": pJson,
-			"Queue":    queue,
-			"JobType":  jobType,
-		})
+		return c.Render(http.StatusOK, "jobs.schedule#payload-examples",
+			pages.PresentJobsExamplePayloads(queue, jobType, payloads))
 	}
-}
-
-func prettyString(str string) string {
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(str), "", "  "); err != nil {
-		return ""
-	}
-
-	return prettyJSON.String()
 }
 
 func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
