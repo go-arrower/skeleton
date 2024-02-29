@@ -96,7 +96,7 @@
     </div>
     <div class="mt-4">
         {{ if not .PrunedAt.Valid }}
-            <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ toString .Args }}</pre>
+            <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ .PrettyPayload }}</pre>
         {{ else}}
             <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">Job data pruned {{ ago .PrunedAt.Time }} ago</pre>
         {{ end }}

@@ -1,7 +1,6 @@
 package pages
 
 import (
-	"bytes"
 	"encoding/json"
 
 	"github.com/labstack/echo/v4"
@@ -29,17 +28,4 @@ func PresentJobsExamplePayloads(queue, jobType string, payloads [][]byte) echo.M
 		"JobType":  jobType,
 		"Payloads": prettyPayloads,
 	}
-}
-
-func prettyJobPayloadDataAsFormattedJSON(payload application.JobPayload) string {
-	return prettyString(payload.JobData)
-}
-
-func prettyString(str string) string {
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(str), "", "  "); err != nil {
-		return ""
-	}
-
-	return prettyJSON.String()
 }
