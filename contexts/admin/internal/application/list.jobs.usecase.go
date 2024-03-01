@@ -3,6 +3,7 @@ package application
 import (
 	crand "crypto/rand"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
@@ -45,7 +46,7 @@ type JobPayload struct { // todo reuse the one in the jobs package
 	Carrier propagation.MapCarrier `json:"carrier"`
 	// JobData is the actual data as string instead of []byte,
 	// so that it is readable more easily when assessing it via psql directly.
-	JobData string `json:"jobData"`
+	JobData interface{} `json:"jobData"`
 }
 
 func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.ScheduleJobsParams {
@@ -55,7 +56,10 @@ func buildJobs(in ScheduleJobsRequest, carrier propagation.MapCarrier) []models.
 		MonotonicReader: ulid.Monotonic(crand.Reader, 0),
 	}
 
-	args, _ := json.Marshal(JobPayload{JobData: in.Payload, Carrier: carrier})
+	buf := map[string]interface{}{}
+	_ = json.Unmarshal([]byte(strings.TrimSpace(in.Payload)), &buf)
+
+	args, _ := json.Marshal(JobPayload{JobData: buf, Carrier: carrier})
 
 	for i := 0; i < in.Count; i++ {
 		jobID, _ := ulid.New(ulid.Now(), entropy)

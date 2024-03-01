@@ -9,12 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-arrower/arrower/alog"
-
 	"github.com/brianvoe/gofakeit/v6"
-
+	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/mw"
-
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"

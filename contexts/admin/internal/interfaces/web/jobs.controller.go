@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -492,7 +493,12 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 		var m application.JobPayload
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
-		jobs[i].Payload = m.JobData
+		data, _ := json.Marshal(m.JobData)
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, data, "", "  "); err != nil {
+		}
+
+		jobs[i].Payload = prettyJSON.String()
 		jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
 	}
 

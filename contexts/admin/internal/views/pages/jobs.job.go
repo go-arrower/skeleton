@@ -27,16 +27,17 @@ func ConvertFinishedJobs(jobs []models.ArrowerGueJobsHistory) []historicJob {
 }
 
 func prettyJobPayloadAsFormattedJSON(p []byte) string {
-	return prettyString(string(p))
+	return prettyString(p)
 }
 
 func prettyJobPayloadDataAsFormattedJSON(payload application.JobPayload) string {
-	return prettyString(payload.JobData)
+	b, _ := json.Marshal(payload.JobData)
+	return prettyString(b)
 }
 
-func prettyString(str string) string {
+func prettyString(str []byte) string {
 	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(str), "", "  "); err != nil {
+	if err := json.Indent(&prettyJSON, str, "", "  "); err != nil {
 		return ""
 	}
 
