@@ -241,6 +241,17 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	_, innerSpan := span.TracerProvider().Tracer("arrower.renderer").Start(ctx, "render")
 	defer innerSpan.End()
 
+	if r.hotReload {
+		r.mu.Lock()
+
+		r.cache = sync.Map{}
+		for k, v := range r.views {
+			r.views[k], _ = prepareViewTemplates(context.Background(), r.logger, v.viewFS)
+		}
+
+		r.mu.Unlock()
+	}
+
 	parsedTempl, _ := r.getParsedTemplate(c, name)
 
 	if parsedTempl.context == "" { // todo should this be in parseTemplateName?

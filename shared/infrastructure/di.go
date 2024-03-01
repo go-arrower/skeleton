@@ -188,7 +188,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			hotReload = true
 		}
 
-		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload) // todo disable hotreload in prod
+		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload) // todo: if prod load from embed
 		router.Renderer = r
 		container.WebRenderer = r
 
