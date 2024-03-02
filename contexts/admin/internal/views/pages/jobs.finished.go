@@ -2,13 +2,11 @@ package pages
 
 import (
 	"encoding/json"
-	"fmt"
-	"math"
-	"time"
+
+	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
-	"github.com/labstack/echo/v4"
 )
 
 func NewFinishedJobs(jobs []jobs.PendingJob) echo.Map {
@@ -39,29 +37,4 @@ func NewFinishedJobs(jobs []jobs.PendingJob) echo.Map {
 	return echo.Map{
 		"Jobs": fjobs,
 	}
-}
-
-func timeAgo(t time.Time) string { // todo move to shared views as general helper
-	seconds := time.Since(t).Nanoseconds()
-
-	switch seconds := time.Duration(seconds); {
-	case seconds < time.Minute:
-		return "now"
-	case seconds < time.Hour:
-		minutes := int(math.Round(float64(seconds / time.Minute)))
-		if minutes == 1 {
-			return fmt.Sprintf("%d minute ago", minutes)
-		}
-
-		return fmt.Sprintf("%d minutes ago", minutes)
-	case seconds > time.Hour*24:
-		days := int(math.Round(float64(seconds / (time.Hour * 24))))
-		if days == 1 {
-			return fmt.Sprintf("%d day ago", days)
-		}
-
-		return fmt.Sprintf("%d days ago", days)
-	}
-
-	return "unclear"
 }
