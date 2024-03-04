@@ -2993,6 +2993,28 @@ html {
   max-width: 64rem;
 }
 
+.max-w-full {
+  max-width: 100%;
+}
+
+.max-w-7xl {
+  max-width: 80rem;
+}
+
+.max-w-fit {
+  max-width: -moz-fit-content;
+  max-width: fit-content;
+}
+
+.max-w-max {
+  max-width: -moz-max-content;
+  max-width: max-content;
+}
+
+.max-w-6xl {
+  max-width: 72rem;
+}
+
 .shrink {
   flex-shrink: 1;
 }
@@ -3127,6 +3149,14 @@ html {
 
 .overflow-y-auto {
   overflow-y: auto;
+}
+
+.whitespace-normal {
+  white-space: normal;
+}
+
+.whitespace-pre {
+  white-space: pre;
 }
 
 .whitespace-pre-wrap {
@@ -3940,6 +3970,10 @@ html {
     display: block;
   }
 
+  .md\:max-w-3xl {
+    max-width: 48rem;
+  }
+
   .md\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3954,6 +3988,10 @@ html {
     margin-top: 0px;
   }
 
+  .lg\:max-w-5xl {
+    max-width: 64rem;
+  }
+
   .lg\:flex-row {
     flex-direction: row;
   }
@@ -3966,6 +4004,10 @@ html {
 
   .xl\:hidden {
     display: none;
+  }
+
+  .xl\:max-w-7xl {
+    max-width: 80rem;
   }
 
   .xl\:grid-cols-3 {

@@ -137,7 +137,7 @@
                     <div class="timeline-middle text-error">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
                     </div>
-                    <div class="min-w-64 timeline-end timeline-box group-hover:bg-error group-hover:text-error-content indicator"
+                    <div class="indicator min-w-64 md:max-w-3xl lg:max-w-5xl xl:max-w-7xl timeline-end timeline-box group-hover:bg-error group-hover:text-error-content"
                          onclick="
                             let that = this;
                             navigator.clipboard.writeText(this.lastElementChild.innerHTML).then(function() {
@@ -150,7 +150,7 @@
                             });
                          ">
                         <span class="indicator-item badge badge-info text-info-content hidden">copied</span>
-                        <div title="{{ .RunCount }}">{{ .RunError }}</div>
+                        <div  title="{{ .RunCount }}"><pre class="whitespace-pre">{{ .RunError }}</pre></div>
                     </div>
                     {{ if ne $i (sub (len $.Jobs) 1) }}
                         <hr class="bg-error"/>
