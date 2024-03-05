@@ -60,7 +60,12 @@ type viewTemplates struct {
 
 // NewRenderer take multiple FS or can Context views be added later?
 // It prepares a renderer for HTML web views.
-func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS fs.FS, hotReload bool) (*Renderer, error) {
+func NewRenderer(
+	logger alog.Logger,
+	traceProvider trace.TracerProvider,
+	viewFS fs.FS,
+	hotReload bool,
+) (*Renderer, error) {
 	if viewFS == nil {
 		return nil, ErrInvalidFS
 	}
@@ -90,7 +95,7 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS) (viewTemplates, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err)
+		return viewTemplates{}, fmt.Errorf("%w: could not get components from fs: %v", ErrInvalidFS, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	componentTemplates := template.New("<empty>").Funcs(sprig.FuncMap())
@@ -98,14 +103,14 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 	for _, c := range components {
 		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not read component file: %s: %v", ErrInvalidFS, file, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not read component file: %s: %v", ErrInvalidFS, file, err) //nolint:errorlint,lll // prevent err in api
 		}
 
 		name := componentName(c)
 
 		_, err = componentTemplates.New(name).Parse(file)
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not parse component: %s: %v", ErrInvalidFS, file, err) //nolint:errorlint,lll // prevent err in api
 		}
 	}
 
@@ -119,7 +124,7 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 
 	pages, err := fs.Glob(viewFS, "pages/*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("%w: could not get pages from fs: %v", ErrInvalidFS, err)
+		return viewTemplates{}, fmt.Errorf("%w: could not get pages from fs: %v", ErrInvalidFS, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	rawPages := make(map[string]string)
@@ -127,12 +132,12 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 	for _, page := range pages {
 		file, err := readFile(viewFS, page) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not read page file: %s: %v", ErrInvalidFS, file, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not read page file: %s: %v", ErrInvalidFS, file, err) //nolint:errorlint,lll // prevent err in api
 		}
 
 		tmp, err := componentTemplates.Clone()
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not clone component templates: %v", ErrLoadFailed, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not clone component templates: %v", ErrLoadFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
 
 		pn := pageName(page)
@@ -140,7 +145,7 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 
 		pageTemplates[pn], err = tmp.New(pn).Parse(file)
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not parse page file: %s: %v", ErrInvalidFS, file, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not parse page file: %s: %v", ErrInvalidFS, file, err) //nolint:errorlint,lll // prevent err in api
 		}
 	}
 
@@ -152,16 +157,17 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 
 	layouts, err := fs.Glob(viewFS, "*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("%w: could not get layouts from fs: %v", ErrInvalidFS, err)
+		return viewTemplates{}, fmt.Errorf("%w: could not get layouts from fs: %v", ErrInvalidFS, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	var defaultLayout string
+
 	rawLayouts := make(map[string]string)
 
 	for _, l := range layouts {
 		file, err := readFile(viewFS, l)
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("%w: could not read layout file: %s: %v", ErrInvalidFS, file, err)
+			return viewTemplates{}, fmt.Errorf("%w: could not read layout file: %s: %v", ErrInvalidFS, file, err) //nolint:errorlint,lll // prevent err in api
 		}
 
 		ln := layoutName(l)
@@ -189,7 +195,7 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 
 func templateNames(templates *template.Template) []string {
 	n := len(templates.Templates())
-	var names = make([]string, n)
+	names := make([]string, n)
 
 	for i, t := range templates.Templates() {
 		names[i] = t.Name()
@@ -300,8 +306,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		(?) htmx support for partial rendering
 	*/
 
-	//dumpAllNamedTemplatesRenderedWithData(templ, data)
-	//fmt.Println("RENDER FOR", parsedTempl.templateName())
+	// fmt.Println("RENDER FOR", parsedTempl.templateName())
 
 	if nil == templ.Lookup(parsedTempl.templateName()) {
 		return ErrNotExistsFragment
@@ -309,15 +314,14 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 	err := templ.ExecuteTemplate(w, parsedTempl.templateName(), data)
 	if err != nil {
-		return fmt.Errorf("%w: could not execute template: %v", ErrRenderFailed, err)
+		return fmt.Errorf("%w: could not execute template: %v", ErrRenderFailed, err) //nolint:errorlint // prevent err in api
 	}
 
 	return nil
 }
 
 func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Template, error) {
-	//r.mu.Lock()
-	//defer r.mu.Unlock()
+	// defer r.mu.Unlock()
 
 	if parsedTempl.isComponent {
 		newTemplate := r.views[parsedTempl.context].components.Lookup(parsedTempl.fragment)
@@ -339,55 +343,54 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 	if isPageWithoutLayout {
 		newTemplate, _ = newTemplate.New(parsedTempl.key()).Parse(`{{block "content" .}}{{end}}`)
 	} else {
-		if "" == r.views[sharedViews].rawLayouts[parsedTempl.layout] {
+		if r.views[sharedViews].rawLayouts[parsedTempl.layout] == "" {
 			return nil, fmt.Errorf("%w: default", ErrNotExistsLayout)
 		}
 
 		newTemplate, err = newTemplate.New(parsedTempl.key()).Parse(r.views[sharedViews].rawLayouts[parsedTempl.layout])
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err)
+			return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
 
 		if parsedTempl.renderAsAdminPage {
-			if "" == r.views["admin"].rawLayouts[parsedTempl.layout] {
+			if r.views["admin"].rawLayouts[parsedTempl.layout] == "" {
 				return nil, ErrNotExistsLayout
 			}
 
 			newTemplate, err = newTemplate.New("layout").Parse(r.views["admin"].rawLayouts[parsedTempl.contextLayout])
 			if err != nil {
-				return nil, fmt.Errorf("%w: could not parse admin layout: %v", ErrRenderFailed, err)
+				return nil, fmt.Errorf("%w: could not parse admin layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 			}
-		} else {
-			if parsedTempl.isComponent {
-				if "" == r.views[parsedTempl.context].rawLayouts[parsedTempl.layout] {
-					return nil, ErrNotExistsLayout
-				}
+		} else if parsedTempl.isComponent {
+			if r.views[parsedTempl.context].rawLayouts[parsedTempl.layout] == "" {
+				return nil, ErrNotExistsLayout
+			}
 
-				newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
-				if err != nil {
-					return nil, fmt.Errorf("%w: could not parse context layout: %v", ErrRenderFailed, err)
-				}
+			newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
+			if err != nil {
+				return nil, fmt.Errorf("%w: could not parse context layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 			}
 		}
 	}
 
 	page := r.views[parsedTempl.context].rawPages[parsedTempl.template]
+
 	pageExists := page != ""
 	if !pageExists {
 		pageExists := r.views[sharedViews].rawPages[parsedTempl.template] != ""
 		if !pageExists {
 			return nil, ErrNotExistsPage
-		} else {
-			page = r.views[sharedViews].rawPages[parsedTempl.template]
 		}
+
+		page = r.views[sharedViews].rawPages[parsedTempl.template]
 	}
 
 	newTemplate, err = newTemplate.New("content").Parse(page)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err)
+		return nil, fmt.Errorf("%w: could not parse page: %v", ErrRenderFailed, err) //nolint:errorlint // prevent err in api
 	}
 
-	//r.logger.LogAttrs(context.Background(), alog.LevelDebug, // todo add ctx
+	// r.logger.LogAttrs(context.Background(), alog.LevelDebug, // todo add ctx
 	//	"build new page",
 	//	slog.String("template_name", newTemplate.Name()),
 	//	slog.Any("layout_templates", rawTemplateNames(newTemplate)),
@@ -397,28 +400,30 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 }
 
 // isRegisteredContext returns if a call is to be rendered for a context registered via AddContext.
-// If false => it is a shared view. // TODO refactor
+// If false => it is a shared view. // TODO refactor.
 func (r *Renderer) isRegisteredContext(c echo.Context) (bool, bool, string) {
 	paths := strings.Split(c.Path(), "/")
 
 	isAdmin := false
 
-	for _, p := range paths {
-		if p == "" {
+	for _, path := range paths {
+		if path == "" {
 			continue
 		}
 
-		if p == "admin" {
+		if path == "admin" {
 			isAdmin = true
+
 			continue
 		}
 
-		_, exists := r.views[p]
+		_, exists := r.views[path]
 		if exists {
 			if isAdmin {
-				return true, true, p
+				return true, true, path
 			}
-			return true, false, p
+
+			return true, false, path
 		}
 	}
 
@@ -557,15 +562,15 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 
 	// todo clean
 	r.views[name], _ = prepareViewTemplates(context.Background(), r.logger, viewFS)
-	m := r.views[name]
+	tmp := r.views[name]
 	cc, _ := r.views[sharedViews].components.Clone()
 
-	for _, t := range m.components.Templates() {
+	for _, t := range tmp.components.Templates() {
 		cc, _ = cc.AddParseTree(t.Name(), t.Tree)
 	}
 
-	m.components = cc
-	r.views[name] = m
+	tmp.components = cc
+	r.views[name] = tmp
 
 	return nil
 }
@@ -588,12 +593,15 @@ func (r *Renderer) viewsForContext(name string) viewTemplates {
 	return r.views[name]
 }
 
-func (r *Renderer) totalCachedTemplates() int { //nolint
+func (r *Renderer) totalCachedTemplates() int {
 	c := 0
+
 	r.cache.Range(func(_, _ any) bool {
 		c++
+
 		return true
 	})
+
 	return c
 }
 
@@ -610,10 +618,14 @@ func rawTemplateNames(pages map[string]string) []string {
 
 // dumpAllNamedTemplatesRenderedWithData pretty prints all templates
 // within the given *template.Template. Use it for convenient debugging.
+// todo move to _test file
+//
+//nolint:forbidigo,lll // this is a debug helper, so the use of fmt is the feature.
 func dumpAllNamedTemplatesRenderedWithData(templ *template.Template, data interface{}) {
 	templ, err := templ.Clone() // ones ExecuteTemplate is called the template cannot be pared any more and could fail calling code.
 	if err != nil {
 		fmt.Println("CAN NOT DUMP TEMPLATE: ", err)
+
 		return
 	}
 
@@ -623,10 +635,11 @@ func dumpAllNamedTemplatesRenderedWithData(templ *template.Template, data interf
 	fmt.Println("--- --- ---   --- --- ---   --- --- ---")
 
 	buf := &bytes.Buffer{}
+
 	for _, t := range templ.Templates() {
 		fmt.Printf("--- --- ---   %s:\n", t.Name())
 
-		templ.ExecuteTemplate(buf, t.Name(), data)
+		_ = templ.ExecuteTemplate(buf, t.Name(), data)
 
 		fmt.Println(buf.String())
 		buf.Reset()

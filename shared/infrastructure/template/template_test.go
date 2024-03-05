@@ -59,16 +59,16 @@ func TestNewRenderer(t *testing.T) {
 		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p2"])
 		assert.Empty(t, renderer.viewsForContext("").rawPages["non-existent"])
 
-		//// assert the page has itself and all dependencies loaded as a template
-		//assert.Len(t, renderer.templates["p0"].Templates(), 4, "expect: <empty>, c0, c1, p0")
-		//assert.Len(t, renderer.templates["p1"].Templates(), 4)
-		//assert.Len(t, renderer.templates["p2"].Templates(), 6, "expect: <empty>, components, fragments, and itself as page")
+		// assert the page has itself and all dependencies loaded as a template
+		// assert.Len(t, renderer.templates["p0"].Templates(), 4, "expect: <empty>, c0, c1, p0")
+		// assert.Len(t, renderer.templates["p1"].Templates(), 4)
+		// assert.Len(t, renderer.templates["p2"].Templates(), 6, "expect: <empty>, components, fragments, and itself as page")
 		//
-		//// assert template is cached
-		//// if the file is called global.layout.html, the template is called global
-		//assert.Len(t, renderer.rawLayouts, 1)
-		//assert.NotEmpty(t, renderer.rawLayouts["global"])
-		//assert.Empty(t, renderer.rawLayouts["non-existent"])
+		// assert template is cached
+		// if the file is called global.layout.html, the template is called global
+		// assert.Len(t, renderer.rawLayouts, 1)
+		// assert.NotEmpty(t, renderer.rawLayouts["global"])
+		// assert.Empty(t, renderer.rawLayouts["non-existent"])
 	})
 
 	// white box test. if it fails, feel free to delete it
@@ -81,8 +81,6 @@ func TestNewRenderer(t *testing.T) {
 
 		assert.Len(t, renderer.viewsForContext("").components.Templates(), 1)
 		assert.Equal(t, 0, renderer.totalCachedTemplates())
-		//assert.Len(t, renderer.rawPages, 0)
-		//assert.Len(t, renderer.rawLayouts, 0)
 	})
 }
 
@@ -183,7 +181,7 @@ func TestRenderer_Render(t *testing.T) {
 			err = renderer.Render(buf, "p2#f0", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
-			assert.Equal(t, buf.String(), testdata.F0Content)
+			assert.Equal(t, testdata.F0Content, buf.String())
 		})
 
 		t.Run("fragment 1", func(t *testing.T) {
@@ -193,7 +191,7 @@ func TestRenderer_Render(t *testing.T) {
 			err = renderer.Render(buf, "p2#f1", nil, testdata.NewEchoContext(t))
 			assert.NoError(t, err)
 
-			assert.Equal(t, buf.String(), testdata.F1Content)
+			assert.Equal(t, testdata.F1Content, buf.String())
 		})
 
 		t.Run("non existing fragment", func(t *testing.T) {
@@ -262,15 +260,15 @@ func TestRenderer_Render(t *testing.T) {
 			assert.Contains(t, buf.String(), testdata.P0Content)
 
 			// change default layout and render same page again
-			//err = renderer.SetDefaultLayout("other")
-			//assert.NoError(t, err)
-			//buf.Reset()
+			// err = renderer.SetDefaultLayout("other")
+			// assert.NoError(t, err)
+			// buf.Reset()
 			//
-			//err = renderer.Render(buf, "p0", nil, testdata.NewEchoContext(t))
-			//assert.NoError(t, err)
+			// err = renderer.Render(buf, "p0", nil, testdata.NewEchoContext(t))
+			// assert.NoError(t, err)
 			//
-			//assert.Contains(t, buf.String(), testdata.LOtherContent)
-			//assert.Contains(t, buf.String(), testdata.P0Content)
+			// assert.Contains(t, buf.String(), testdata.LOtherContent)
+			// assert.Contains(t, buf.String(), testdata.P0Content)
 		})
 
 		t.Run("explicitly name default layout anyway", func(t *testing.T) {
@@ -360,7 +358,7 @@ func TestRenderer_Render(t *testing.T) {
 	})
 }
 
-// white box test. if it fails, feel free to delete it
+// white box test. if it fails, feel free to delete it.
 func TestParsedTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -440,9 +438,8 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		//err = renderer.SetDefaultLayout("other")
-		//assert.NoError(t, err)
-		//assert.Equal(t, "other", renderer.Layout())
+		// assert.NoError(t, err)
+		// assert.Equal(t, "other", renderer.Layout())
 	})
 
 	t.Run("set non existing layout", func(t *testing.T) {
@@ -452,9 +449,8 @@ func TestRenderer_SetDefaultLayout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, renderer)
 
-		//err = renderer.SetDefaultLayout("non-existing")
-		//assert.ErrorIs(t, err, ErrNotExistsLayout)
-		//assert.Equal(t, "default", renderer.Layout())
+		// assert.ErrorIs(t, err, ErrNotExistsLayout)
+
 	})
 }
 
@@ -509,8 +505,8 @@ func TestRenderer_RenderContext(t *testing.T) {
 		change context layout with template naming pattern
 		render a page with "otherLayout"
 		render a context page that includes a default component
-		context has template but no global template => create placeholder gloabl to make it work anyway
-		change "defaultContextLayout" in the context layout to be different from the gloabl layout, so it can be asserted on which one is used
+		context has template but no global template => create placeholder global to make it work anyway
+		change "defaultContextLayout" in the context layout to be different from the global layout, so it can be asserted on which one is used
 	*/
 
 	t.Run("shared", func(t *testing.T) {
@@ -632,7 +628,7 @@ func TestRenderer_RenderContext(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Contains(t, buf.String(), testdata.P0ContextContent)
-			//assert.Contains(t, buf.String(), "context c0") // TODO (?) uncomment, as it should overwrite
+
 			assert.Contains(t, buf.String(), testdata.LDefaultContent)
 			assert.Contains(t, buf.String(), "adminLayout")
 			assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
@@ -658,7 +654,6 @@ func TestRenderer_RenderContext(t *testing.T) {
 			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
 		})
 
-		//t.Run("page overwrites shared page with same name", func(t *testing.T) {
 		t.Run("overwrite shared page", func(t *testing.T) {
 			t.Parallel()
 

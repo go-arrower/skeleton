@@ -5,11 +5,10 @@ import (
 	"fmt"
 
 	"github.com/go-arrower/arrower/setting"
-
-	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/contexts/admin"
+	"github.com/go-arrower/skeleton/contexts/auth"
 )
 
 const appTitle = "skeleton"
@@ -66,6 +65,7 @@ func (p *DefaultPresenter) MapDefaultBasePage(ctx context.Context, title string,
 
 	return basePage, nil
 }
+
 func (p *DefaultPresenter) MustMapDefaultBasePage(ctx context.Context, title string, keyVals ...echo.Map) MapBasePage {
 	r, _ := p.MapDefaultBasePage(ctx, title, keyVals...)
 	return r

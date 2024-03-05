@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-arrower/arrower/alog"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/shared/infrastructure"
@@ -32,17 +31,20 @@ func TestSecret_String(t *testing.T) {
 			t.Parallel()
 
 			buf := &bytes.Buffer{}
-			s := infrastructure.Secret(tc.secret)
-			fmt.Fprintln(buf, s)
+			secret := infrastructure.Secret(tc.secret)
 
-			// t.Log(s)
+			fmt.Fprintln(buf, secret)
+
+			// uncomment, to see masking of secrets in action:
+			// t.Log(secret)
 			// t.Log(buf.String())
 			assert.Equal(t, "******\n", buf.String())
 
 			buf.Reset()
 			logger := alog.NewTest(buf)
-			logger.Info("msg", slog.Any("secret", s))
+			logger.Info("msg", slog.Any("secret", secret))
 
+			// uncomment, to see masking of secrets in action:
 			// t.Log(buf.String())
 			assert.Contains(t, buf.String(), "******")
 			if notEmpty := strings.Trim(tc.secret, " ") != ""; notEmpty {

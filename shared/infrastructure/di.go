@@ -13,18 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4/middleware"
-
-	"github.com/go-arrower/arrower/setting"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
+	"github.com/go-arrower/arrower/setting"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -41,9 +39,7 @@ import (
 	"github.com/go-arrower/skeleton/shared/infrastructure/template"
 )
 
-var (
-	ErrMissingDependency = errors.New("missing dependency")
-)
+var ErrMissingDependency = errors.New("missing dependency")
 
 // Container holds global dependencies that can be used within each Context, to make initialisation easier.
 // If the Context can operate with the shared resources.
@@ -76,13 +72,12 @@ func (c *Container) EnsureAllDependenciesPresent() error {
 	return nil
 }
 
-func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*Container, func(ctx context.Context) error, error) {
-	container := &Container{
+func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*Container, func(ctx context.Context) error, error) { //nolint:funlen,gocyclo,cyclop,lll // dependency injection is long but also straight forward.
+	container := &Container{ //nolint:exhaustruct
 		Config: conf,
 	}
 
 	{ // observability
-		//labels/tags/resources that are common to all traces and metrics.
 		resource := resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", conf.OrganisationName, conf.ApplicationName)),
@@ -96,7 +91,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 		{
 			opts := []otlptracegrpc.Option{
-				otlptracegrpc.WithEndpoint("localhost:4317"), // todo configure
+				otlptracegrpc.WithEndpoint(fmt.Sprintf("%s:%d", conf.OTEL.Host, conf.OTEL.Port)),
 			}
 			if conf.Debug {
 				opts = append(opts,
@@ -107,7 +102,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 			traceExporter, err := otlptracegrpc.New(ctx, opts...)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("%w", err)
 			}
 
 			traceProvider := trace.NewTracerProvider(
@@ -131,7 +126,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		{
 			exporter, err := prometheus.New()
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("%w", err)
 			}
 
 			meterProvider := metric.NewMeterProvider(
@@ -155,7 +150,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			Migrations: postgres.ArrowerDefaultMigrations,
 		}, container.TraceProvider)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("%w", err)
 		}
 
 		container.PGx = pg.PGx
@@ -171,7 +166,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	// slog.SetDefault(container.Logger.(*slog.Logger)) // todo test if this works even if the cast works
 
 	{ // echo router
-		// todo extract echo setup to main arrower repo, ones it is "ready" and can be abstracted for easier use
+		// todo extract echo setup to main arrower repo, ones it is "ready" and can be abstracted for easier use, analog to postgres
 		router := echo.New()
 		router.HideBanner = true
 		router.Logger.SetOutput(io.Discard)
@@ -193,7 +188,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		container.WebRenderer = r
 
 		// router.Use(session.Middleware())
-		ss, _ := auth.NewPGSessionStore(container.PGx, conf.Web.Secret)
+		ss, _ := auth.NewPGSessionStore(container.PGx, []byte(conf.Web.Secret))
 		container.WebRouter = router
 		container.WebRouter.Use(session.Middleware(ss))
 		// di.WebRouter.Use(middleware.CSRF())
@@ -215,15 +210,19 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			jobs.WithPoolName(name),
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("%w", err)
 		}
 
-		arrowerQueue, err := jobs.NewPostgresJobs(container.Logger, container.MeterProvider, container.TraceProvider, container.PGx,
+		arrowerQueue, err := jobs.NewPostgresJobs(
+			container.Logger,
+			container.MeterProvider,
+			container.TraceProvider,
+			container.PGx,
 			jobs.WithQueue("Arrower"),
 			jobs.WithPoolName(name),
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("%w", err)
 		}
 
 		container.DefaultQueue = queue
@@ -274,7 +273,7 @@ func serveMetrics(ctx context.Context, di *Container) {
 	// http.Handle("/metrics", promhttp.Handler())
 	http.Handle(metricPath, promhttp.HandlerFor(
 		prometheus2.DefaultGatherer,
-		promhttp.HandlerOpts{
+		promhttp.HandlerOpts{ //nolint:exhaustruct
 			EnableOpenMetrics: true, // to enable Examplars in the export format
 		},
 	))
@@ -303,10 +302,10 @@ type CustomValidator struct {
 
 func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.validator.Struct(i); err != nil {
-		return err //nolint:wrapcheck // return the original validate error to not break the API for the caller.
-
 		// Optionally, you could return the error to give each route more control over the status code
 		// return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+
+		return err //nolint:wrapcheck // return the original validate error to not break the API for the caller.
 	}
 
 	return nil

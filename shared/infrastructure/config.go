@@ -13,24 +13,30 @@ type Config struct {
 
 	Postgres Postgres `mapstructure:"postgres"`
 	Web      Web      `mapstructure:"web"`
+	OTEL     OTEL     `mapstructure:"otel"`
 }
 
 type (
 	Postgres struct {
-		User     string `mapstructure:"user" json:"user"`
-		Password Secret `mapstructure:"password" json:"-"`
-		Database string `mapstructure:"database" json:"database"`
-		Host     string `mapstructure:"host" json:"host"`
-		Port     int    `mapstructure:"port" json:"port"`
-		MaxConns int    `mapstructure:"max_conns" json:"maxConns"`
+		User     string `json:"user"     mapstructure:"user"`
+		Password Secret `json:"-"        mapstructure:"password"`
+		Database string `json:"database" mapstructure:"database"`
+		Host     string `json:"host"     mapstructure:"host"`
+		Port     int    `json:"port"     mapstructure:"port"`
+		MaxConns int    `json:"maxConns" mapstructure:"max_conns"`
 	}
 
 	Web struct {
-		Port               int    `mapstructure:"port" json:"port"`
-		Hostname           string `mapstructure:"hostname" json:"hostname"`
-		Secret             []byte `mapstructure:"secret" json:"-"` // todo use Secret type
-		StatusEndpoint     bool   `mapstructure:"status_endpoint" json:"-"`
-		StatusEndpointPort int    `mapstructure:"status_endpoint_port" json:"-"`
+		Hostname           string `json:"hostname" mapstructure:"hostname"`
+		Port               int    `json:"port"     mapstructure:"port"`
+		Secret             Secret `json:"-"        mapstructure:"secret"`
+		StatusEndpoint     bool   `json:"-"        mapstructure:"status_endpoint"`
+		StatusEndpointPort int    `json:"-"        mapstructure:"status_endpoint_port"`
+	}
+
+	OTEL struct {
+		Host string `json:"host" mapstructure:"host"`
+		Port int    `json:"port" mapstructure:"port"`
 	}
 )
 
@@ -38,9 +44,9 @@ type (
 // It is masked should you output it somewhere.
 //
 // s := Secret("my-secret")
-// fmt.Println(s)							=> output: ******
-// t.Log(s)									=> output: ******
-// logger.Info("", slog.Any("secret", s))	=> output: ******
+// fmt.Println(s)										=> output: ******
+// t.Log(s)												=> output: ******
+// logger.Info("", slog.Any("secret", s))				=> output: ******
 // logger.Info("", slog.String("secret", string(s)))	=> DON'T DO THIS! The secret will be exposed.
 type Secret string
 

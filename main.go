@@ -40,11 +40,15 @@ func main() {
 				MaxConns: 100,  //nolint:gomnd
 			},
 			Web: infrastructure.Web{
-				Secret:             []byte("secret"),
+				Secret:             "secret",
 				Port:               8080,
 				Hostname:           "www.servername.tld",
 				StatusEndpoint:     true,
 				StatusEndpointPort: 2223,
+			},
+			OTEL: infrastructure.OTEL{
+				Host: "localhost",
+				Port: 4317,
 			},
 		})
 	if err != nil {
@@ -96,7 +100,7 @@ func main() {
 
 	//
 	// start app
-	//initRegularExampleQueueLoad(ctx, arrower)
+	initRegularExampleQueueLoad(ctx, arrower)
 	arrower.WebRouter.Logger.Fatal(arrower.WebRouter.Start(fmt.Sprintf(":%d", arrower.Config.Web.Port)))
 
 	//
