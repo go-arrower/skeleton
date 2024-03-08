@@ -234,7 +234,7 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 		workers[i] = jobs.WorkerPool{
 			ID:       w.ID,
 			Queue:    queue,
-			Version:  w.Version,
+			Version:  w.GitHash,
 			JobTypes: w.JobTypes,
 			Workers:  int(w.Workers),
 			LastSeen: w.UpdatedAt.Time,
