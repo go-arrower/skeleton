@@ -74,7 +74,13 @@ func NewRenderer(
 	tracer := traceProvider.Tracer("arrower.renderer")
 
 	views := map[string]viewTemplates{}
-	views[sharedViews], _ = prepareViewTemplates(context.Background(), logger, viewFS) // todo err check
+
+	view, err := prepareViewTemplates(context.Background(), logger, viewFS) // todo err check
+	if err != nil {
+		return nil, fmt.Errorf("could not load views: %w", err)
+	}
+
+	views[sharedViews] = view
 
 	logger.LogAttrs(nil, alog.LevelInfo,
 		"renderer created",
@@ -99,6 +105,9 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS)
 	}
 
 	componentTemplates := template.New("<empty>").Funcs(sprig.FuncMap())
+	componentTemplates.Funcs(template.FuncMap{
+		"route": func(name string, params ...interface{}) string { return "" }, // stub for real function set when the echo.Context is available later
+	})
 
 	for _, c := range components {
 		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
@@ -248,9 +257,14 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	defer innerSpan.End()
 
 	if r.hotReload {
-		r.mu.Lock()
+		r.mu.Lock() // todo is this lock still reqired, as the cache is delted via range now. Instead of = sync.Map{} of previous implementation
 
-		r.cache = sync.Map{}
+		// delete all keys
+		r.cache.Range(func(key interface{}, value interface{}) bool {
+			r.cache.Delete(key)
+			return true
+		})
+
 		for k, v := range r.views {
 			r.views[k], _ = prepareViewTemplates(context.Background(), r.logger, v.viewFS)
 		}
@@ -287,7 +301,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		}
 
 		newTemplate.Funcs(template.FuncMap{
-			"reverse": c.Echo().Reverse,
+			"reverse": c.Echo().Reverse, // overwrite the stub set earlier
 		})
 
 		r.cache.Store(parsedTempl.key(), newTemplate)
@@ -548,6 +562,9 @@ func parseTemplateName(name string) (parsedTemplate, error) {
 }
 
 func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if name == "" {
 		return fmt.Errorf("%w: set a name", ErrContextNotAdded)
 	}
@@ -561,12 +578,15 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	}
 
 	// todo clean
-	r.views[name], _ = prepareViewTemplates(context.Background(), r.logger, viewFS)
+	view, _ := prepareViewTemplates(context.Background(), r.logger, viewFS)
+	r.views[name] = view
 	tmp := r.views[name]
 	cc, _ := r.views[sharedViews].components.Clone()
 
 	for _, t := range tmp.components.Templates() {
-		cc, _ = cc.AddParseTree(t.Name(), t.Tree)
+		c, err := cc.AddParseTree(t.Name(), t.Tree)
+		cc = c
+		fmt.Println(err)
 	}
 
 	tmp.components = cc
