@@ -15,6 +15,7 @@ generate: ## Generate all code to run the service
 	go generate ./...
 	@# the experimental flag is required for pgx compatible code, see: https://docs.sqlc.dev/en/stable/guides/using-go-and-pgx.html?highlight=experimental#getting-started
 	sqlc generate --experimental
+	npx tailwindcss -i ./public/css/input.css  -o ./public/css/main.css --minify
 
 .PHONY: test
 test: static-check generate test-unit test-integration ## Run all tests
