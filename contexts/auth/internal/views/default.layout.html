@@ -1,9 +1,9 @@
 {{ define "layout" }}
-<main>
+  <main>
     AUTH CONTEXT LAYOUT
-    <hr/>
-    {{block "content" . }}
-        Fallback, if "content" is not defined elsewhere
-    {{end}}
-</main>
+    <hr />
+    {{ block "content" . }}
+      Fallback, if "content" is not defined elsewhere
+    {{ end }}
+  </main>
 {{ end }}

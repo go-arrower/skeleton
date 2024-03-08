@@ -1,3 +1,9 @@
+# skeleton files
+public/css/main.css
+public/js/echarts
+public/js/htmx.org
+
+
 # Ignore artifacts:
 build
 coverage

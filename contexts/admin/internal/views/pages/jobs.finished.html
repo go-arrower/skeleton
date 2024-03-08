@@ -1,45 +1,52 @@
 {{ define "admin.title" }}
-<div class="indicator">
-    <span class="indicator-item badge badge-accent text-accent-content"
-          hx-get="{{ reverse "admin.jobs.finished_total" }}"
-          hx-trigger="load, every 10s"
+  <div class="indicator">
+    <span
+      class="badge indicator-item badge-accent text-accent-content"
+      hx-get="{{ reverse "admin.jobs.finished_total" }}"
+      hx-trigger="load, every 10s"
     ></span>
     Finished Jobs
-</div>
+  </div>
 {{ end }}
 
 
 <div class="overflow-x-auto">
-    <table class="table table-zebra">
-        <thead>
-            <tr>
-                <th>Job</th>
-                <th>Queue</th>
-                <th>Finished</th>
-            </tr>
-        </thead>
-        <tbody>
-        {{ range .Jobs }}
-            <tr>
-                <td>
-                    <div>
-                        <span class="text-lg text-primary">
-                            <a href="{{ reverse "admin.jobs.job" .ID }}">{{ .Type }}</a>
-                        </span><br>
-                        <pre class="whitespace-pre-wrap p-1 hover:bg-neutral hover:text-neutral-content rounded">{{ .Payload }}</pre>
-                        <span class="text-xs">Enqueued {{ .EnqueuedAtFmt }}</span>
-                    </div>
-                </td>
-                <td class="align-top text-secondary">
-                    <a href="{{ reverse "admin.jobs.queue" .Queue }}">{{ .Queue }}</a>
-                </td>
-                <td class="align-top">{{ .FinishedAtFmt }}</td>
-            </tr>
-        {{ else }}
-            <tr class="border-none">
-                <td colspan="3" class="text-center">No Jobs.</td>
-            </tr>
-        {{ end }}
-        </tbody>
-    </table>
+  <table class="table table-zebra">
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Queue</th>
+        <th>Finished</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Jobs }}
+        <tr>
+          <td>
+            <div>
+              <span class="text-lg text-primary">
+                <a href="{{ reverse "admin.jobs.job" .ID }}"
+                  >{{ .Type }}</a
+                > </span
+              ><br />
+              <pre
+                class="whitespace-pre-wrap rounded p-1 hover:bg-neutral hover:text-neutral-content"
+              >
+{{ .Payload }}</pre
+              >
+              <span class="text-xs">Enqueued {{ .EnqueuedAtFmt }}</span>
+            </div>
+          </td>
+          <td class="align-top text-secondary">
+            <a href="{{ reverse "admin.jobs.queue" .Queue }}">{{ .Queue }}</a>
+          </td>
+          <td class="align-top">{{ .FinishedAtFmt }}</td>
+        </tr>
+      {{ else }}
+        <tr class="border-none">
+          <td colspan="3" class="text-center">No Jobs.</td>
+        </tr>
+      {{ end }}
+    </tbody>
+  </table>
 </div>

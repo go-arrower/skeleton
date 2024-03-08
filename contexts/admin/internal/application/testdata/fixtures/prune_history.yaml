@@ -5,7 +5,7 @@ arrower.gue_jobs_history:
     job_type: some-type
     args:
       -
-    queue: ''
+    queue: ""
     created_at: "2006-01-02 15:04:05.000000+00"
     updated_at: RAW=NOW()
   - job_id: current-job
@@ -14,6 +14,6 @@ arrower.gue_jobs_history:
     job_type: some-type
     args:
       -
-    queue: ''
+    queue: ""
     created_at: RAW=NOW()
     updated_at: RAW=NOW()
