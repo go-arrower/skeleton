@@ -68,7 +68,6 @@ func TestIP2Location_ResolveIP(t *testing.T) {
 	ip := infrastructure.NewIP2LocationService("")
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 

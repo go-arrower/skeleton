@@ -60,7 +60,6 @@ func TestJobsApplication_VacuumJobsTable(t *testing.T) {
 	app := application.NewJobsApplication(pgHandler.PGx())
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
