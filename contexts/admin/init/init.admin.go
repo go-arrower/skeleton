@@ -2,7 +2,6 @@ package init
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -26,8 +25,7 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings)),
 	}
 
-	err := di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views")) // todo build path automatically, as it is a convention (?)
-	fmt.Println(err)
+	_ = di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views")) // todo build path automatically, as it is a convention (?)
 
 	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, web2.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
 	jobsController.Queries = models.New(di.PGx)

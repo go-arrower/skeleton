@@ -584,9 +584,8 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	cc, _ := r.views[sharedViews].components.Clone()
 
 	for _, t := range tmp.components.Templates() {
-		c, err := cc.AddParseTree(t.Name(), t.Tree)
+		c, _ := cc.AddParseTree(t.Name(), t.Tree)
 		cc = c
-		fmt.Println(err)
 	}
 
 	tmp.components = cc
