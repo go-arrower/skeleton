@@ -85,6 +85,16 @@ FROM (SELECT DISTINCT ON (job_id) *
       LIMIT 100) as f
 ORDER BY f.finished_at DESC;
 
+-- name: GetFinishedJobsByQueueAndType :many
+SELECT f.*
+FROM (SELECT DISTINCT ON (job_id) *
+      FROM arrower.gue_jobs_history
+      WHERE finished_at IS NOT NULL
+        AND queue = $1
+        AND job_type = $2
+      LIMIT 100) as f
+ORDER BY f.finished_at DESC;
+
 -- name: DeleteJob :exec
 DELETE
 FROM arrower.gue_jobs
@@ -152,6 +162,13 @@ WHERE finished_at IS NOT NULL;
 SELECT COUNT(DISTINCT (job_id))
 FROM arrower.gue_jobs_history
 WHERE queue = $1
+  AND finished_at IS NOT NULL;
+
+-- name: TotalFinishedJobsByQueueAndType :one
+SELECT COUNT(DISTINCT (job_id))
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND job_type = $2
   AND finished_at IS NOT NULL;
 
 -- name: GetJobHistory :many

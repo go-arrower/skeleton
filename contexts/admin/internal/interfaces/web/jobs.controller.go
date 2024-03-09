@@ -544,8 +544,26 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 
 func (jc *JobsController) FinishedJobs() func(echo.Context) error {
 	return func(c echo.Context) error {
+		if updateJobTypeSelectOptions := c.QueryParam("updateJobTypes"); updateJobTypeSelectOptions == "true" {
+			q := c.QueryParam("queue")
+			if q == string(jobs.DefaultQueueName) {
+				q = ""
+			}
+
+			jobTypes, err := jc.Queries.JobTypes(c.Request().Context(), q)
+			if err != nil {
+				return fmt.Errorf("%w", err)
+			}
+
+			return c.Render(http.StatusOK, "jobs.finished#known-job-types", echo.Map{
+				"JobType":  jobTypes,
+				"Selected": c.QueryParam("job-type"),
+			})
+		}
+
 		filter := jobs.Filter{ // todo, see if echo can autobind to this; same for total count controller
-			Queue: jobs.QueueName(c.QueryParam("queue")),
+			Queue:   jobs.QueueName(c.QueryParam("queue")),
+			JobType: jobs.JobType(c.QueryParam("job-type")),
 		}
 
 		finishedJobs, err := jc.repo.FinishedJobs(c.Request().Context(), filter)
@@ -571,7 +589,8 @@ func (jc *JobsController) FinishedJobs() func(echo.Context) error {
 func (jc *JobsController) FinishedJobsTotal() func(ctx echo.Context) error {
 	return func(c echo.Context) error {
 		filter := jobs.Filter{
-			Queue: jobs.QueueName(c.QueryParam("queue")),
+			Queue:   jobs.QueueName(c.QueryParam("queue")),
+			JobType: jobs.JobType(c.QueryParam("job-type")),
 		}
 
 		total, err := jc.repo.FinishedJobsTotal(c.Request().Context(), filter)

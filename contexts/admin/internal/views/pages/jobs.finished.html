@@ -27,9 +27,39 @@
       </option>
     {{ end }}
   </select>
-  <select class="select w-full max-w-xs" autocomplete="off">
-    <option disabled selected>Filter by Job Type</option>
-  </select>
+
+  {{ block "known-job-types" . }}
+    <select
+      class="select w-full max-w-xs border-0 focus:outline-none"
+      autocomplete="off"
+      name="job-type"
+      id="job-type"
+      hx-get="{{ route "admin.jobs.finished" }}"
+      hx-target="#jobs-list"
+      hx-include="#queue"
+    >
+      <option
+        disabled
+        selected
+        value=""
+        hx-get="{{ route "admin.jobs.finished" }}"
+        hx-trigger="arrower:admin.jobs.filter.changed from:body"
+        hx-include="#queue, #job-type"
+        hx-vals='{"updateJobTypes": "true"}'
+        hx-target="closest select"
+        hx-swap="outerHTML"
+      >
+        Filter by Job Type
+      </option>
+      {{ $.Selected }}
+      {{ range .JobType }}
+        {{ eq $.Selected . }}
+        <option value="{{ . }}" {{ if eq $.Selected . }}selected{{ end }}>
+          {{ . }}
+        </option>
+      {{ end }}
+    </select>
+  {{ end }}
 </div>
 
 {{ block "jobs.list" . }}

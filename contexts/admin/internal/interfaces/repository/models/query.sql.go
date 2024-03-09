@@ -108,6 +108,56 @@ func (q *Queries) GetFinishedJobsByQueue(ctx context.Context, queue string) ([]A
 	return items, nil
 }
 
+const getFinishedJobsByQueueAndType = `-- name: GetFinishedJobsByQueueAndType :many
+SELECT f.job_id, f.priority, f.run_at, f.job_type, f.args, f.queue, f.run_count, f.run_error, f.created_at, f.updated_at, f.success, f.finished_at, f.pruned_at
+FROM (SELECT DISTINCT ON (job_id) job_id, priority, run_at, job_type, args, queue, run_count, run_error, created_at, updated_at, success, finished_at, pruned_at
+      FROM arrower.gue_jobs_history
+      WHERE finished_at IS NOT NULL
+        AND queue = $1
+        AND job_type = $2
+      LIMIT 100) as f
+ORDER BY f.finished_at DESC
+`
+
+type GetFinishedJobsByQueueAndTypeParams struct {
+	Queue   string
+	JobType string
+}
+
+func (q *Queries) GetFinishedJobsByQueueAndType(ctx context.Context, arg GetFinishedJobsByQueueAndTypeParams) ([]ArrowerGueJobsHistory, error) {
+	rows, err := q.db.Query(ctx, getFinishedJobsByQueueAndType, arg.Queue, arg.JobType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ArrowerGueJobsHistory
+	for rows.Next() {
+		var i ArrowerGueJobsHistory
+		if err := rows.Scan(
+			&i.JobID,
+			&i.Priority,
+			&i.RunAt,
+			&i.JobType,
+			&i.Args,
+			&i.Queue,
+			&i.RunCount,
+			&i.RunError,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Success,
+			&i.FinishedAt,
+			&i.PrunedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getJobHistory = `-- name: GetJobHistory :many
 SELECT job_id, priority, run_at, job_type, args, queue, run_count, run_error, created_at, updated_at, success, finished_at, pruned_at
 FROM arrower.gue_jobs_history
@@ -564,6 +614,26 @@ WHERE queue = $1
 
 func (q *Queries) TotalFinishedJobsByQueue(ctx context.Context, queue string) (int64, error) {
 	row := q.db.QueryRow(ctx, totalFinishedJobsByQueue, queue)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const totalFinishedJobsByQueueAndType = `-- name: TotalFinishedJobsByQueueAndType :one
+SELECT COUNT(DISTINCT (job_id))
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND job_type = $2
+  AND finished_at IS NOT NULL
+`
+
+type TotalFinishedJobsByQueueAndTypeParams struct {
+	Queue   string
+	JobType string
+}
+
+func (q *Queries) TotalFinishedJobsByQueueAndType(ctx context.Context, arg TotalFinishedJobsByQueueAndTypeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, totalFinishedJobsByQueueAndType, arg.Queue, arg.JobType)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

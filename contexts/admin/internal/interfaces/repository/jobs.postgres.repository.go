@@ -244,13 +244,25 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 }
 
 func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context, f jobs.Filter) ([]jobs.PendingJob, error) {
-	if f.Queue != "" {
-		q := string(f.Queue)
-		if f.Queue == jobs.DefaultQueueName {
-			q = ""
+	queue := string(f.Queue)
+	if f.Queue == jobs.DefaultQueueName {
+		queue = ""
+	}
+
+	if f.Queue != "" && f.JobType != "" {
+		jobs, err := repo.Conn().GetFinishedJobsByQueueAndType(ctx, models.GetFinishedJobsByQueueAndTypeParams{
+			Queue:   queue,
+			JobType: string(f.JobType),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not get finished jobs by queue and job type: %v", err)
 		}
 
-		jobs, err := repo.Conn().GetFinishedJobsByQueue(ctx, q)
+		return historyJobsToDomain(jobs), nil
+	}
+
+	if f.Queue != "" {
+		jobs, err := repo.Conn().GetFinishedJobsByQueue(ctx, queue)
 		if err != nil {
 			return nil, fmt.Errorf("could not get finished jobs by queue: %v", err)
 		}
@@ -267,13 +279,25 @@ func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context, f jobs.Fil
 }
 
 func (repo *PostgresJobsRepository) FinishedJobsTotal(ctx context.Context, f jobs.Filter) (int64, error) {
-	if f.Queue != "" {
-		q := string(f.Queue)
-		if f.Queue == jobs.DefaultQueueName {
-			q = ""
+	queue := string(f.Queue)
+	if f.Queue == jobs.DefaultQueueName {
+		queue = ""
+	}
+
+	if f.Queue != "" && f.JobType != "" {
+		total, err := repo.Conn().TotalFinishedJobsByQueueAndType(ctx, models.TotalFinishedJobsByQueueAndTypeParams{
+			Queue:   queue,
+			JobType: string(f.JobType),
+		})
+		if err != nil {
+			return 0, fmt.Errorf("%v", err)
 		}
 
-		total, err := repo.Conn().TotalFinishedJobsByQueue(ctx, q)
+		return total, nil
+	}
+
+	if f.Queue != "" {
+		total, err := repo.Conn().TotalFinishedJobsByQueue(ctx, queue)
 		if err != nil {
 			return 0, fmt.Errorf("%v", err)
 		}
