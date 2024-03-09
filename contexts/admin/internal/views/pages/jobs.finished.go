@@ -9,7 +9,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 )
 
-func NewFinishedJobs(jobs []jobs.PendingJob) echo.Map {
+func NewFinishedJobs(jobs []jobs.PendingJob, queues jobs.QueueNames) echo.Map {
 	type finishedJob struct {
 		EnqueuedAtFmt string
 		FinishedAtFmt string
@@ -35,6 +35,7 @@ func NewFinishedJobs(jobs []jobs.PendingJob) echo.Map {
 	}
 
 	return echo.Map{
-		"Jobs": fjobs,
+		"Jobs":   fjobs,
+		"Queues": queues,
 	}
 }

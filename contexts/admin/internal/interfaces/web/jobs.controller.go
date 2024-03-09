@@ -24,7 +24,8 @@ import (
 const (
 	defaultQueueName = "Default" // todo remove
 
-	historyTableSizeChangedJSEvent = "arrower:admin.jobs.history.deleted"
+	historyTableSizeChangedJSEvent   = "arrower:admin.jobs.history.deleted"
+	finishedJobsFilterChangedJSEvent = "arrower:admin.jobs.filter.changed"
 
 	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
@@ -543,20 +544,39 @@ func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {
 
 func (jc *JobsController) FinishedJobs() func(echo.Context) error {
 	return func(c echo.Context) error {
-		jobs, err := jc.repo.FinishedJobs(c.Request().Context())
+		filter := jobs.Filter{ // todo, see if echo can autobind to this; same for total count controller
+			Queue: jobs.QueueName(c.QueryParam("queue")),
+		}
+
+		finishedJobs, err := jc.repo.FinishedJobs(c.Request().Context(), filter)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "jobs.finished", pages.NewFinishedJobs(jobs))
+		if filter != (jobs.Filter{}) {
+			c.Response().Header().Set("HX-TRIGGER", finishedJobsFilterChangedJSEvent)
+
+			return c.Render(http.StatusOK, "jobs.finished#jobs.list", pages.NewFinishedJobs(finishedJobs, nil))
+		}
+
+		queues, err := jc.repo.Queues(c.Request().Context())
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		return c.Render(http.StatusOK, "jobs.finished", pages.NewFinishedJobs(finishedJobs, queues))
 	}
 }
 
 func (jc *JobsController) FinishedJobsTotal() func(ctx echo.Context) error {
 	return func(c echo.Context) error {
-		total, err := jc.Queries.TotalFinishedJobs(c.Request().Context())
+		filter := jobs.Filter{
+			Queue: jobs.QueueName(c.QueryParam("queue")),
+		}
+
+		total, err := jc.repo.FinishedJobsTotal(c.Request().Context(), filter)
 		if err != nil {
-			return fmt.Errorf("%v", err)
+			return fmt.Errorf("%w", err)
 		}
 
 		return c.String(http.StatusOK, strconv.FormatInt(total, 10))

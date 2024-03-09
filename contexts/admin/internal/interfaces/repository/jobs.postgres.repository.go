@@ -243,13 +243,50 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 	return workers
 }
 
-func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context) ([]jobs.PendingJob, error) {
+func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context, f jobs.Filter) ([]jobs.PendingJob, error) {
+	if f.Queue != "" {
+		q := string(f.Queue)
+		if f.Queue == jobs.DefaultQueueName {
+			q = ""
+		}
+
+		jobs, err := repo.Conn().GetFinishedJobsByQueue(ctx, q)
+		if err != nil {
+			return nil, fmt.Errorf("could not get finished jobs by queue: %v", err)
+		}
+
+		return historyJobsToDomain(jobs), nil
+	}
+
 	jobs, err := repo.Conn().GetFinishedJobs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get finished jobs: %v", err)
 	}
 
 	return historyJobsToDomain(jobs), nil
+}
+
+func (repo *PostgresJobsRepository) FinishedJobsTotal(ctx context.Context, f jobs.Filter) (int64, error) {
+	if f.Queue != "" {
+		q := string(f.Queue)
+		if f.Queue == jobs.DefaultQueueName {
+			q = ""
+		}
+
+		total, err := repo.Conn().TotalFinishedJobsByQueue(ctx, q)
+		if err != nil {
+			return 0, fmt.Errorf("%v", err)
+		}
+
+		return total, nil
+	}
+
+	total, err := repo.Conn().TotalFinishedJobs(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("%v", err)
+	}
+
+	return total, nil
 }
 
 func historyJobsToDomain(j []models.ArrowerGueJobsHistory) []jobs.PendingJob {

@@ -65,6 +65,12 @@ type (
 		Delete(ctx context.Context, jobID string) error
 		RunJobAt(ctx context.Context, jobID string, runAt time.Time) error
 		WorkerPools(ctx context.Context) ([]WorkerPool, error)
-		FinishedJobs(ctx context.Context) ([]PendingJob, error)
+		FinishedJobs(ctx context.Context, f Filter) ([]PendingJob, error)
+		FinishedJobsTotal(ctx context.Context, f Filter) (int64, error)
+	}
+
+	Filter struct {
+		Queue   QueueName
+		JobType JobType
 	}
 )

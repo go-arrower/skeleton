@@ -76,6 +76,15 @@ WHERE finished_at IS NOT NULL
 ORDER BY finished_at DESC
 LIMIT 100;
 
+-- name: GetFinishedJobsByQueue :many
+SELECT f.*
+FROM (SELECT DISTINCT ON (job_id) *
+      FROM arrower.gue_jobs_history
+      WHERE finished_at IS NOT NULL
+        AND queue = $1
+      LIMIT 100) as f
+ORDER BY f.finished_at DESC;
+
 -- name: DeleteJob :exec
 DELETE
 FROM arrower.gue_jobs
@@ -136,7 +145,14 @@ ON CONFLICT (id, queue) DO UPDATE SET updated_at = STATEMENT_TIMESTAMP(),
 
 -- name: TotalFinishedJobs :one
 SELECT COUNT(DISTINCT (job_id))
-FROM arrower.gue_jobs_history;
+FROM arrower.gue_jobs_history
+WHERE finished_at IS NOT NULL;
+
+-- name: TotalFinishedJobsByQueue :one
+SELECT COUNT(DISTINCT (job_id))
+FROM arrower.gue_jobs_history
+WHERE queue = $1
+  AND finished_at IS NOT NULL;
 
 -- name: GetJobHistory :many
 SELECT *
