@@ -75,7 +75,7 @@ func NewRenderer(
 
 	views := map[string]viewTemplates{}
 
-	view, err := prepareViewTemplates(context.Background(), logger, viewFS) // todo err check
+	view, err := prepareViewTemplates(context.Background(), logger, viewFS)
 	if err != nil {
 		return nil, fmt.Errorf("could not load views: %w", err)
 	}
@@ -301,7 +301,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		}
 
 		newTemplate.Funcs(template.FuncMap{
-			"reverse": c.Echo().Reverse, // overwrite the stub set earlier
+			"route": c.Echo().Reverse, // overwrite the stub set earlier
 		})
 
 		r.cache.Store(parsedTempl.key(), newTemplate)
