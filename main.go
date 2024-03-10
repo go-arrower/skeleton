@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -29,7 +30,7 @@ func main() {
 		&infrastructure.Config{
 			OrganisationName: "arrower",
 			ApplicationName:  "skeleton",
-			InstanceName:     "",
+			InstanceName:     getOutboundIP(),
 			Debug:            true,
 			Postgres: infrastructure.Postgres{
 				User:     "arrower",
@@ -188,4 +189,20 @@ func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Contain
 			}
 		}
 	}()
+}
+
+// Get preferred outbound ip of this machine.
+//
+// Actually, it does not establish any connection and the destination does not need to be existed at all :)
+// So, what the code does actually, is to get the local up address if it would connect to that target,
+// you can change to any other IP address you want. conn.LocalAddr().String() is the local ip and port.
+// https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
+func getOutboundIP() string {
+	conn, err := net.Dial("udp", "5.1.66.255:80")
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }

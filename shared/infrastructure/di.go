@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -182,7 +181,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		router.IPExtractor = echo.ExtractIPFromXFFHeader() // see: https://echo.labstack.com/docs/ip-address
 		router.Use(otelecho.Middleware(conf.Web.Hostname, otelecho.WithTracerProvider(container.TraceProvider)))
 		router.Use(echoprometheus.NewMiddleware(conf.ApplicationName))
-		router.Use(middleware.Static("public")) // todo use fs instead
+		router.Use(middleware.Static("public")) // todo if prod use fs instead
 
 		hotReload := false
 		if conf.Debug {
@@ -209,13 +208,8 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	}
 
 	{ // jobs
-		name := conf.InstanceName
-		if name == "" {
-			name = getOutboundIP()
-		}
-
 		queue, err := jobs.NewPostgresJobs(container.Logger, container.MeterProvider, container.TraceProvider, container.PGx,
-			jobs.WithPoolName(name),
+			jobs.WithPoolName(conf.InstanceName),
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w", err)
@@ -227,7 +221,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			container.TraceProvider,
 			container.PGx,
 			jobs.WithQueue("Arrower"),
-			jobs.WithPoolName(name),
+			jobs.WithPoolName(conf.InstanceName),
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w", err)
@@ -402,19 +396,3 @@ const hotReloadJSCode = `<!-- Code injected by hot-reload middleware -->
     }
 </script>
 `
-
-// Get preferred outbound ip of this machine.
-//
-// Actually, it does not establish any connection and the destination does not need to be existed at all :)
-// So, what the code does actually, is to get the local up address if it would connect to that target,
-// you can change to any other IP address you want. conn.LocalAddr().String() is the local ip and port.
-// https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
-func getOutboundIP() string {
-	conn, err := net.Dial("udp", "5.1.66.255:80")
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-
-	return conn.LocalAddr().(*net.UDPAddr).IP.String()
-}
