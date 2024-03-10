@@ -3,47 +3,75 @@ package init
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 
-	alogmodels "github.com/go-arrower/arrower/alog/models"
+	"github.com/go-arrower/arrower/alog"
 
+	alogmodels "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/views"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
 	sweb "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
-func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
-	adminContext := &AdminContext{
-		Container: di,
+const contextName = "admin"
 
-		jobRepository: repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx)),
+func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
+	logger := di.Logger.With(slog.String("context", contextName))
+
+	jobRepository := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
+
+	adminContext := &AdminContext{
+		globalContainer: di,
+
+		logger: logger,
+
+		jobRepository: jobRepository,
 
 		settingsController: web.NewSettingsController(di.AdminRouter),
-		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), sweb.NewDefaultPresenter(di.Settings)),
+		jobsController: web.NewJobsController(
+			logger,
+			models.New(di.PGx),
+			jobRepository,
+			sweb.NewDefaultPresenter(di.Settings),
+			application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), logger),
+		),
+		logsController: web.NewLogsController(
+			logger,
+			di.Settings,
+			alogmodels.New(di.PGx),
+			di.AdminRouter.Group("/logs"),
+			sweb.NewDefaultPresenter(di.Settings),
+		),
 	}
 
-	// todo build path automatically, as it is a convention (?)
-	err := di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views"))
+	var views fs.FS = views.AdminViews
+	if di.Config.Debug {
+		views = os.DirFS("contexts/admin/internal/views")
+	}
+
+	err := di.WebRenderer.AddContext(contextName, views)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, sweb.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
-	jobsController.Queries = models.New(di.PGx)
-	adminContext.jobsController = jobsController
-
 	registerAdminRoutes(adminContext)
+
+	logger.Debug("context admin initialised")
 
 	return adminContext, nil
 }
 
 type AdminContext struct {
-	*infrastructure.Container
+	globalContainer *infrastructure.Container
+
+	logger alog.Logger
 
 	jobRepository jobs.Repository
 

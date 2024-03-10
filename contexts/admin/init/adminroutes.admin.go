@@ -8,16 +8,16 @@ import (
 )
 
 func registerAdminRoutes(di *AdminContext) {
-	di.AdminRouter.GET("", func(c echo.Context) error {
+	di.globalContainer.AdminRouter.GET("", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "admin.home", nil)
 	})
 
-	di.AdminRouter.GET("/", func(c echo.Context) error {
+	di.globalContainer.AdminRouter.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "admin.home", nil)
 	})
 
-	di.AdminRouter.GET("/routes", func(c echo.Context) error {
-		routes := di.WebRouter.Routes()
+	di.globalContainer.AdminRouter.GET("/routes", func(c echo.Context) error {
+		routes := di.globalContainer.WebRouter.Routes()
 
 		// sort routes by path and then by method
 		sort.Slice(routes, func(i, j int) bool {
@@ -44,7 +44,7 @@ func registerAdminRoutes(di *AdminContext) {
 	di.logsController.SettingLogs()
 
 	{
-		jobs := di.AdminRouter.Group("/jobs")
+		jobs := di.globalContainer.AdminRouter.Group("/jobs")
 		jobs.GET("", di.jobsController.ListQueues())
 		jobs.GET("/", di.jobsController.ListQueues())
 		jobs.GET("/data/pending", di.jobsController.PendingJobsPieChartData())                // todo better htmx fruednly data URL

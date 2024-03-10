@@ -22,20 +22,25 @@ import (
 )
 
 const (
-	defaultQueueName = "Default" // todo remove
-
 	historyTableSizeChangedJSEvent   = "arrower:admin.jobs.history.deleted"
 	finishedJobsFilterChangedJSEvent = "arrower:admin.jobs.filter.changed"
 
 	htmlDatetimeLayout = "2006-01-02T15:04" // format used by the HTML datetime-local input element
 )
 
-func NewJobsController(logger alog.Logger, repo jobs.Repository, presenter *web.DefaultPresenter, app application.JobsApplication) *JobsController {
+func NewJobsController(
+	logger alog.Logger,
+	queries *models.Queries,
+	repo jobs.Repository,
+	presenter *web.DefaultPresenter,
+	app application.JobsApplication,
+) *JobsController {
 	return &JobsController{
-		logger: logger,
-		repo:   repo,
-		p:      presenter,
-		app:    app,
+		logger:  logger,
+		queries: queries,
+		repo:    repo,
+		p:       presenter,
+		app:     app,
 	}
 }
 
@@ -44,7 +49,7 @@ type JobsController struct {
 	repo   jobs.Repository
 	p      *web.DefaultPresenter
 
-	Queries *models.Queries
+	queries *models.Queries
 	app     application.JobsApplication
 }
 
@@ -96,13 +101,13 @@ func (jc *JobsController) ProcessedJobsLineChartData() func(echo.Context) error 
 		var err error
 
 		if interval == "hour" { // show last 60 minutes
-			data, err = jc.Queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{
+			data, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{
 				DateBin:    pgtype.Interval{Valid: true, Microseconds: int64(time.Minute * 5 / time.Microsecond)},
 				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour)},
 				Limit:      12,
 			})
 		} else {
-			data, err = jc.Queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{ // show whole week
+			data, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{ // show whole week
 				DateBin:    pgtype.Interval{Valid: true, Days: 1},
 				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour * 24 * 7)},
 				Limit:      7,
@@ -190,7 +195,7 @@ func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 
 func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+		size, _ := jc.queries.JobTableSize(c.Request().Context())
 
 		res, _ := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{}) // fixme: don't call existing use case, create own or call domain model
 
@@ -219,7 +224,7 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 		_ = jc.app.VacuumJobsTable(c.Request().Context(), table)
 
 		// reload the dashboard badges with the size, by using htmx's oob technique
-		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+		size, _ := jc.queries.JobTableSize(c.Request().Context())
 
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
@@ -239,7 +244,7 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 		_ = jc.app.PruneHistory(c.Request().Context(), days)
 
 		// reload the dashboard badges with the size, by using htmx's oob technique
-		size, _ := jc.Queries.JobTableSize(c.Request().Context())
+		size, _ := jc.queries.JobTableSize(c.Request().Context())
 
 		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
 
@@ -260,7 +265,7 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 			queue = ""
 		}
 
-		_ = jc.Queries.PruneHistoryPayload(c.Request().Context(), models.PruneHistoryPayloadParams{
+		_ = jc.queries.PruneHistoryPayload(c.Request().Context(), models.PruneHistoryPayloadParams{
 			Queue:     queue,
 			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
 		})
@@ -277,7 +282,7 @@ func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
 
 		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
 
-		size, _ := jc.Queries.JobHistorySize(c.Request().Context(), pgtype.Timestamptz{Time: estimateBefore, Valid: true})
+		size, _ := jc.queries.JobHistorySize(c.Request().Context(), pgtype.Timestamptz{Time: estimateBefore, Valid: true})
 
 		var fmtSize string
 		if size != "" {
@@ -298,7 +303,7 @@ func (jc *JobsController) EstimateHistoryPayloadSize() func(echo.Context) error 
 		days, _ := strconv.Atoi(c.QueryParam("days"))
 		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
 
-		size, _ := jc.Queries.JobHistoryPayloadSize(c.Request().Context(), models.JobHistoryPayloadSizeParams{
+		size, _ := jc.queries.JobHistoryPayloadSize(c.Request().Context(), models.JobHistoryPayloadSizeParams{
 			Queue:     queue,
 			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
 		})
@@ -350,7 +355,7 @@ func (jc *JobsController) PayloadExamples() func(_ echo.Context) error {
 			queue = ""
 		}
 
-		payloads, _ := jc.Queries.LastHistoryPayloads(c.Request().Context(), models.LastHistoryPayloadsParams{
+		payloads, _ := jc.queries.LastHistoryPayloads(c.Request().Context(), models.LastHistoryPayloadsParams{
 			Queue:   queue,
 			JobType: jobType,
 		})
@@ -550,7 +555,7 @@ func (jc *JobsController) FinishedJobs() func(echo.Context) error {
 				q = ""
 			}
 
-			jobTypes, err := jc.Queries.JobTypes(c.Request().Context(), q)
+			jobTypes, err := jc.queries.JobTypes(c.Request().Context(), q)
 			if err != nil {
 				return fmt.Errorf("%w", err)
 			}
@@ -604,7 +609,7 @@ func (jc *JobsController) FinishedJobsTotal() func(ctx echo.Context) error {
 
 func (jc *JobsController) ShowJob() func(ctx echo.Context) error {
 	return func(c echo.Context) error {
-		jobs, err := jc.Queries.GetJobHistory(c.Request().Context(), c.Param("job_id"))
+		jobs, err := jc.queries.GetJobHistory(c.Request().Context(), c.Param("job_id"))
 		if err != nil {
 			return fmt.Errorf("%v", err)
 		}
