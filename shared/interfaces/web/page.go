@@ -7,7 +7,6 @@ import (
 	"github.com/go-arrower/arrower/setting"
 	"github.com/labstack/echo/v4"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/auth"
 )
 
@@ -42,8 +41,8 @@ func (p *DefaultPresenter) MapDefaultBasePage(ctx context.Context, title string,
 		docTitle = appTitle
 	}
 
-	isRegisterActive, _ := p.settings.Setting(ctx, admin.SettingRegistration)
-	isLoginActive, _ := p.settings.Setting(ctx, admin.SettingLogin)
+	isRegisterActive, _ := p.settings.Setting(ctx, auth.SettingAllowRegistration)
+	isLoginActive, _ := p.settings.Setting(ctx, auth.SettingAllowLogin)
 
 	showLoginBtn := isLoginActive.MustBool() && !auth.IsLoggedIn(ctx)
 
@@ -82,7 +81,7 @@ func (p *DefaultPresenter) DefaultBasePage(ctx context.Context, title string, ke
 		d = keyVals[0]
 	}
 
-	isRegisterActive, _ := p.settings.Setting(ctx, admin.SettingRegistration)
+	isRegisterActive, _ := p.settings.Setting(ctx, auth.SettingAllowRegistration)
 
 	return BasePage{
 		Title:               docTitle,

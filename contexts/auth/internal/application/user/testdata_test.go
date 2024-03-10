@@ -3,9 +3,9 @@ package user_test
 import (
 	"context"
 
-	"github.com/go-arrower/arrower/setting"
+	"github.com/go-arrower/skeleton/contexts/auth"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
+	"github.com/go-arrower/arrower/setting"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
@@ -42,7 +42,7 @@ var (
 // used by AuthenticationService
 func settingsService(active bool) setting.Settings {
 	settings := setting.NewInMemorySettings()
-	settings.Save(ctx, admin.SettingLogin, setting.NewValue(active))
+	settings.Save(ctx, auth.SettingAllowLogin, setting.NewValue(active))
 
 	return settings
 }

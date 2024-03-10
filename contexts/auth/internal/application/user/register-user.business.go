@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/go-arrower/arrower/setting"
+	"github.com/go-arrower/skeleton/contexts/auth"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
+	"github.com/go-arrower/arrower/setting"
 )
 
 var (
@@ -32,7 +32,7 @@ func (s *RegistrationService) RegisterNewUser(
 	registerEmail string,
 	password string,
 ) (User, error) {
-	isRegistrationActive, err := s.settings.Setting(ctx, admin.SettingRegistration)
+	isRegistrationActive, err := s.settings.Setting(ctx, auth.SettingAllowRegistration)
 	if err != nil {
 		return User{}, fmt.Errorf("%w: could not load settings: %v", ErrRegistrationFailed, err)
 	}

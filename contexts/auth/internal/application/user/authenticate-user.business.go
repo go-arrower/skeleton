@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 
-	"github.com/go-arrower/arrower/setting"
+	"github.com/go-arrower/skeleton/contexts/auth"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
+	"github.com/go-arrower/arrower/setting"
 )
 
 func NewAuthenticationService(settings setting.Settings) *AuthenticationService {
@@ -17,7 +17,7 @@ type AuthenticationService struct {
 }
 
 func (s *AuthenticationService) Authenticate(ctx context.Context, usr User, password string) bool {
-	if isLoginActive, err := s.settingsService.Setting(ctx, admin.SettingLogin); !isLoginActive.MustBool() || err != nil {
+	if isLoginActive, err := s.settingsService.Setting(ctx, auth.SettingAllowLogin); !isLoginActive.MustBool() || err != nil {
 		return false
 	}
 

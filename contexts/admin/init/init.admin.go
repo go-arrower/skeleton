@@ -2,17 +2,19 @@ package init
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 
 	alogmodels "github.com/go-arrower/arrower/alog/models"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
+	sweb "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
@@ -22,12 +24,16 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobRepository: repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx)),
 
 		settingsController: web.NewSettingsController(di.AdminRouter),
-		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), web2.NewDefaultPresenter(di.Settings)),
+		logsController:     web.NewLogsController(di.Logger, di.Settings, alogmodels.New(di.PGx), di.AdminRouter.Group("/logs"), sweb.NewDefaultPresenter(di.Settings)),
 	}
 
-	_ = di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views")) // todo build path automatically, as it is a convention (?)
+	// todo build path automatically, as it is a convention (?)
+	err := di.WebRenderer.AddContext("admin", os.DirFS("contexts/admin/internal/views"))
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
 
-	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, web2.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
+	jobsController := web.NewJobsController(di.Logger, adminContext.jobRepository, sweb.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), (di.Logger).(*slog.Logger)))
 	jobsController.Queries = models.New(di.PGx)
 	adminContext.jobsController = jobsController
 

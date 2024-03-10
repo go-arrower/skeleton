@@ -3,11 +3,12 @@ package user_test
 import (
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/auth"
+
 	"github.com/go-arrower/arrower/setting"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/admin"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 )
@@ -19,7 +20,7 @@ func TestRegistrationService_RegisterNewUser(t *testing.T) {
 		t.Parallel()
 
 		settings := setting.NewInMemorySettings()
-		settings.Save(ctx, admin.SettingRegistration, setting.NewValue(false))
+		settings.Save(ctx, auth.SettingAllowRegistration, setting.NewValue(false))
 
 		rs := user.NewRegistrationService(settings, nil)
 
@@ -34,7 +35,7 @@ func TestRegistrationService_RegisterNewUser(t *testing.T) {
 		_ = repo.Save(ctx, userVerified)
 
 		settings := setting.NewInMemorySettings()
-		settings.Save(ctx, admin.SettingRegistration, setting.NewValue(true))
+		settings.Save(ctx, auth.SettingAllowRegistration, setting.NewValue(true))
 
 		rs := user.NewRegistrationService(settings, repo)
 
@@ -48,7 +49,7 @@ func TestRegistrationService_RegisterNewUser(t *testing.T) {
 		repo := repository.NewMemoryRepository()
 
 		settings := setting.NewInMemorySettings()
-		settings.Save(ctx, admin.SettingRegistration, setting.NewValue(true))
+		settings.Save(ctx, auth.SettingAllowRegistration, setting.NewValue(true))
 
 		rs := user.NewRegistrationService(settings, repo)
 

@@ -4,7 +4,11 @@ package auth
 import (
 	"context"
 	"time"
+
+	"github.com/go-arrower/arrower/setting"
 )
+
+const contextName = "auth"
 
 // API is the api of the auth Context.
 //
@@ -85,3 +89,8 @@ func Logout(userID any) bool { return false }
 	- OtherDeviceLogout
 	- PasswordReset
 */
+
+var (
+	SettingAllowRegistration = setting.NewKey(contextName, "", "registration.registration_enabled")
+	SettingAllowLogin        = setting.NewKey(contextName, "", "registration.login_enabled")
+)

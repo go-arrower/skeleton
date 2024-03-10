@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/go-arrower/arrower/setting"
-	"github.com/go-arrower/skeleton/contexts/admin"
+	"github.com/go-arrower/skeleton/contexts/auth"
 
+	"github.com/go-arrower/arrower/setting"
 	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/arrower/mw"
@@ -41,11 +41,11 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = di.WebRenderer.AddContext("auth", os.DirFS("contexts/auth/internal/views")) // todo build path automatically, as it is a convention (?)
 
 	{ // register default auth settings
-		_ = di.Settings.Save(context.Background(), admin.SettingRegistration, setting.NewValue(true))
-		_ = di.Settings.Save(context.Background(), admin.SettingLogin, setting.NewValue(true))
+		_ = di.Settings.Save(context.Background(), auth.SettingAllowRegistration, setting.NewValue(true))
+		_ = di.Settings.Save(context.Background(), auth.SettingAllowLogin, setting.NewValue(true))
 
 		//_ = di.Settings.Add(context.Background(), admin.Setting{
-		//	Key:   admin.SettingRegistration,
+		//	Key:   admin.SettingAllowRegistration,
 		//	Value: admin.NewSettingValue(true),
 		//	UIOptions: admin.Options{
 		//		Type:         admin.Checkbox,
@@ -57,7 +57,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		//	},
 		//})
 		//di.Settings.Add(context.Background(), admin.Setting{
-		//	Key:   admin.SettingLogin,
+		//	Key:   admin.SettingAllowLogin,
 		//	Value: admin.NewSettingValue(true),
 		//	UIOptions: admin.Options{
 		//		Type:         admin.Checkbox,
