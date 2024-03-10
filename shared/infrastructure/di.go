@@ -146,6 +146,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			Database:   conf.Postgres.Database,
 			Host:       conf.Postgres.Host,
 			Port:       conf.Postgres.Port,
+			SSLMode:    conf.Postgres.SSLMode,
 			MaxConns:   conf.Postgres.MaxConns,
 			Migrations: postgres.ArrowerDefaultMigrations,
 		}, container.TraceProvider)

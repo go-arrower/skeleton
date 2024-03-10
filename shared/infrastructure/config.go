@@ -23,6 +23,7 @@ type (
 		Database string `json:"database" mapstructure:"database"`
 		Host     string `json:"host"     mapstructure:"host"`
 		Port     int    `json:"port"     mapstructure:"port"`
+		SSLMode  string `json:"sslMode"  mapstructure:"ssl_mode"`
 		MaxConns int    `json:"maxConns" mapstructure:"max_conns"`
 	}
 

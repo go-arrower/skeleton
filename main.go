@@ -37,7 +37,8 @@ func main() {
 				Database: "arrower",
 				Host:     "localhost",
 				Port:     5432, //nolint:gomnd
-				MaxConns: 100,  //nolint:gomnd
+				SSLMode:  "disable",
+				MaxConns: 100, //nolint:gomnd
 			},
 			Web: infrastructure.Web{
 				Secret:             "secret",
