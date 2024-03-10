@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -167,6 +168,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		slog.String("organisation_name", conf.OrganisationName),
 		slog.String("application_name", conf.ApplicationName),
 		slog.String("instance_name", conf.InstanceName),
+		slog.String("git_hash", gitHash()),
 		slog.Bool("debug", conf.Debug),
 	)
 	container.Logger = logger
@@ -396,3 +398,15 @@ const hotReloadJSCode = `<!-- Code injected by hot-reload middleware -->
     }
 </script>
 `
+
+func gitHash() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				return setting.Value
+			}
+		}
+	}
+
+	return "unknown"
+}
