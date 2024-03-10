@@ -159,10 +159,17 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 	container.Settings = setting.NewPostgresSettings(container.PGx)
 
-	container.Logger = alog.New()
+	logger := alog.New()
 	if conf.Debug {
-		container.Logger = alog.NewDevelopment(container.PGx, container.Settings)
+		logger = alog.NewDevelopment(container.PGx, container.Settings)
 	}
+	logger = logger.With(
+		slog.String("organisation_name", conf.OrganisationName),
+		slog.String("application_name", conf.ApplicationName),
+		slog.String("instance_name", conf.InstanceName),
+		slog.Bool("debug", conf.Debug),
+	)
+	container.Logger = logger
 	// slog.SetDefault(container.Logger.(*slog.Logger)) // todo test if this works even if the cast works
 
 	{ // echo router
