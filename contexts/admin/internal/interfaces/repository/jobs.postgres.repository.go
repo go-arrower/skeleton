@@ -47,9 +47,7 @@ func (repo *PostgresJobsRepository) Queues(ctx context.Context) (jobs.QueueNames
 }
 
 func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) { // todo change signature to use queename type
-	if jobs.QueueName(queue) == jobs.DefaultQueueName {
-		queue = ""
-	}
+	queue = queueNameFromDomain(jobs.QueueName(queue))
 
 	jobs, err := repo.Conn().GetPendingJobs(ctx, queue)
 	if err != nil {
@@ -87,14 +85,12 @@ func jobToDomain(job models.ArrowerGueJob) jobs.PendingJob {
 func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.QueueName) (jobs.QueueKPIs, error) { //nolint:funlen
 	var kpis jobs.QueueKPIs
 
-	if queue == jobs.DefaultQueueName {
-		queue = ""
-	}
+	queueName := queueNameFromDomain(queue)
 
 	group, newCtx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		jp, err := repo.Conn().StatsPendingJobs(newCtx, string(queue))
+		jp, err := repo.Conn().StatsPendingJobs(newCtx, queueName)
 		if err != nil {
 			return fmt.Errorf("%w: could not query pending jobs: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -105,7 +101,7 @@ func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.Qu
 	})
 
 	group.Go(func() error {
-		jf, err := repo.Conn().StatsFailedJobs(newCtx, string(queue))
+		jf, err := repo.Conn().StatsFailedJobs(newCtx, queueName)
 		if err != nil {
 			return fmt.Errorf("%w: could not query failed jobs: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -116,7 +112,7 @@ func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.Qu
 	})
 
 	group.Go(func() error {
-		jt, err := repo.Conn().StatsProcessedJobs(newCtx, string(queue))
+		jt, err := repo.Conn().StatsProcessedJobs(newCtx, queueName)
 		if err != nil {
 			return fmt.Errorf("%w: could not query processed jobs: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -127,7 +123,7 @@ func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.Qu
 	})
 
 	group.Go(func() error {
-		avg, err := repo.Conn().StatsAvgDurationOfJobs(newCtx, string(queue))
+		avg, err := repo.Conn().StatsAvgDurationOfJobs(newCtx, queueName)
 		if err != nil && !errors.As(err, &pgx.ScanArgError{}) { //nolint:exhaustruct // Scan() fails if history table is empty
 			return fmt.Errorf("%w: could not query average job durration: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -139,7 +135,7 @@ func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.Qu
 	})
 
 	group.Go(func() error {
-		nt, err := repo.Conn().StatsPendingJobsPerType(newCtx, string(queue))
+		nt, err := repo.Conn().StatsPendingJobsPerType(newCtx, queueName)
 		if err != nil {
 			return fmt.Errorf("%w: cound not query pending job_types: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -150,7 +146,7 @@ func (repo *PostgresJobsRepository) QueueKPIs(ctx context.Context, queue jobs.Qu
 	})
 
 	group.Go(func() error {
-		w, err := repo.Conn().StatsQueueWorkerPoolSize(newCtx, string(queue))
+		w, err := repo.Conn().StatsQueueWorkerPoolSize(newCtx, queueName)
 		if err != nil {
 			return fmt.Errorf("%w: could not query total queue worker size: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
@@ -225,14 +221,9 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 	workers := make([]jobs.WorkerPool, len(w))
 
 	for i, w := range w {
-		queue := w.Queue
-		if queue == "" {
-			queue = string(jobs.DefaultQueueName)
-		}
-
 		workers[i] = jobs.WorkerPool{
 			ID:       w.ID,
-			Queue:    queue,
+			Queue:    string(queueNameToDomain(w.Queue)), // todo change struct type
 			Version:  w.GitHash,
 			JobTypes: w.JobTypes,
 			Workers:  int(w.Workers),
@@ -244,10 +235,7 @@ func workersToDomain(w []models.ArrowerGueJobsWorkerPool) []jobs.WorkerPool {
 }
 
 func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context, f jobs.Filter) ([]jobs.PendingJob, error) {
-	queue := string(f.Queue)
-	if f.Queue == jobs.DefaultQueueName {
-		queue = ""
-	}
+	queue := queueNameFromDomain(f.Queue)
 
 	if f.Queue != "" && f.JobType != "" {
 		jobs, err := repo.Conn().GetFinishedJobsByQueueAndType(ctx, models.GetFinishedJobsByQueueAndTypeParams{
@@ -279,10 +267,7 @@ func (repo *PostgresJobsRepository) FinishedJobs(ctx context.Context, f jobs.Fil
 }
 
 func (repo *PostgresJobsRepository) FinishedJobsTotal(ctx context.Context, f jobs.Filter) (int64, error) {
-	queue := string(f.Queue)
-	if f.Queue == jobs.DefaultQueueName {
-		queue = ""
-	}
+	queue := queueNameFromDomain(f.Queue)
 
 	if f.Queue != "" && f.JobType != "" {
 		total, err := repo.Conn().TotalFinishedJobsByQueueAndType(ctx, models.TotalFinishedJobsByQueueAndTypeParams{
@@ -324,11 +309,6 @@ func historyJobsToDomain(j []models.ArrowerGueJobsHistory) []jobs.PendingJob {
 }
 
 func historyJobToDomain(job models.ArrowerGueJobsHistory) jobs.PendingJob {
-	queue := job.Queue
-	if queue == "" {
-		queue = string(jobs.DefaultQueueName)
-	}
-
 	return jobs.PendingJob{
 		ID:         job.JobID,
 		Priority:   job.Priority,
@@ -337,8 +317,24 @@ func historyJobToDomain(job models.ArrowerGueJobsHistory) jobs.PendingJob {
 		Payload:    string(job.Args),
 		ErrorCount: job.RunCount,
 		LastError:  job.RunError,
-		Queue:      queue,
+		Queue:      string(queueNameToDomain(job.Queue)), // todo change type of struct
 		CreatedAt:  job.CreatedAt.Time,
 		UpdatedAt:  job.UpdatedAt.Time,
 	}
+}
+
+func queueNameFromDomain(name jobs.QueueName) string {
+	if name == jobs.DefaultQueueName {
+		name = ""
+	}
+
+	return string(name)
+}
+
+func queueNameToDomain(name string) jobs.QueueName {
+	if name == "" {
+		name = string(jobs.DefaultQueueName)
+	}
+
+	return jobs.QueueName(name)
 }

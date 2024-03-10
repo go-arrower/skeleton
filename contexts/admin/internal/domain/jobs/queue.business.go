@@ -5,6 +5,4 @@ const DefaultQueueName = QueueName("Default")
 type (
 	QueueName  string
 	QueueNames []QueueName
-
-	JobType string
 )

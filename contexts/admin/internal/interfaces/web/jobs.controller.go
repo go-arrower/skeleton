@@ -39,18 +39,19 @@ func NewJobsController(
 		logger:  logger,
 		queries: queries,
 		repo:    repo,
-		p:       presenter,
 		app:     app,
+		p:       presenter,
 	}
 }
 
 type JobsController struct {
 	logger alog.Logger
-	repo   jobs.Repository
-	p      *web.DefaultPresenter
 
 	queries *models.Queries
+	repo    jobs.Repository
 	app     application.JobsApplication
+
+	p *web.DefaultPresenter
 }
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {

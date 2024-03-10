@@ -9,27 +9,24 @@ import (
 	"time"
 
 	"github.com/go-arrower/arrower/alog"
-	"github.com/go-arrower/arrower/jobs"
+	ajobs "github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
 	mnoop "go.opentelemetry.io/otel/metric/noop"
 	tnoop "go.opentelemetry.io/otel/trace/noop"
 
-	jobs_domain "github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/testdata"
 )
 
 var (
-	ctx = context.Background()
-
+	ctx       = context.Background()
 	pgHandler *tests.PostgresDocker
-	logger    alog.Logger
 )
 
 func TestMain(m *testing.M) {
 	pgHandler = tests.GetPostgresDockerForIntegrationTestingInstance()
-	logger = alog.NewTest(nil) // TODO remove and inject a noop logger each time explicitly
 
 	//
 	// Run tests
@@ -47,18 +44,18 @@ func TestPostgresGueRepository_Queues(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 
 		// Given a job queue
-		jq0, _ := jobs.NewPostgresJobs(logger, mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
-			pg, jobs.WithPollInterval(time.Nanosecond),
+		jq0, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
+			pg, ajobs.WithPollInterval(time.Nanosecond),
 		)
 		_ = jq0.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error { return nil })
 		_ = jq0.Enqueue(ctx, testdata.SimpleJob{})
 
-		// And Given a different job queue run in the future
-		jq1, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
-			pg, jobs.WithPollInterval(time.Nanosecond), jobs.WithQueue("some_queue"),
+		// And given a different job queue run in the future, meaning: this queue does not have a history yet
+		jq1, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(),
+			pg, ajobs.WithPollInterval(time.Nanosecond), ajobs.WithQueue("some_queue"),
 		)
 		_ = jq1.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error { return nil })
-		_ = jq1.Enqueue(ctx, testdata.SimpleJob{}, jobs.WithRunAt(time.Now().Add(1*time.Hour)))
+		_ = jq1.Enqueue(ctx, testdata.SimpleJob{}, ajobs.WithRunAt(time.Now().Add(1*time.Hour)))
 
 		time.Sleep(100 * time.Millisecond) // wait for job to finish
 
@@ -79,16 +76,16 @@ func TestPostgresJobsRepository_PendingJobs(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		pendingJobs, err := repo.PendingJobs(ctx, string(jobs_domain.DefaultQueueName))
+		pendingJobs, err := repo.PendingJobs(ctx, string(jobs.DefaultQueueName))
 		assert.NoError(t, err)
 		assert.Empty(t, pendingJobs, "queue needs to be empty, as no jobs got enqueued yet")
 
-		jq, _ := jobs.NewPostgresJobs(logger, mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
+		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
-		pendingJobs, err = repo.PendingJobs(ctx, string(jobs_domain.DefaultQueueName))
+		pendingJobs, err = repo.PendingJobs(ctx, string(jobs.DefaultQueueName))
 		assert.NoError(t, err)
-		assert.Len(t, pendingJobs, 1, "one Job is enqueued")
+		assert.Len(t, pendingJobs, 1, "one job is enqueued")
 	})
 }
 
@@ -102,7 +99,7 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		stats, err := repo.QueueKPIs(context.Background(), jobs_domain.DefaultQueueName)
+		stats, err := repo.QueueKPIs(context.Background(), jobs.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, stats.PendingJobs)
 		assert.Equal(t, 0, stats.FailedJobs)
@@ -119,7 +116,7 @@ func TestPostgresJobsRepository_QueueKPIs(t *testing.T) {
 
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		stats, err := repo.QueueKPIs(context.Background(), jobs_domain.DefaultQueueName)
+		stats, err := repo.QueueKPIs(context.Background(), jobs.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, stats.PendingJobs)
 		assert.Equal(t, 1, stats.FailedJobs)
@@ -142,7 +139,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 
 		repo := repository.NewPostgresJobsRepository(pg)
-		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
+		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 
 		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
@@ -162,8 +159,8 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 
 		repo := repository.NewPostgresJobsRepository(pg)
-		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
-			jobs.WithPollInterval(time.Nanosecond),
+		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
+			ajobs.WithPollInterval(time.Nanosecond),
 		)
 
 		_ = jq.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error {
@@ -181,7 +178,7 @@ func TestPostgresJobsRepository_Delete(t *testing.T) {
 
 		err := repo.Delete(ctx, pending[0].ID)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, jobs_domain.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs.ErrJobLockedAlready)
 
 		pending, _ = repo.PendingJobs(ctx, "")
 		assert.Len(t, pending, 1, "delete should fail, as the job is currently processed and thus locked by the db")
@@ -196,8 +193,8 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase()
 		repo := repository.NewPostgresJobsRepository(pg)
-		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
-			jobs.WithPollInterval(time.Nanosecond),
+		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
+			ajobs.WithPollInterval(time.Nanosecond),
 		)
 
 		newJobTime := time.Now().Add(time.Minute)
@@ -220,8 +217,8 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		pg := pgHandler.NewTestDatabase()
 		repo := repository.NewPostgresJobsRepository(pg)
-		jq, _ := jobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
-			jobs.WithPollInterval(time.Nanosecond),
+		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg,
+			ajobs.WithPollInterval(time.Nanosecond),
 		)
 
 		_ = jq.RegisterJobFunc(func(ctx context.Context, job testdata.SimpleJob) error {
@@ -240,6 +237,6 @@ func TestPostgresJobsRepository_RunJobAt(t *testing.T) {
 
 		err := repo.RunJobAt(ctx, pending[0].ID, newJobTime)
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, jobs_domain.ErrJobLockedAlready)
+		assert.ErrorIs(t, err, jobs.ErrJobLockedAlready)
 	})
 }
