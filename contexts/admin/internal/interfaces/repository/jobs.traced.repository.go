@@ -29,11 +29,11 @@ func (repo *TracedJobsRepository) Queues(ctx context.Context) (jobs.QueueNames, 
 	return repo.repo.Queues(ctx) //nolint:wrapcheck // this is decorator
 }
 
-func (repo *TracedJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) {
+func (repo *TracedJobsRepository) PendingJobs(ctx context.Context, queue jobs.QueueName) ([]jobs.PendingJob, error) {
 	ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("arrower.jobs").
 		Start(ctx, "repo", trace.WithAttributes(
 			attribute.String("method", "PendingJobs"),
-			attribute.String("queue", queue),
+			attribute.String("queue", string(queue)),
 		))
 	defer span.End()
 

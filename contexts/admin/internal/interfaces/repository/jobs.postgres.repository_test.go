@@ -76,14 +76,14 @@ func TestPostgresJobsRepository_PendingJobs(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo := repository.NewPostgresJobsRepository(pg)
 
-		pendingJobs, err := repo.PendingJobs(ctx, string(jobs.DefaultQueueName))
+		pendingJobs, err := repo.PendingJobs(ctx, jobs.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Empty(t, pendingJobs, "queue needs to be empty, as no jobs got enqueued yet")
 
 		jq, _ := ajobs.NewPostgresJobs(alog.NewNoopLogger(), mnoop.NewMeterProvider(), tnoop.NewTracerProvider(), pg)
 		_ = jq.Enqueue(ctx, testdata.SimpleJob{})
 
-		pendingJobs, err = repo.PendingJobs(ctx, string(jobs.DefaultQueueName))
+		pendingJobs, err = repo.PendingJobs(ctx, jobs.DefaultQueueName)
 		assert.NoError(t, err)
 		assert.Len(t, pendingJobs, 1, "one job is enqueued")
 	})

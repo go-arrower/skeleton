@@ -105,7 +105,14 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 			models.New(di.PGx),
 			jobRepository,
 			sweb.NewDefaultPresenter(di.Settings),
-			application.NewLoggedJobsApplication(application.NewJobsApplication(di.PGx), logger),
+			application.NewLoggedJobsApplication(
+				application.NewJobsApplication(
+					di.PGx,
+					models.New(di.PGx),
+					repository.NewPostgresJobsRepository(di.PGx),
+				),
+				logger,
+			),
 		),
 		logsController: web.NewLogsController(
 			logger,

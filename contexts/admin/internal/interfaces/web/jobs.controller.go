@@ -143,7 +143,7 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 		queue := c.Param("queue")
 
 		res, err := jc.app.GetQueue(c.Request().Context(), application.GetQueueRequest{
-			QueueName: queue,
+			QueueName: jobs.QueueName(queue),
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)

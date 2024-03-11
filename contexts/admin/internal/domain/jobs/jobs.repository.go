@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-// Repository manages the data access to the underlying Jobs implementation.
+// Repository manages the data access to the underlying jobs' implementation.
 type Repository interface {
 	Queues(ctx context.Context) (QueueNames, error)
-	PendingJobs(ctx context.Context, queue string) ([]PendingJob, error) // TODO use the QueueName type
+	PendingJobs(ctx context.Context, queue QueueName) ([]PendingJob, error)
 	QueueKPIs(ctx context.Context, queue QueueName) (QueueKPIs, error)
 	Delete(ctx context.Context, jobID string) error
 	RunJobAt(ctx context.Context, jobID string, runAt time.Time) error

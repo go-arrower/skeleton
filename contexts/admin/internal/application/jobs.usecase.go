@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
-	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
@@ -31,18 +30,22 @@ type JobsApplication interface {
 	PruneHistory(ctx context.Context, days int) error
 }
 
-func NewJobsApplication(db *pgxpool.Pool) *JobsUsecase {
+func NewJobsApplication(
+	db *pgxpool.Pool,
+	queries *models.Queries,
+	repo jobs.Repository,
+) *JobsUsecase {
 	return &JobsUsecase{
-		db:      db,             // todo remove and use repo instead?
-		queries: models.New(db), // todo remove and use repo instead?
+		db:      db,      // todo remove and use repo instead?
+		queries: queries, //  todo remove and use repo instead?
 
-		repo: repository.NewPostgresJobsRepository(db),
+		repo: repo,
 	}
 }
 
 type JobsUsecase struct {
 	db      *pgxpool.Pool
-	queries *models.Queries
+	queries *models.Queries // FIXME violates clean arch checker
 
 	repo jobs.Repository
 }
@@ -84,7 +87,7 @@ func (app *JobsUsecase) ListAllQueues(ctx context.Context, in ListAllQueuesReque
 
 type (
 	GetQueueRequest struct {
-		QueueName string // todo type QueueName?
+		QueueName jobs.QueueName
 	}
 	GetQueueResponse struct {
 		Jobs []jobs.PendingJob

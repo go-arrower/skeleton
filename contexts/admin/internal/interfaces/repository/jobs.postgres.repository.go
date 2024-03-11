@@ -46,10 +46,10 @@ func (repo *PostgresJobsRepository) Queues(ctx context.Context) (jobs.QueueNames
 	return queueNames, nil
 }
 
-func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue string) ([]jobs.PendingJob, error) { // todo change signature to use queename type
-	queue = queueNameFromDomain(jobs.QueueName(queue))
+func (repo *PostgresJobsRepository) PendingJobs(ctx context.Context, queue jobs.QueueName) ([]jobs.PendingJob, error) { // todo change signature to use queename type
+	name := queueNameFromDomain(queue)
 
-	jobs, err := repo.Conn().GetPendingJobs(ctx, queue)
+	jobs, err := repo.Conn().GetPendingJobs(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not get pending jobs: %v", postgres.ErrQueryFailed, err) //nolint:errorlint,lll // prevent err in api
 	}

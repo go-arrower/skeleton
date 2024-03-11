@@ -6,13 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
-
-	"go.opentelemetry.io/otel/propagation"
-
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/oklog/ulid/v2"
+	"go.opentelemetry.io/otel/propagation"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
