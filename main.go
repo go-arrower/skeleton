@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, _ := context.WithCancel(context.Background())
 
 	arrower, shutdown, err := infrastructure.InitialiseDefaultArrowerDependencies(ctx,
 		&infrastructure.Config{
@@ -63,7 +63,7 @@ func main() {
 
 	//
 	// load and initialise optional contexts provided by arrower
-	adminContext, _ := admin_init.NewAdminContext(arrower)
+	adminContext, _ := admin_init.NewAdminContext(ctx, arrower)
 	authContext, _ := auth_init.NewAuthContext(arrower)
 
 	//

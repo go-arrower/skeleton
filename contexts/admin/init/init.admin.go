@@ -1,3 +1,8 @@
+// Package init is the context's startup API.
+//
+// Put all initialisations here.
+// For example, load context-specific configuration, setup dependency injection,
+// register routes, workers and more.
 package init
 
 import (
@@ -8,8 +13,8 @@ import (
 	"os"
 
 	"github.com/go-arrower/arrower/alog"
-
 	alogmodels "github.com/go-arrower/arrower/alog/models"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository"
@@ -22,12 +27,72 @@ import (
 
 const contextName = "admin"
 
-func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
+func NewAdminContext(ctx context.Context, di *infrastructure.Container) (*AdminContext, error) {
+	err := ensureRequiredDependencies(di)
+	if err != nil {
+		return nil, fmt.Errorf("missing dependencies to initialise context admin: %w", err)
+	}
+
+	admin, err := setupAdminContext(di)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialise context admin: %w", err)
+	}
+
+	admin.logger.DebugContext(ctx, "context admin initialised")
+
+	return admin, nil
+}
+
+type AdminContext struct {
+	globalContainer *infrastructure.Container
+
+	logger alog.Logger
+
+	jobRepository jobs.Repository
+
+	settingsController *web.SettingsController
+	jobsController     *web.JobsController
+	logsController     *web.LogsController
+}
+
+func (c *AdminContext) Shutdown(_ context.Context) error {
+	return nil
+}
+
+func ensureRequiredDependencies(di *infrastructure.Container) error {
+	if di.Logger == nil {
+		return fmt.Errorf("%w: logger", infrastructure.ErrMissingDependency)
+	}
+
+	if di.PGx == nil {
+		return fmt.Errorf("%w: pgx", infrastructure.ErrMissingDependency)
+	}
+
+	if di.WebRouter == nil {
+		return fmt.Errorf("%w: web router", infrastructure.ErrMissingDependency)
+	}
+
+	if di.AdminRouter == nil {
+		return fmt.Errorf("%w: admin router", infrastructure.ErrMissingDependency)
+	}
+
+	if di.WebRenderer == nil {
+		return fmt.Errorf("%w: renderer", infrastructure.ErrMissingDependency)
+	}
+
+	if di.Settings == nil {
+		return fmt.Errorf("%w: settings", infrastructure.ErrMissingDependency)
+	}
+
+	return nil
+}
+
+func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	logger := di.Logger.With(slog.String("context", contextName))
 
 	jobRepository := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
 
-	adminContext := &AdminContext{
+	admin := &AdminContext{
 		globalContainer: di,
 
 		logger: logger,
@@ -51,35 +116,19 @@ func NewAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		),
 	}
 
-	var views fs.FS = views.AdminViews
-	if di.Config.Debug {
-		views = os.DirFS("contexts/admin/internal/views")
+	{ // add context-specific web views.
+		var views fs.FS = views.AdminViews
+		if di.Config.Debug {
+			views = os.DirFS("contexts/admin/internal/views")
+		}
+
+		err := di.WebRenderer.AddContext(contextName, views)
+		if err != nil {
+			return nil, fmt.Errorf("could not add context views: %w", err)
+		}
 	}
 
-	err := di.WebRenderer.AddContext(contextName, views)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
+	registerAdminRoutes(admin)
 
-	registerAdminRoutes(adminContext)
-
-	logger.Debug("context admin initialised")
-
-	return adminContext, nil
-}
-
-type AdminContext struct {
-	globalContainer *infrastructure.Container
-
-	logger alog.Logger
-
-	jobRepository jobs.Repository
-
-	settingsController *web.SettingsController
-	jobsController     *web.JobsController
-	logsController     *web.LogsController
-}
-
-func (c *AdminContext) Shutdown(_ context.Context) error {
-	return nil
+	return admin, nil
 }
