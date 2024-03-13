@@ -142,7 +142,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	{ // postgres
 		pg, err := postgres.ConnectAndMigrate(ctx, postgres.Config{
 			User:       conf.Postgres.User,
-			Password:   string(conf.Postgres.Password),
+			Password:   conf.Postgres.Password.Secret(),
 			Database:   conf.Postgres.Database,
 			Host:       conf.Postgres.Host,
 			Port:       conf.Postgres.Port,
@@ -197,7 +197,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		container.WebRenderer = r
 
 		// router.Use(session.Middleware())
-		ss, _ := auth.NewPGSessionStore(container.PGx, []byte(conf.Web.Secret))
+		ss, _ := auth.NewPGSessionStore(container.PGx, []byte(conf.Web.Secret.Secret()))
 		container.WebRouter = router
 		container.WebRouter.Use(session.Middleware(ss))
 		// di.WebRouter.Use(middleware.CSRF())
