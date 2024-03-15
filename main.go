@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/arrower/secret"
+
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/mw"
@@ -34,7 +36,7 @@ func main() {
 			Debug:            true,
 			Postgres: infrastructure.Postgres{
 				User:     "arrower",
-				Password: "secret",
+				Password: secret.New("secret"),
 				Database: "arrower",
 				Host:     "localhost",
 				Port:     5432, //nolint:gomnd
@@ -42,7 +44,7 @@ func main() {
 				MaxConns: 100, //nolint:gomnd
 			},
 			Web: infrastructure.Web{
-				Secret:             "secret",
+				Secret:             secret.New("secret"),
 				Port:               8080,
 				Hostname:           "www.servername.tld",
 				StatusEndpoint:     true,
