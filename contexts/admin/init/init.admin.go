@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/arrower/alog"
 	alogmodels "github.com/go-arrower/arrower/alog/models"
 
@@ -100,19 +102,17 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobRepository: jobRepository,
 
 		settingsController: web.NewSettingsController(di.AdminRouter),
-		jobsController: web.NewJobsController(
-			logger,
-			models.New(di.PGx),
-			jobRepository,
-			sweb.NewDefaultPresenter(di.Settings),
-			application.NewLoggedJobsApplication(
-				application.NewJobsApplication(
-					di.PGx,
-					models.New(di.PGx),
-					repository.NewPostgresJobsRepository(di.PGx),
-				),
-				logger,
+		jobsController: web.NewJobsController(logger, models.New(di.PGx), jobRepository, sweb.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(
+			application.NewJobsApplication(
+				di.PGx,
+				models.New(di.PGx),
+				repository.NewPostgresJobsRepository(di.PGx),
 			),
+			logger,
+		),
+			application.App{ // todo add instrumentation
+				PruneJobHistory: app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewPruneJobHistoryRequestHandler(models.New(di.PGx))),
+			},
 		),
 		logsController: web.NewLogsController(
 			logger,

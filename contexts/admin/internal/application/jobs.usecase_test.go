@@ -8,13 +8,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
-
 	"github.com/go-arrower/arrower/tests"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
 var (
@@ -97,7 +96,6 @@ func TestJobsApplication_PruneHistory(t *testing.T) {
 
 		assertTableNumberOfRows(t, pg, "arrower.gue_jobs_history", 0)
 	})
-
 }
 
 func assertTableNumberOfRows(t *testing.T, db *pgxpool.Pool, table string, num int) {

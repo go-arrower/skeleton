@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -34,6 +35,7 @@ func NewJobsController(
 	repo jobs.Repository,
 	presenter *web.DefaultPresenter,
 	app application.JobsApplication,
+	appDI application.App,
 ) *JobsController {
 	return &JobsController{
 		logger:  logger,
@@ -41,6 +43,7 @@ func NewJobsController(
 		repo:    repo,
 		app:     app,
 		p:       presenter,
+		appDI:   appDI,
 	}
 }
 
@@ -50,6 +53,7 @@ type JobsController struct {
 	queries *models.Queries
 	repo    jobs.Repository
 	app     application.JobsApplication
+	appDI   application.App
 
 	p *web.DefaultPresenter
 }
@@ -236,19 +240,21 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 
 func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 	return func(c echo.Context) error {
-		days, _ := strconv.Atoi(c.FormValue("days"))
-
-		if days == 0 && c.FormValue("days") != "all" {
+		// valid days values: any number or "all", with "all" mapping to 0
+		days, err := strconv.Atoi(c.FormValue("days"))
+		if errors.Is(err, strconv.ErrSyntax) && c.FormValue("days") != "all" {
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		_ = jc.app.PruneHistory(c.Request().Context(), days)
+		size, err := jc.appDI.PruneJobHistory.H(c.Request().Context(), application.PruneJobHistoryRequest{Days: days})
+		if err != nil {
+			return c.NoContent(http.StatusBadRequest)
+		}
 
-		// reload the dashboard badges with the size, by using htmx's oob technique
-		size, _ := jc.queries.JobTableSize(c.Request().Context())
-
+		// trigger size change of history table, for other size-estimation widgets to reload.
 		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
 
+		// reload the dashboard badges with the new size, by using htmx's oob technique.
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,

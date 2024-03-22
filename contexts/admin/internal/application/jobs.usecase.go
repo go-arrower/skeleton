@@ -216,7 +216,7 @@ func isValidTable(table string) bool {
 	return validTable
 }
 
-func (app *JobsUsecase) PruneHistory(ctx context.Context, days int) error {
+func (app *JobsUsecase) PruneHistory(ctx context.Context, days int) error { // todo remove
 	deleteBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
 
 	err := app.queries.PruneHistory(ctx, pgtype.Timestamptz{Time: deleteBefore, Valid: true})
