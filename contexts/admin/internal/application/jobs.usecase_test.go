@@ -8,6 +8,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
+
 	"github.com/go-arrower/arrower/tests"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
@@ -57,7 +59,7 @@ func TestJobsApplication_VacuumJobsTable(t *testing.T) {
 	}
 
 	// share one database for all tests, as it is about vacuum and not modifying data
-	app := application.NewJobsApplication(pgHandler.PGx())
+	app := application.NewJobsApplication(pgHandler.PGx(), nil, nil)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -76,7 +78,7 @@ func TestJobsApplication_PruneHistory(t *testing.T) {
 		t.Parallel()
 
 		pg := pgHandler.NewTestDatabase("testdata/fixtures/prune_history.yaml")
-		app := application.NewJobsApplication(pg)
+		app := application.NewJobsApplication(nil, models.New(pg), nil)
 
 		err := app.PruneHistory(ctx, 7)
 		assert.NoError(t, err)
@@ -88,7 +90,7 @@ func TestJobsApplication_PruneHistory(t *testing.T) {
 		t.Parallel()
 
 		pg := pgHandler.NewTestDatabase("testdata/fixtures/prune_history.yaml")
-		app := application.NewJobsApplication(pg)
+		app := application.NewJobsApplication(nil, models.New(pg), nil)
 
 		err := app.PruneHistory(ctx, 0)
 		assert.NoError(t, err)
