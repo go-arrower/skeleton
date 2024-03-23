@@ -181,7 +181,10 @@ func (jc *JobsController) DeleteJob() func(c echo.Context) error {
 		q := c.Param("queue")
 		jobID := c.Param("job_id")
 
-		_ = jc.app.DeleteJob(c.Request().Context(), application.DeleteJobRequest{JobID: jobID})
+		err := jc.appDI.DeleteJob.H(c.Request().Context(), application.DeleteJobCommand{JobID: jobID})
+		if err != nil {
+			return c.NoContent(http.StatusBadRequest)
+		}
 
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
 	}

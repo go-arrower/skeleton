@@ -31,8 +31,6 @@ func (app *JobsSuccess) GetWorkers(_ context.Context, _ GetWorkersRequest) (GetW
 
 func (app *JobsSuccess) ScheduleJobs(_ context.Context, _ ScheduleJobsRequest) error { return nil }
 
-func (app *JobsSuccess) DeleteJob(_ context.Context, _ DeleteJobRequest) error { return nil }
-
 func (app *JobsSuccess) RescheduleJob(_ context.Context, _ RescheduleJobRequest) error { return nil }
 
 func (app *JobsSuccess) JobTypesForQueue(_ context.Context, _ jobs.QueueName) ([]jobs.JobType, error) {
@@ -66,10 +64,6 @@ func (app *JobsFailure) GetWorkers(_ context.Context, _ GetWorkersRequest) (GetW
 }
 
 func (app *JobsFailure) ScheduleJobs(_ context.Context, _ ScheduleJobsRequest) error {
-	return ErrJobsAppFailed
-}
-
-func (app *JobsFailure) DeleteJob(_ context.Context, _ DeleteJobRequest) error {
 	return ErrJobsAppFailed
 }
 

@@ -28,32 +28,6 @@ func NewLoggedJobsApplication(next JobsApplication, logger *slog.Logger) LoggedJ
 	}
 }
 
-// DeleteJob implements JobsApplication
-func (app LoggedJobsApplication) DeleteJob(ctx context.Context, in DeleteJobRequest) (err error) {
-	cmdName := commandName(in)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	err = app.next.DeleteJob(ctx, in)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return err
-
-}
-
 // GetQueue implements JobsApplication
 func (app LoggedJobsApplication) GetQueue(ctx context.Context, in GetQueueRequest) (g1 GetQueueResponse, err error) {
 	cmdName := commandName(in)
@@ -158,32 +132,6 @@ func (app LoggedJobsApplication) ListAllQueues(ctx context.Context, in ListAllQu
 
 }
 
-// PruneHistory implements JobsApplication
-func (app LoggedJobsApplication) PruneHistory(ctx context.Context, days int) (err error) {
-	cmdName := commandName(days)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	err = app.next.PruneHistory(ctx, days)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return err
-
-}
-
 // Queues implements JobsApplication
 func (app LoggedJobsApplication) Queues(ctx context.Context) (q1 jobs.QueueNames, err error) {
 	cmdName := "Queues"
@@ -246,32 +194,6 @@ func (app LoggedJobsApplication) ScheduleJobs(ctx context.Context, in ScheduleJo
 
 	// result, err := app.next(ctx, in)
 	err = app.next.ScheduleJobs(ctx, in)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return err
-
-}
-
-// VacuumJobsTable implements JobsApplication
-func (app LoggedJobsApplication) VacuumJobsTable(ctx context.Context, table string) (err error) {
-	cmdName := commandName(table)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	err = app.next.VacuumJobsTable(ctx, table)
 
 	if err == nil {
 		app.logger.DebugContext(ctx, "command executed successfully",

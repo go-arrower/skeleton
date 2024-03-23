@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/propagation"
 
@@ -20,11 +19,8 @@ type JobsApplication interface {
 	GetQueue(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error)
 	ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) error
-	DeleteJob(ctx context.Context, in DeleteJobRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
 	JobTypesForQueue(ct context.Context, queue jobs.QueueName) ([]jobs.JobType, error)
-	VacuumJobsTable(ctx context.Context, table string) error // todo remove
-	PruneHistory(ctx context.Context, days int) error        // todo remove
 }
 
 func NewJobsApplication(
@@ -143,18 +139,6 @@ func (app *JobsUsecase) ScheduleJobs(ctx context.Context, in ScheduleJobsRequest
 }
 
 type (
-	DeleteJobRequest struct {
-		JobID string
-	}
-)
-
-func (app *JobsUsecase) DeleteJob(ctx context.Context, in DeleteJobRequest) error {
-	err := app.repo.Delete(ctx, in.JobID)
-
-	return fmt.Errorf("%w", err)
-}
-
-type (
 	RescheduleJobRequest struct {
 		JobID string
 	}
@@ -182,28 +166,4 @@ func (app *JobsUsecase) JobTypesForQueue(ctx context.Context, queue jobs.QueueNa
 	}
 
 	return jobTypes, nil
-}
-
-func (app *JobsUsecase) VacuumJobsTable(ctx context.Context, table string) error {
-	if !isValidTable(table) {
-		return fmt.Errorf("%w: invalid table: %s", ErrVacuumFailed, table)
-	}
-
-	_, err := app.db.Exec(ctx, fmt.Sprintf(`VACUUM FULL arrower.%s`, validTables[table]))
-	if err != nil {
-		return fmt.Errorf("%w for table: %s: %v", ErrVacuumFailed, table, err)
-	}
-
-	return nil
-}
-
-func (app *JobsUsecase) PruneHistory(ctx context.Context, days int) error { // todo remove
-	deleteBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
-
-	err := app.queries.PruneHistory(ctx, pgtype.Timestamptz{Time: deleteBefore, Valid: true})
-	if err != nil {
-		return fmt.Errorf("could not delete old history: %v", err)
-	}
-
-	return nil
 }
