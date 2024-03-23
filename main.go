@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/arrower/secret"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -104,7 +106,7 @@ func main() {
 
 	//
 	// start app
-	// initRegularExampleQueueLoad(ctx, arrower)
+	initRegularExampleQueueLoad(ctx, arrower)
 	arrower.WebRouter.Logger.Fatal(arrower.WebRouter.Start(fmt.Sprintf(":%d", arrower.Config.Web.Port)))
 
 	//
@@ -118,7 +120,6 @@ func main() {
 func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Container) {
 	type (
 		SomeJob        struct{}
-		NamedJob       struct{ Name string }
 		LongRunningJob struct{}
 	)
 
@@ -140,15 +141,7 @@ func initRegularExampleQueueLoad(ctx context.Context, di *infrastructure.Contain
 	)
 
 	_ = di.DefaultQueue.RegisterJobFunc(
-		mw.TracedU(di.TraceProvider, mw.MetricU(di.MeterProvider, mw.LoggedU(di.Logger.(*slog.Logger),
-			func(ctx context.Context, job NamedJob) error {
-				di.Logger.InfoContext(ctx, "named job", slog.String("name", job.Name))
-
-				time.Sleep(time.Duration(rand.Intn(4)) * time.Second)
-
-				return nil
-			},
-		))),
+		app.NewInstrumentedJob[NamedJob](di.TraceProvider, di.MeterProvider, di.Logger, &namedJobHandler{Logger: di.Logger}).H,
 	)
 
 	_ = di.DefaultQueue.RegisterJobFunc(
@@ -207,4 +200,17 @@ func getOutboundIP() string {
 	defer conn.Close()
 
 	return conn.LocalAddr().(*net.UDPAddr).IP.String()
+}
+
+type NamedJob struct{ Name string }
+type namedJobHandler struct {
+	Logger alog.Logger
+}
+
+func (h *namedJobHandler) H(ctx context.Context, job NamedJob) error {
+	h.Logger.InfoContext(ctx, "named job", slog.String("name", job.Name))
+
+	time.Sleep(time.Duration(rand.Intn(4)) * time.Second)
+
+	return nil
 }

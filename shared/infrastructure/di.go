@@ -161,9 +161,6 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 	container.Settings = setting.NewPostgresSettings(container.PGx)
 
 	logger := alog.New()
-	if conf.Debug {
-		logger = alog.NewDevelopment(container.PGx, container.Settings)
-	}
 	logger = logger.With(
 		slog.String("organisation_name", conf.OrganisationName),
 		slog.String("application_name", conf.ApplicationName),
@@ -171,6 +168,9 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		slog.String("git_hash", gitHash()),
 		slog.Bool("debug", conf.Debug),
 	)
+	if conf.Debug {
+		logger = alog.NewDevelopment(container.PGx, container.Settings)
+	}
 	container.Logger = logger
 	// slog.SetDefault(container.Logger.(*slog.Logger)) // todo test if this works even if the cast works
 
