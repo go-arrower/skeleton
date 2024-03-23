@@ -60,7 +60,7 @@ type JobsController struct {
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := jc.appDI.ListAllQueues.H(c.Request().Context(), application.ListAllQueuesQuery{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -79,7 +79,7 @@ func (jc *JobsController) PendingJobsPieChartData() func(echo.Context) error {
 	}
 
 	return func(c echo.Context) error {
-		res, err := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{})
+		res, err := jc.appDI.ListAllQueues.H(c.Request().Context(), application.ListAllQueuesQuery{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -203,7 +203,7 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		size, _ := jc.queries.JobTableSize(c.Request().Context())
 
-		res, _ := jc.app.ListAllQueues(c.Request().Context(), application.ListAllQueuesRequest{}) // fixme: don't call existing use case, create own or call domain model
+		res, _ := jc.appDI.ListAllQueues.H(c.Request().Context(), application.ListAllQueuesQuery{}) // fixme: don't call existing use case, create own or call domain model
 
 		var queues []string
 		for q, _ := range res.QueueStats {

@@ -17,7 +17,7 @@ var _ JobsApplication = (*JobsSuccess)(nil)
 
 func (app *JobsSuccess) Queues(_ context.Context) (jobs.QueueNames, error) { return nil, nil }
 
-func (app *JobsSuccess) ListAllQueues(_ context.Context, _ ListAllQueuesRequest) (ListAllQueuesResponse, error) {
+func (app *JobsSuccess) ListAllQueues(_ context.Context, _ ListAllQueuesQuery) (ListAllQueuesResponse, error) {
 	return ListAllQueuesResponse{}, nil
 }
 
@@ -47,7 +47,7 @@ func (app *JobsFailure) Queues(_ context.Context) (jobs.QueueNames, error) {
 	return nil, ErrJobsAppFailed
 }
 
-func (app *JobsFailure) ListAllQueues(_ context.Context, _ ListAllQueuesRequest) (ListAllQueuesResponse, error) {
+func (app *JobsFailure) ListAllQueues(_ context.Context, _ ListAllQueuesQuery) (ListAllQueuesResponse, error) {
 	return ListAllQueuesResponse{}, ErrJobsAppFailed
 }
 

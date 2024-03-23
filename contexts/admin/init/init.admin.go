@@ -117,6 +117,7 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 				GetQueue:         app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetQueueQueryHandler(jobRepository)),
 				GetWorkers:       app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
 				JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewJobTypesForQueueQueryHandler(models.New(di.PGx))),
+				ListAllQueues:    app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListAllQueuesQueryHandler(jobRepository)),
 			},
 		),
 		logsController: web.NewLogsController(

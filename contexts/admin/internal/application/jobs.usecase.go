@@ -15,7 +15,6 @@ import (
 //go:generate go run github.com/hexdigest/gowrap/cmd/gowrap gen -p github.com/go-arrower/skeleton/contexts/admin/internal/application -g -i JobsApplication -t ./templates/slog.html -o jobs.log.usecase.go
 type JobsApplication interface {
 	Queues(ctx context.Context) (jobs.QueueNames, error)
-	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
 }
@@ -45,34 +44,6 @@ var _ JobsApplication = (*JobsUsecase)(nil)
 // Queues returns a list of all known Queues.
 func (app *JobsUsecase) Queues(ctx context.Context) (jobs.QueueNames, error) {
 	return app.repo.Queues(ctx)
-}
-
-type (
-	ListAllQueuesRequest  struct{}
-	ListAllQueuesResponse struct {
-		QueueStats map[jobs.QueueName]jobs.QueueStats
-	}
-)
-
-// todo how different to Queues and make that clear in the naming of the methods
-// ListAllQueues returns all Queues.
-func (app *JobsUsecase) ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error) {
-	queues, err := app.repo.Queues(ctx)
-	if err != nil {
-		return ListAllQueuesResponse{}, fmt.Errorf("could not get queues: %w", err)
-	}
-
-	qWithStats := make(map[jobs.QueueName]jobs.QueueStats)
-	for _, q := range queues {
-		s, err := app.repo.QueueKPIs(ctx, q)
-		if err != nil {
-			return ListAllQueuesResponse{}, fmt.Errorf("could not get kpis for queue: %s: %w", q, err)
-		}
-
-		qWithStats[q] = queueKpiToStats(string(q), s)
-	}
-
-	return ListAllQueuesResponse{QueueStats: qWithStats}, nil
 }
 
 type (

@@ -34,7 +34,7 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 
 		//handler := &web.JobsController{
 		//	Cmds: application.JobsCommandContainer{
-		//		ListAllQueues: func(context.Context, application.ListAllQueuesRequest) (application.ListAllQueuesResponse, error) {
+		//		ListAllQueues: func(context.Context, application.ListAllQueuesQuery) (application.ListAllQueuesResponse, error) {
 		//			return application.ListAllQueuesResponse{}, nil
 		//		},
 		//	},
@@ -55,7 +55,7 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 
 		//handler := web.JobsController{
 		//	Cmds: application.JobsCommandContainer{
-		//		ListAllQueues: func(context.Context, application.ListAllQueuesRequest) (application.ListAllQueuesResponse, error) {
+		//		ListAllQueues: func(context.Context, application.ListAllQueuesQuery) (application.ListAllQueuesResponse, error) {
 		//			return application.ListAllQueuesResponse{}, errUCFailed
 		//		},
 		//	},

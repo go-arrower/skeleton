@@ -13,4 +13,5 @@ type App struct {
 	GetQueue         app.Query[GetQueueQuery, GetQueueResponse]
 	GetWorkers       app.Query[GetWorkersQuery, GetWorkersResponse]
 	JobTypesForQueue app.Query[JobTypesForQueueQuery, []jobs.JobType]
+	ListAllQueues    app.Query[ListAllQueuesQuery, ListAllQueuesResponse]
 }
