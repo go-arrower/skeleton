@@ -110,8 +110,9 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 			),
 			logger,
 		),
-			application.App{ // todo add instrumentation
+			application.App{
 				PruneJobHistory: app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewPruneJobHistoryRequestHandler(models.New(di.PGx))),
+				VacuumJobTable:  app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewVacuumJobTableRequestHandler(di.PGx)),
 			},
 		),
 		logsController: web.NewLogsController(

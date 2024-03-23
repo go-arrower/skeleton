@@ -226,11 +226,12 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 	return func(c echo.Context) error {
 		table := c.Param("table")
 
-		_ = jc.app.VacuumJobsTable(c.Request().Context(), table)
+		size, err := jc.appDI.VacuumJobTable.H(c.Request().Context(), application.VacuumJobTableRequest{Table: table})
+		if err != nil {
+			return c.NoContent(http.StatusBadRequest)
+		}
 
 		// reload the dashboard badges with the size, by using htmx's oob technique
-		size, _ := jc.queries.JobTableSize(c.Request().Context())
-
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
 			"Jobs":    size.Jobs,
 			"History": size.History,

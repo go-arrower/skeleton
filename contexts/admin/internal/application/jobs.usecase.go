@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
-var ErrVacuumFailed = errors.New("VACUUM failed")
-
 //go:generate go run github.com/hexdigest/gowrap/cmd/gowrap gen -p github.com/go-arrower/skeleton/contexts/admin/internal/application -g -i JobsApplication -t ./templates/slog.html -o jobs.log.usecase.go
 type JobsApplication interface {
 	Queues(ctx context.Context) (jobs.QueueNames, error)
@@ -26,8 +23,8 @@ type JobsApplication interface {
 	DeleteJob(ctx context.Context, in DeleteJobRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
 	JobTypesForQueue(ct context.Context, queue jobs.QueueName) ([]jobs.JobType, error)
-	VacuumJobsTable(ctx context.Context, table string) error
-	PruneHistory(ctx context.Context, days int) error
+	VacuumJobsTable(ctx context.Context, table string) error // todo remove
+	PruneHistory(ctx context.Context, days int) error        // todo remove
 }
 
 func NewJobsApplication(
@@ -198,22 +195,6 @@ func (app *JobsUsecase) VacuumJobsTable(ctx context.Context, table string) error
 	}
 
 	return nil
-}
-
-var validTables = map[string]string{
-	"jobs":    "gue_jobs",
-	"history": "gue_jobs_history",
-}
-
-func isValidTable(table string) bool {
-	var validTable bool
-	for k := range validTables {
-		if k == table {
-			validTable = true
-		}
-	}
-
-	return validTable
 }
 
 func (app *JobsUsecase) PruneHistory(ctx context.Context, days int) error { // todo remove
