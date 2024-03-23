@@ -65,10 +65,9 @@ func (jc *JobsController) ListQueues() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues",
-			echo.Map{
-				"Queues": res.QueueStats,
-			}))
+		return c.Render(http.StatusOK, "jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues", echo.Map{
+			"Queues": res.QueueStats,
+		}))
 	}
 }
 
@@ -199,6 +198,7 @@ func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 	}
 }
 
+// todo clean into proper application usecase.
 func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		size, _ := jc.queries.JobTableSize(c.Request().Context())
@@ -274,6 +274,7 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 			queue = ""
 		}
 
+		// todo check if pruneJobHistoryRequestHandler can be used here
 		_ = jc.queries.PruneHistoryPayload(c.Request().Context(), models.PruneHistoryPayloadParams{
 			Queue:     queue,
 			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
@@ -401,7 +402,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 
 		runAt, _ := time.Parse(htmlDatetimeLayout, t)
 
-		err = jc.app.ScheduleJobs(c.Request().Context(), application.ScheduleJobsRequest{
+		err = jc.appDI.ScheduleJobs.H(c.Request().Context(), application.ScheduleJobsCommand{
 			Queue:    jq,
 			JobType:  jt,
 			Priority: int16(priority),
@@ -622,9 +623,6 @@ func (jc *JobsController) ShowJob() func(ctx echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("%v", err)
 		}
-
-		//return c.Render(http.StatusOK, "empty=>jobs.job", pages2.Job{Jobs:jobs})
-		//return c.Render(http.StatusOK, "empty=>jobs.job", pages2.NewJob(jobs))
 
 		return c.Render(http.StatusOK, "jobs.job", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Job", echo.Map{
 			"Jobs": pages.ConvertFinishedJobsForShow(jobs),

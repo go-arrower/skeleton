@@ -80,32 +80,6 @@ func (app LoggedJobsApplication) RescheduleJob(ctx context.Context, in Reschedul
 
 }
 
-// ScheduleJobs implements JobsApplication
-func (app LoggedJobsApplication) ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) (err error) {
-	cmdName := commandName(in)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	err = app.next.ScheduleJobs(ctx, in)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return err
-
-}
-
 // commandName extracts a printable name from cmd in the format of: functionName.
 //
 // structName	 								=> strings.Split(fmt.Sprintf("%T", cmd), ".")[1]

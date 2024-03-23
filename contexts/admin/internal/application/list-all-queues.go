@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-arrower/arrower/app"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
@@ -43,4 +44,29 @@ func (h *listAllQueuesQueryHandler) H(ctx context.Context, query ListAllQueuesQu
 	}
 
 	return ListAllQueuesResponse{QueueStats: qWithStats}, nil
+}
+
+func queueKpiToStats(queue string, kpis jobs.QueueKPIs) jobs.QueueStats {
+	var errorRate float64
+
+	if kpis.FailedJobs != 0 {
+		errorRate = float64(kpis.FailedJobs * 100 / kpis.PendingJobs)
+	}
+
+	var duration time.Duration
+	if kpis.AvailableWorkers != 0 {
+		duration = time.Duration(kpis.PendingJobs/kpis.AvailableWorkers) * kpis.AverageTimePerJob
+	}
+
+	return jobs.QueueStats{
+		QueueName:            jobs.QueueName(queue),
+		PendingJobs:          kpis.PendingJobs,
+		PendingJobsPerType:   kpis.PendingJobsPerType,
+		FailedJobs:           kpis.FailedJobs,
+		ProcessedJobs:        kpis.ProcessedJobs,
+		AvailableWorkers:     kpis.AvailableWorkers,
+		PendingJobsErrorRate: errorRate,
+		AverageTimePerJob:    kpis.AverageTimePerJob,
+		EstimateUntilEmpty:   duration,
+	}
 }

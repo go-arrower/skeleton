@@ -103,11 +103,7 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 
 		settingsController: web.NewSettingsController(di.AdminRouter),
 		jobsController: web.NewJobsController(logger, models.New(di.PGx), jobRepository, sweb.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(
-			application.NewJobsApplication(
-				di.PGx,
-				models.New(di.PGx),
-				repository.NewPostgresJobsRepository(di.PGx),
-			),
+			application.NewJobsApplication(repository.NewPostgresJobsRepository(di.PGx)),
 			logger,
 		),
 			application.App{
@@ -118,6 +114,7 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 				GetWorkers:       app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
 				JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewJobTypesForQueueQueryHandler(models.New(di.PGx))),
 				ListAllQueues:    app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListAllQueuesQueryHandler(jobRepository)),
+				ScheduleJobs:     app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewScheduleJobsCommandHandler(models.New(di.PGx))),
 			},
 		),
 		logsController: web.NewLogsController(

@@ -25,7 +25,7 @@ func (app *JobsSuccess) GetWorkers(_ context.Context, _ GetWorkersQuery) (GetWor
 	return GetWorkersResponse{}, nil
 }
 
-func (app *JobsSuccess) ScheduleJobs(_ context.Context, _ ScheduleJobsRequest) error { return nil }
+func (app *JobsSuccess) ScheduleJobs(_ context.Context, _ ScheduleJobsCommand) error { return nil }
 
 func (app *JobsSuccess) RescheduleJob(_ context.Context, _ RescheduleJobRequest) error { return nil }
 
@@ -55,7 +55,7 @@ func (app *JobsFailure) GetWorkers(_ context.Context, _ GetWorkersQuery) (GetWor
 	return GetWorkersResponse{}, ErrJobsAppFailed
 }
 
-func (app *JobsFailure) ScheduleJobs(_ context.Context, _ ScheduleJobsRequest) error {
+func (app *JobsFailure) ScheduleJobs(_ context.Context, _ ScheduleJobsCommand) error {
 	return ErrJobsAppFailed
 }
 
