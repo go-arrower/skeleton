@@ -127,7 +127,7 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 
 		//handler := web.JobsController{
 		//	Cmds: application.JobsCommandContainer{
-		//		GetWorkers: func(context.Context, application.GetWorkersRequest) (application.GetWorkersResponse, error) {
+		//		GetWorkers: func(context.Context, application.GetWorkersQuery) (application.GetWorkersResponse, error) {
 		//			return application.GetWorkersResponse{}, nil
 		//		},
 		//	},
@@ -148,7 +148,7 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 
 		//handler := web.JobsController{
 		//	Cmds: application.JobsCommandContainer{
-		//		GetWorkers: func(context.Context, application.GetWorkersRequest) (application.GetWorkersResponse, error) {
+		//		GetWorkers: func(context.Context, application.GetWorkersQuery) (application.GetWorkersResponse, error) {
 		//			return application.GetWorkersResponse{}, errUCFailed
 		//		},
 		//	},

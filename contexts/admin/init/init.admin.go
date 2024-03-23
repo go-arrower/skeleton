@@ -115,6 +115,7 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 				VacuumJobTable:  app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewVacuumJobTableRequestHandler(di.PGx)),
 				DeleteJob:       app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewDeleteJobCommandHandler(jobRepository)),
 				GetQueue:        app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetQueueQueryHandler(jobRepository)),
+				GetWorkers:      app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
 			},
 		),
 		logsController: web.NewLogsController(

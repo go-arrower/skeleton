@@ -163,7 +163,7 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 
 func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := jc.app.GetWorkers(c.Request().Context(), application.GetWorkersRequest{})
+		res, err := jc.appDI.GetWorkers.H(c.Request().Context(), application.GetWorkersQuery{})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}

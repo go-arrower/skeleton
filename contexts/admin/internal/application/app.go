@@ -8,4 +8,5 @@ type App struct {
 	VacuumJobTable  app.Request[VacuumJobTableRequest, VacuumJobTableResponse]
 	DeleteJob       app.Command[DeleteJobCommand]
 	GetQueue        app.Query[GetQueueQuery, GetQueueResponse]
+	GetWorkers      app.Query[GetWorkersQuery, GetWorkersResponse]
 }

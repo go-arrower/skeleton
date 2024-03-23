@@ -21,7 +21,7 @@ func (app *JobsSuccess) ListAllQueues(_ context.Context, _ ListAllQueuesRequest)
 	return ListAllQueuesResponse{}, nil
 }
 
-func (app *JobsSuccess) GetWorkers(_ context.Context, _ GetWorkersRequest) (GetWorkersResponse, error) {
+func (app *JobsSuccess) GetWorkers(_ context.Context, _ GetWorkersQuery) (GetWorkersResponse, error) {
 	return GetWorkersResponse{}, nil
 }
 
@@ -51,7 +51,7 @@ func (app *JobsFailure) ListAllQueues(_ context.Context, _ ListAllQueuesRequest)
 	return ListAllQueuesResponse{}, ErrJobsAppFailed
 }
 
-func (app *JobsFailure) GetWorkers(_ context.Context, _ GetWorkersRequest) (GetWorkersResponse, error) {
+func (app *JobsFailure) GetWorkers(_ context.Context, _ GetWorkersQuery) (GetWorkersResponse, error) {
 	return GetWorkersResponse{}, ErrJobsAppFailed
 }
 

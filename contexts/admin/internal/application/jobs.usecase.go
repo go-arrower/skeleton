@@ -16,7 +16,6 @@ import (
 type JobsApplication interface {
 	Queues(ctx context.Context) (jobs.QueueNames, error)
 	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
-	GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error)
 	ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
 	JobTypesForQueue(ct context.Context, queue jobs.QueueName) ([]jobs.JobType, error)
@@ -75,19 +74,6 @@ func (app *JobsUsecase) ListAllQueues(ctx context.Context, in ListAllQueuesReque
 	}
 
 	return ListAllQueuesResponse{QueueStats: qWithStats}, nil
-}
-
-type (
-	GetWorkersRequest  struct{}
-	GetWorkersResponse struct {
-		Pool []jobs.WorkerPool
-	}
-)
-
-func (app *JobsUsecase) GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error) {
-	wp, _ := app.repo.WorkerPools(ctx)
-
-	return GetWorkersResponse{Pool: wp}, nil
 }
 
 type (
