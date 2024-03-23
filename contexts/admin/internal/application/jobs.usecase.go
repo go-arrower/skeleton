@@ -16,7 +16,6 @@ import (
 type JobsApplication interface {
 	Queues(ctx context.Context) (jobs.QueueNames, error)
 	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
-	GetQueue(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error)
 	GetWorkers(ctx context.Context, in GetWorkersRequest) (GetWorkersResponse, error)
 	ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
@@ -76,27 +75,6 @@ func (app *JobsUsecase) ListAllQueues(ctx context.Context, in ListAllQueuesReque
 	}
 
 	return ListAllQueuesResponse{QueueStats: qWithStats}, nil
-}
-
-type (
-	GetQueueRequest struct {
-		QueueName jobs.QueueName
-	}
-	GetQueueResponse struct {
-		Jobs []jobs.PendingJob
-		Kpis jobs.QueueKPIs
-	}
-)
-
-// GetQueue returns a Queue.
-func (app *JobsUsecase) GetQueue(ctx context.Context, in GetQueueRequest) (GetQueueResponse, error) {
-	kpis, _ := app.repo.QueueKPIs(ctx, jobs.QueueName(in.QueueName))
-	jobs, _ := app.repo.PendingJobs(ctx, in.QueueName)
-
-	return GetQueueResponse{
-		Jobs: jobs,
-		Kpis: kpis,
-	}, nil
 }
 
 type (

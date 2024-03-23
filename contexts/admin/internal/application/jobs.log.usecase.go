@@ -28,32 +28,6 @@ func NewLoggedJobsApplication(next JobsApplication, logger *slog.Logger) LoggedJ
 	}
 }
 
-// GetQueue implements JobsApplication
-func (app LoggedJobsApplication) GetQueue(ctx context.Context, in GetQueueRequest) (g1 GetQueueResponse, err error) {
-	cmdName := commandName(in)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	g1, err = app.next.GetQueue(ctx, in)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return g1, err
-
-}
-
 // GetWorkers implements JobsApplication
 func (app LoggedJobsApplication) GetWorkers(ctx context.Context, in GetWorkersRequest) (g1 GetWorkersResponse, err error) {
 	cmdName := commandName(in)
