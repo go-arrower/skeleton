@@ -18,7 +18,6 @@ type JobsApplication interface {
 	ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (ListAllQueuesResponse, error)
 	ScheduleJobs(ctx context.Context, in ScheduleJobsRequest) error
 	RescheduleJob(ctx context.Context, in RescheduleJobRequest) error
-	JobTypesForQueue(ct context.Context, queue jobs.QueueName) ([]jobs.JobType, error)
 }
 
 func NewJobsApplication(
@@ -112,22 +111,4 @@ func (app *JobsUsecase) RescheduleJob(ctx context.Context, in RescheduleJobReque
 	err := app.repo.RunJobAt(ctx, in.JobID, time.Now())
 
 	return fmt.Errorf("%w", err)
-}
-
-func (app *JobsUsecase) JobTypesForQueue(ctx context.Context, queue jobs.QueueName) ([]jobs.JobType, error) {
-	if queue == jobs.DefaultQueueName { // todo move check to repo
-		queue = ""
-	}
-
-	types, err := app.queries.JobTypes(ctx, string(queue))
-	if err != nil {
-		return nil, fmt.Errorf("could not get job types for queue: %s: %v", queue, err)
-	}
-
-	jobTypes := make([]jobs.JobType, len(types))
-	for i, jt := range types {
-		jobTypes[i] = jobs.JobType(jt)
-	}
-
-	return jobTypes, nil
 }

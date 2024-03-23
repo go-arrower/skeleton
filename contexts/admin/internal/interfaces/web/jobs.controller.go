@@ -330,7 +330,7 @@ func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queues, _ := jc.app.Queues(c.Request().Context())
 
-		jobType, _ := jc.app.JobTypesForQueue(c.Request().Context(), jobs.DefaultQueueName)
+		jobType, _ := jc.appDI.JobTypesForQueue.H(c.Request().Context(), application.JobTypesForQueueQuery{Queue: jobs.DefaultQueueName})
 
 		y, m, d := time.Now().Date()
 
@@ -347,7 +347,7 @@ func (jc *JobsController) ShowJobTypes() func(_ echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.QueryParam("queue")
 
-		jobType, _ := jc.app.JobTypesForQueue(c.Request().Context(), jobs.QueueName(queue))
+		jobType, _ := jc.appDI.JobTypesForQueue.H(c.Request().Context(), application.JobTypesForQueueQuery{Queue: jobs.QueueName(queue)})
 
 		return c.Render(http.StatusOK, "jobs.schedule#known-job-types", echo.Map{
 			"JobTypes": jobType,

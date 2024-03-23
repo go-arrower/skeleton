@@ -28,32 +28,6 @@ func NewLoggedJobsApplication(next JobsApplication, logger *slog.Logger) LoggedJ
 	}
 }
 
-// JobTypesForQueue implements JobsApplication
-func (app LoggedJobsApplication) JobTypesForQueue(ctx context.Context, queue jobs.QueueName) (ja1 []jobs.JobType, err error) {
-	cmdName := commandName(queue)
-
-	app.logger.DebugContext(ctx, "executing command",
-		slog.String("command", cmdName),
-	)
-
-	// result, err := app.next(ctx, in)
-	ja1, err = app.next.JobTypesForQueue(ctx, queue)
-
-	if err == nil {
-		app.logger.DebugContext(ctx, "command executed successfully",
-			slog.String("command", cmdName),
-		)
-	} else {
-		app.logger.DebugContext(ctx, "failed to execute command",
-			slog.String("command", cmdName),
-			slog.String("error", err.Error()),
-		)
-	}
-
-	return ja1, err
-
-}
-
 // ListAllQueues implements JobsApplication
 func (app LoggedJobsApplication) ListAllQueues(ctx context.Context, in ListAllQueuesRequest) (l1 ListAllQueuesResponse, err error) {
 	cmdName := commandName(in)
