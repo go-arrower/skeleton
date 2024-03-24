@@ -91,6 +91,6 @@ func Logout(userID any) bool { return false }
 */
 
 var (
-	SettingAllowRegistration = setting.NewKey(contextName, "", "registration.registration_enabled")
-	SettingAllowLogin        = setting.NewKey(contextName, "", "registration.login_enabled")
+	SettingAllowRegistration = setting.NewKey(contextName, "registration", "registration_enabled")
+	SettingAllowLogin        = setting.NewKey(contextName, "registration", "login_enabled")
 )
