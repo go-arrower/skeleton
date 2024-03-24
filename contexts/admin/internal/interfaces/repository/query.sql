@@ -70,11 +70,12 @@ ORDER BY priority, run_at ASC
 LIMIT 100;
 
 -- name: GetFinishedJobs :many
-SELECT DISTINCT *
-FROM arrower.gue_jobs_history
-WHERE finished_at IS NOT NULL
-ORDER BY finished_at DESC
-LIMIT 100;
+SELECT f.*
+FROM (SELECT DISTINCT ON (job_id) *
+      FROM arrower.gue_jobs_history
+      WHERE finished_at IS NOT NULL
+      LIMIT 100) as f
+ORDER BY f.finished_at DESC;
 
 -- name: GetFinishedJobsByQueue :many
 SELECT f.*

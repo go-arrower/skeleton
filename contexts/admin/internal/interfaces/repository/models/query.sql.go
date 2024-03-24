@@ -23,11 +23,12 @@ func (q *Queries) DeleteJob(ctx context.Context, jobID string) error {
 }
 
 const getFinishedJobs = `-- name: GetFinishedJobs :many
-SELECT DISTINCT job_id, priority, run_at, job_type, args, queue, run_count, run_error, created_at, updated_at, success, finished_at, pruned_at
-FROM arrower.gue_jobs_history
-WHERE finished_at IS NOT NULL
-ORDER BY finished_at DESC
-LIMIT 100
+SELECT f.job_id, f.priority, f.run_at, f.job_type, f.args, f.queue, f.run_count, f.run_error, f.created_at, f.updated_at, f.success, f.finished_at, f.pruned_at
+FROM (SELECT DISTINCT ON (job_id) job_id, priority, run_at, job_type, args, queue, run_count, run_error, created_at, updated_at, success, finished_at, pruned_at
+      FROM arrower.gue_jobs_history
+      WHERE finished_at IS NOT NULL
+      LIMIT 100) as f
+ORDER BY f.finished_at DESC
 `
 
 func (q *Queries) GetFinishedJobs(ctx context.Context) ([]ArrowerGueJobsHistory, error) {
