@@ -283,7 +283,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		parsedTempl.layout = r.views[sharedViews].defaultLayout
 	}
 
-	r.logger.LogAttrs(nil, alog.LevelInfo,
+	r.logger.LogAttrs(ctx, alog.LevelInfo,
 		"render template",
 		slog.String("original_name", name),
 		slog.String("cache_key", parsedTempl.key()),
