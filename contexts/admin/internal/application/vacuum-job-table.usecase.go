@@ -36,12 +36,15 @@ type (
 	}
 )
 
-func (h *vacuumJobTableRequestHandler) H(ctx context.Context, req VacuumJobTableRequest) (VacuumJobTableResponse, error) {
+func (h *vacuumJobTableRequestHandler) H(
+	ctx context.Context,
+	req VacuumJobTableRequest,
+) (VacuumJobTableResponse, error) {
 	if !isValidTable(req.Table) {
 		return VacuumJobTableResponse{}, fmt.Errorf("%w: invalid table: %s", ErrVacuumFailed, req.Table)
 	}
 
-	_, err := h.db.Exec(ctx, fmt.Sprintf(`VACUUM FULL arrower.%s`, validTables[req.Table]))
+	_, err := h.db.Exec(ctx, fmt.Sprintf(`VACUUM FULL arrower.%s`, validTables()[req.Table]))
 	if err != nil {
 		return VacuumJobTableResponse{}, fmt.Errorf("%w for table: %s: %v", ErrVacuumFailed, req.Table, err)
 	}
@@ -57,14 +60,17 @@ func (h *vacuumJobTableRequestHandler) H(ctx context.Context, req VacuumJobTable
 	}, nil
 }
 
-var validTables = map[string]string{
-	"jobs":    "gue_jobs",
-	"history": "gue_jobs_history",
+func validTables() map[string]string {
+	return map[string]string{
+		"jobs":    "gue_jobs",
+		"history": "gue_jobs_history",
+	}
 }
 
 func isValidTable(table string) bool {
 	var validTable bool
-	for k := range validTables {
+
+	for k := range validTables() {
 		if k == table {
 			validTable = true
 		}

@@ -13,7 +13,9 @@ import (
 
 type PruneJobHistoryRequestHandler app.Request[PruneJobHistoryRequest, PruneJobHistoryResponse]
 
-func NewPruneJobHistoryRequestHandler(queries *models.Queries) app.Request[PruneJobHistoryRequest, PruneJobHistoryResponse] {
+func NewPruneJobHistoryRequestHandler(
+	queries *models.Queries,
+) app.Request[PruneJobHistoryRequest, PruneJobHistoryResponse] {
 	return &pruneJobHistoryRequestHandler{queries: queries}
 }
 
@@ -32,10 +34,16 @@ type (
 	}
 )
 
-func (h *pruneJobHistoryRequestHandler) H(ctx context.Context, req PruneJobHistoryRequest) (PruneJobHistoryResponse, error) {
+func (h *pruneJobHistoryRequestHandler) H(
+	ctx context.Context,
+	req PruneJobHistoryRequest,
+) (PruneJobHistoryResponse, error) {
 	deleteBefore := time.Now().Add(-1 * time.Duration(req.Days) * time.Hour * 24)
 
-	err := h.queries.PruneHistory(ctx, pgtype.Timestamptz{Time: deleteBefore, Valid: true})
+	err := h.queries.PruneHistory(
+		ctx,
+		pgtype.Timestamptz{Time: deleteBefore, Valid: true, InfinityModifier: pgtype.Finite},
+	)
 	if err != nil {
 		return PruneJobHistoryResponse{}, fmt.Errorf("could not delete old history: %v", err)
 	}

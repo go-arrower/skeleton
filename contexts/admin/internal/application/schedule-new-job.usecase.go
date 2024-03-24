@@ -23,8 +23,8 @@ func NewScheduleJobsCommandHandler(queries *models.Queries) app.Command[Schedule
 type ScheduleJobsCommand struct {
 	Queue    string
 	JobType  string
-	Priority int16
 	Payload  string
+	Priority int16
 	Count    int
 	RunAt    time.Time
 }
@@ -39,7 +39,12 @@ func (h *scheduleJobsCommandHandler) H(ctx context.Context, cmd ScheduleJobsComm
 
 	propagator.Inject(ctx, carrier)
 
-	_, err := h.queries.ScheduleJobs(ctx, buildJobs(cmd, carrier))
+	jobs, err := buildJobs(cmd, carrier)
+	if err != nil {
+		return fmt.Errorf("could not build jobs: %w", err)
+	}
+
+	_, err = h.queries.ScheduleJobs(ctx, jobs)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -47,7 +52,7 @@ func (h *scheduleJobsCommandHandler) H(ctx context.Context, cmd ScheduleJobsComm
 	return nil
 }
 
-func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) []models.ScheduleJobsParams {
+func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) ([]models.ScheduleJobsParams, error) {
 	jobs := make([]models.ScheduleJobsParams, in.Count)
 
 	entropy := &ulid.LockedMonotonicReader{
@@ -55,17 +60,24 @@ func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) []models.
 	}
 
 	buf := map[string]interface{}{}
-	_ = json.Unmarshal([]byte(strings.TrimSpace(in.Payload)), &buf)
 
-	args, _ := json.Marshal(JobPayload{JobData: buf, Carrier: carrier})
+	err := json.Unmarshal([]byte(strings.TrimSpace(in.Payload)), &buf)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal job: %v", err)
+	}
+
+	args, err := json.Marshal(JobPayload{JobData: buf, Carrier: carrier})
+	if err != nil {
+		return nil, fmt.Errorf("could not marshal job: %v", err)
+	}
 
 	for i := 0; i < in.Count; i++ {
 		jobID, _ := ulid.New(ulid.Now(), entropy)
 
 		jobs[i] = models.ScheduleJobsParams{
 			JobID:     jobID.String(),
-			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
-			UpdatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true, InfinityModifier: pgtype.Finite},
+			UpdatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true, InfinityModifier: pgtype.Finite},
 			Queue:     in.Queue,
 			JobType:   in.JobType,
 			Priority:  in.Priority,
@@ -75,7 +87,7 @@ func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) []models.
 
 	}
 
-	return jobs
+	return jobs, nil
 }
 
 type JobPayload struct { // todo reuse the one in the jobs package

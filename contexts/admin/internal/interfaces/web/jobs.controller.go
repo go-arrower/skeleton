@@ -101,37 +101,47 @@ func (jc *JobsController) ProcessedJobsLineChartData() func(echo.Context) error 
 	return func(c echo.Context) error {
 		interval := c.Param("interval")
 
-		var data []models.PendingJobsRow
-		var err error
+		const (
+			bucketsPerHour = 12
+			bucketsPerWeek = 7
+		)
+
+		var (
+			jobData []models.PendingJobsRow
+			err     error
+		)
 
 		if interval == "hour" { // show last 60 minutes
-			data, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{
+			jobData, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{
 				DateBin:    pgtype.Interval{Valid: true, Microseconds: int64(time.Minute * 5 / time.Microsecond)},
-				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour)},
-				Limit:      12,
+				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour), InfinityModifier: pgtype.Finite},
+				Limit:      bucketsPerHour,
 			})
 		} else {
-			data, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{ // show whole week
+			jobData, err = jc.queries.PendingJobs(c.Request().Context(), models.PendingJobsParams{ // show whole week
 				DateBin:    pgtype.Interval{Valid: true, Days: 1},
-				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour * 24 * 7)},
-				Limit:      7,
+				FinishedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().UTC().Add(-time.Hour * 24 * bucketsPerWeek), InfinityModifier: pgtype.Finite},
+				Limit:      bucketsPerWeek,
 			})
 		}
+
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		var xaxis []string
-		var series []int
+		var (
+			xaxis  []string
+			series []int
+		)
 
-		for _, d := range data {
+		for _, data := range jobData {
 			if interval == "hour" {
-				xaxis = append([]string{d.T.Time.Format("15:04")}, xaxis...)
+				xaxis = append([]string{data.T.Time.Format("15:04")}, xaxis...)
 			} else {
-				xaxis = append([]string{d.T.Time.Format("01.02")}, xaxis...)
+				xaxis = append([]string{data.T.Time.Format("01.02")}, xaxis...)
 			}
 
-			series = append([]int{int(d.Count)}, series...)
+			series = append([]int{int(data.Count)}, series...)
 		}
 
 		return c.JSON(http.StatusOK, lineData{
@@ -152,11 +162,12 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
-		return c.Render(http.StatusOK, "jobs.queue", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
-			"QueueName": page.QueueName,
-			"Jobs":      page.Jobs,
-			"Stats":     page.Stats,
-		}))
+		return c.Render(http.StatusOK, "jobs.queue",
+			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
+				"QueueName": page.QueueName,
+				"Jobs":      page.Jobs,
+				"Stats":     page.Stats,
+			}))
 	}
 }
 
@@ -175,7 +186,7 @@ func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 
 func (jc *JobsController) DeleteJob() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		q := c.Param("queue")
+		queue := c.Param("queue")
 		jobID := c.Param("job_id")
 
 		err := jc.appDI.DeleteJob.H(c.Request().Context(), application.DeleteJobCommand{JobID: jobID})
@@ -183,7 +194,7 @@ func (jc *JobsController) DeleteJob() func(c echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
+		return c.Redirect(http.StatusSeeOther, "/admin/jobs/"+queue)
 	}
 }
 
@@ -194,7 +205,7 @@ func (jc *JobsController) RescheduleJob() func(c echo.Context) error {
 
 		_ = jc.app.RescheduleJob(c.Request().Context(), application.RescheduleJobRequest{JobID: jobID})
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", q))
+		return c.Redirect(http.StatusSeeOther, "/admin/jobs/"+q)
 	}
 }
 
@@ -206,6 +217,7 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 		res, _ := jc.appDI.ListAllQueues.H(c.Request().Context(), application.ListAllQueuesQuery{}) // fixme: don't call existing use case, create own or call domain model
 
 		var queues []string
+
 		for q, _ := range res.QueueStats {
 			queue := string(q)
 			if queue == "" {
@@ -215,11 +227,13 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 			queues = append(queues, queue)
 		}
 
-		return c.Render(http.StatusOK, "jobs.maintenance", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Maintenance", echo.Map{
-			"Jobs":    size.Jobs,
-			"History": size.History,
-			"Queues":  queues,
-		}))
+		return c.Render(http.StatusOK, "jobs.maintenance",
+			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Maintenance", echo.Map{
+				"Jobs":    size.Jobs,
+				"History": size.History,
+				"Queues":  queues,
+			}),
+		)
 	}
 }
 
@@ -233,10 +247,12 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 		}
 
 		// reload the dashboard badges with the size, by using htmx's oob technique
-		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
-			"Jobs":    size.Jobs,
-			"History": size.History,
-		}))
+		return c.Render(http.StatusOK, "jobs.maintenance#table-size",
+			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+				"Jobs":    size.Jobs,
+				"History": size.History,
+			}),
+		)
 	}
 }
 
@@ -248,7 +264,10 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		size, err := jc.appDI.PruneJobHistory.H(c.Request().Context(), application.PruneJobHistoryRequest{Days: days})
+		size, err := jc.appDI.PruneJobHistory.H(
+			c.Request().Context(),
+			application.PruneJobHistoryRequest{Days: days},
+		)
 		if err != nil {
 			return c.NoContent(http.StatusBadRequest)
 		}
@@ -257,17 +276,21 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
 
 		// reload the dashboard badges with the new size, by using htmx's oob technique.
-		return c.Render(http.StatusOK, "jobs.maintenance#table-size", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
-			"Jobs":    size.Jobs,
-			"History": size.History,
-		}))
+		return c.Render(http.StatusOK, "jobs.maintenance#table-size",
+			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+				"Jobs":    size.Jobs,
+				"History": size.History,
+			}),
+		)
 	}
 }
 
 func (jc *JobsController) PruneHistory() func(echo.Context) error {
+	const timeDay = time.Hour * 24 // todo const is defined multiple times => make global
+
 	return func(c echo.Context) error {
 		days, _ := strconv.Atoi(c.FormValue("days"))
-		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * timeDay)
 
 		queue := c.FormValue("queue")
 		if queue == "Default" {
@@ -277,7 +300,7 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 		// todo check if pruneJobHistoryRequestHandler can be used here
 		_ = jc.queries.PruneHistoryPayload(c.Request().Context(), models.PruneHistoryPayloadParams{
 			Queue:     queue,
-			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
+			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true, InfinityModifier: pgtype.Finite},
 		})
 
 		c.Response().Header().Set("HX-Trigger", historyTableSizeChangedJSEvent)
@@ -287,10 +310,12 @@ func (jc *JobsController) PruneHistory() func(echo.Context) error {
 }
 
 func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
+	const timeDay = time.Hour * 24
+
 	return func(c echo.Context) error {
 		days, _ := strconv.Atoi(c.QueryParam("days"))
 
-		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * timeDay)
 
 		size, _ := jc.queries.JobHistorySize(c.Request().Context(), pgtype.Timestamptz{Time: estimateBefore, Valid: true})
 
@@ -304,6 +329,8 @@ func (jc *JobsController) EstimateHistorySize() func(echo.Context) error {
 }
 
 func (jc *JobsController) EstimateHistoryPayloadSize() func(echo.Context) error {
+	const timeDay = time.Hour * 24
+
 	return func(c echo.Context) error {
 		queue := c.QueryParam("queue")
 		if queue == "Default" {
@@ -311,11 +338,11 @@ func (jc *JobsController) EstimateHistoryPayloadSize() func(echo.Context) error 
 		}
 
 		days, _ := strconv.Atoi(c.QueryParam("days"))
-		estimateBefore := time.Now().Add(-1 * time.Duration(days) * time.Hour * 24)
+		estimateBefore := time.Now().Add(-1 * time.Duration(days) * timeDay)
 
 		size, _ := jc.queries.JobHistoryPayloadSize(c.Request().Context(), models.JobHistoryPayloadSizeParams{
 			Queue:     queue,
-			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true},
+			CreatedAt: pgtype.Timestamptz{Time: estimateBefore, Valid: true, InfinityModifier: pgtype.Finite},
 		})
 
 		var fmtSize string
@@ -331,16 +358,21 @@ func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		queues, _ := jc.app.Queues(c.Request().Context())
 
-		jobType, _ := jc.appDI.JobTypesForQueue.H(c.Request().Context(), application.JobTypesForQueueQuery{Queue: jobs.DefaultQueueName})
+		jobType, _ := jc.appDI.JobTypesForQueue.H(
+			c.Request().Context(),
+			application.JobTypesForQueueQuery{Queue: jobs.DefaultQueueName},
+		)
 
-		y, m, d := time.Now().Date()
+		year, month, day := time.Now().Date()
 
-		return c.Render(http.StatusOK, "jobs.schedule", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
-			"Queues":   queues,
-			"JobTypes": jobType,
-			"RunAt":    time.Now().Format(htmlDatetimeLayout),
-			"RunAtMin": fmt.Sprintf("%d-%02d-%02dT00:00", y, m, d),
-		}))
+		return c.Render(http.StatusOK, "jobs.schedule",
+			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
+				"Queues":   queues,
+				"JobTypes": jobType,
+				"RunAt":    time.Now().Format(htmlDatetimeLayout),
+				"RunAtMin": fmt.Sprintf("%d-%02d-%02dT00:00", year, month, day),
+			}),
+		)
 	}
 }
 
@@ -348,7 +380,10 @@ func (jc *JobsController) ShowJobTypes() func(_ echo.Context) error {
 	return func(c echo.Context) error {
 		queue := c.QueryParam("queue")
 
-		jobType, _ := jc.appDI.JobTypesForQueue.H(c.Request().Context(), application.JobTypesForQueueQuery{Queue: jobs.QueueName(queue)})
+		jobType, _ := jc.appDI.JobTypesForQueue.H(
+			c.Request().Context(),
+			application.JobTypesForQueueQuery{Queue: jobs.QueueName(queue)},
+		)
 
 		return c.Render(http.StatusOK, "jobs.schedule#known-job-types", echo.Map{
 			"JobTypes": jobType,
@@ -382,7 +417,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		prio := c.FormValue("priority")
 		payload := c.FormValue("payload")
 		num := c.FormValue("count")
-		t := c.FormValue("runAt-time")
+		runAtParam := c.FormValue("runAt-time")
 
 		jq := queue
 		if queue == "Default" {
@@ -393,14 +428,14 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
-		priority = priority * -1
+		priority *= -1
 
 		count, err := strconv.Atoi(num)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		runAt, _ := time.Parse(htmlDatetimeLayout, t)
+		runAt, _ := time.Parse(htmlDatetimeLayout, runAtParam)
 
 		err = jc.appDI.ScheduleJobs.H(c.Request().Context(), application.ScheduleJobsCommand{
 			Queue:    jq,
@@ -414,7 +449,7 @@ func (jc *JobsController) ScheduleJobs() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/jobs/%s", queue))
+		return c.Redirect(http.StatusSeeOther, "/admin/jobs/"+queue)
 	}
 }
 
@@ -507,10 +542,12 @@ func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) Q
 func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 	for i := 0; i < len(jobs); i++ { //nolint:varnamelen
 		var m application.JobPayload
-		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
+		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 		data, _ := json.Marshal(m.JobData)
+
 		var prettyJSON bytes.Buffer
+
 		if err := json.Indent(&prettyJSON, data, "", "  "); err != nil {
 		}
 
@@ -521,15 +558,15 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 	return jobs
 }
 
-func fmtRunAtTime(t time.Time) string {
+func fmtRunAtTime(tme time.Time) string {
 	now := time.Now()
 
-	isToday := t.Year() == now.Year() && t.Month() == now.Month() && t.Day() == now.Day()
+	isToday := tme.Year() == now.Year() && tme.Month() == now.Month() && tme.Day() == now.Day()
 	if isToday {
-		return fmt.Sprintf("%02d:%02d", t.Hour(), t.Minute())
+		return fmt.Sprintf("%02d:%02d", tme.Hour(), tme.Minute())
 	}
 
-	return t.Format("2006.01.02 15:04")
+	return tme.Format("2006.01.02 15:04")
 }
 
 func queueKpiToStats(queue string, kpis jobs.QueueKPIs) QueueStats {

@@ -23,7 +23,7 @@ type (
 	}
 )
 
-func (h *getWorkersQueryHandler) H(ctx context.Context, query GetWorkersQuery) (GetWorkersResponse, error) {
+func (h *getWorkersQueryHandler) H(ctx context.Context, _ GetWorkersQuery) (GetWorkersResponse, error) {
 	wp, err := h.repo.WorkerPools(ctx)
 	if err != nil {
 		return GetWorkersResponse{}, fmt.Errorf("could not get workers: %w", err)

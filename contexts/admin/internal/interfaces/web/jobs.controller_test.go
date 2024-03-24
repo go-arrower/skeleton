@@ -8,16 +8,13 @@ import (
 	"testing"
 
 	"github.com/go-arrower/arrower/app"
-
 	"github.com/go-arrower/arrower/setting"
-
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
-
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
+	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
@@ -32,14 +29,6 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		//handler := &web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		ListAllQueues: func(context.Context, application.ListAllQueuesQuery) (application.ListAllQueuesResponse, error) {
-		//			return application.ListAllQueuesResponse{}, nil
-		//		},
-		//	},
-		//}
-
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsSuccessApplication(), application.App{})
 
 		if assert.NoError(t, handler.ListQueues()(c)) {
@@ -53,13 +42,6 @@ func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		ListAllQueues: func(context.Context, application.ListAllQueuesQuery) (application.ListAllQueuesResponse, error) {
-		//			return application.ListAllQueuesResponse{}, errUCFailed
-		//		},
-		//	},
-		//}
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsFailureApplication(), application.App{})
 
 		assert.Error(t, handler.ListQueues()(c))
@@ -78,14 +60,6 @@ func TestJobsController_JobsQueue(t *testing.T) { //nolint:dupl
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		GetQueue: func(context.Context, application.GetQueueRequest) (application.GetQueueResponse, error) {
-		//			return application.GetQueueResponse{}, nil
-		//		},
-		//	},
-		//}
-
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsSuccessApplication(), application.App{})
 
 		if assert.NoError(t, handler.ShowQueue()(c)) {
@@ -98,14 +72,6 @@ func TestJobsController_JobsQueue(t *testing.T) { //nolint:dupl
 
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
-
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		GetQueue: func(context.Context, application.GetQueueRequest) (application.GetQueueResponse, error) {
-		//			return application.GetQueueResponse{}, errUCFailed
-		//		},
-		//	},
-		//}
 
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsFailureApplication(), application.App{})
 
@@ -125,14 +91,6 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
 
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		GetWorkers: func(context.Context, application.GetWorkersQuery) (application.GetWorkersResponse, error) {
-		//			return application.GetWorkersResponse{}, nil
-		//		},
-		//	},
-		//}
-
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsSuccessApplication(), application.App{})
 
 		if assert.NoError(t, handler.ListWorkers()(c)) {
@@ -145,14 +103,6 @@ func TestJobsController_JobsWorkers(t *testing.T) { //nolint:dupl
 
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(req, rec)
-
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		GetWorkers: func(context.Context, application.GetWorkersQuery) (application.GetWorkersResponse, error) {
-		//			return application.GetWorkersResponse{}, errUCFailed
-		//		},
-		//	},
-		//}
 
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsFailureApplication(), application.App{})
 
@@ -176,16 +126,6 @@ func TestJobsController_DeleteJob(t *testing.T) {
 		c.SetParamNames("queue", "job_id")
 		c.SetParamValues("Default", "1337")
 
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) error {
-		//			assert.Equal(t, "1337", in.JobID)
-		//
-		//			return nil
-		//		},
-		//	},
-		//}
-
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsSuccessApplication(), application.App{})
 
 		if assert.NoError(t, handler.DeleteJob()(c)) {
@@ -203,14 +143,6 @@ func TestJobsController_DeleteJob(t *testing.T) {
 		c.SetPath("/:queue/delete/:job_id")
 		c.SetParamNames("queue", "job_id")
 		c.SetParamValues("Default", "1337")
-
-		//handler := web.JobsController{
-		//	Cmds: application.JobsCommandContainer{
-		//		DeleteJob: func(ctx context.Context, in application.DeleteJobRequest) error {
-		//			return errUCFailed
-		//		},
-		//	},
-		//}
 
 		handler := web.NewJobsController(nil, nil, nil, nil, application.NewJobsFailureApplication(), application.App{})
 

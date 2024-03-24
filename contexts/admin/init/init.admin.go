@@ -12,10 +12,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/go-arrower/arrower/app"
-
 	"github.com/go-arrower/arrower/alog"
 	alogmodels "github.com/go-arrower/arrower/alog/models"
+	"github.com/go-arrower/arrower/app"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
@@ -94,6 +93,17 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 
 	jobRepository := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
 
+	appDI := application.App{
+		PruneJobHistory:  app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewPruneJobHistoryRequestHandler(models.New(di.PGx))),
+		VacuumJobTable:   app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewVacuumJobTableRequestHandler(di.PGx)),
+		DeleteJob:        app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewDeleteJobCommandHandler(jobRepository)),
+		GetQueue:         app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetQueueQueryHandler(jobRepository)),
+		GetWorkers:       app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
+		JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewJobTypesForQueueQueryHandler(models.New(di.PGx))),
+		ListAllQueues:    app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListAllQueuesQueryHandler(jobRepository)),
+		ScheduleJobs:     app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewScheduleJobsCommandHandler(models.New(di.PGx))),
+	}
+
 	admin := &AdminContext{
 		globalContainer: di,
 
@@ -102,20 +112,16 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		jobRepository: jobRepository,
 
 		settingsController: web.NewSettingsController(di.AdminRouter),
-		jobsController: web.NewJobsController(logger, models.New(di.PGx), jobRepository, sweb.NewDefaultPresenter(di.Settings), application.NewLoggedJobsApplication(
-			application.NewJobsApplication(repository.NewPostgresJobsRepository(di.PGx)),
+		jobsController: web.NewJobsController(
 			logger,
-		),
-			application.App{
-				PruneJobHistory:  app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewPruneJobHistoryRequestHandler(models.New(di.PGx))),
-				VacuumJobTable:   app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewVacuumJobTableRequestHandler(di.PGx)),
-				DeleteJob:        app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewDeleteJobCommandHandler(jobRepository)),
-				GetQueue:         app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetQueueQueryHandler(jobRepository)),
-				GetWorkers:       app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
-				JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewJobTypesForQueueQueryHandler(models.New(di.PGx))),
-				ListAllQueues:    app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListAllQueuesQueryHandler(jobRepository)),
-				ScheduleJobs:     app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewScheduleJobsCommandHandler(models.New(di.PGx))),
-			},
+			models.New(di.PGx),
+			jobRepository,
+			sweb.NewDefaultPresenter(di.Settings),
+			application.NewLoggedJobsApplication(
+				application.NewJobsApplication(repository.NewPostgresJobsRepository(di.PGx)),
+				logger,
+			),
+			appDI,
 		),
 		logsController: web.NewLogsController(
 			logger,

@@ -8,20 +8,23 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-arrower/arrower/setting"
-
-	"github.com/google/uuid"
-
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/alog/models"
+	"github.com/go-arrower/arrower/setting"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
-func NewLogsController(logger alog.Logger, settings setting.Settings, queries *models.Queries, routes *echo.Group, presenter *web.DefaultPresenter) *LogsController {
+func NewLogsController(
+	logger alog.Logger,
+	settings setting.Settings,
+	queries *models.Queries,
+	routes *echo.Group,
+	presenter *web.DefaultPresenter,
+) *LogsController {
 	return &LogsController{
 		logger:   logger,
 		settings: settings,
@@ -42,6 +45,8 @@ type LogsController struct {
 func (lc *LogsController) ShowLogs() {
 	// FIXME: how to add route with and without trailing slash
 
+	const defaultLogs = 1000
+
 	type filter struct {
 		Range int    `query:"range"`
 		Level string `query:"level"`
@@ -54,8 +59,8 @@ func (lc *LogsController) ShowLogs() {
 	}
 	type log struct {
 		Time   time.Time
-		UserID string
 		Log    map[string]any
+		UserID string
 	}
 
 	lc.r.GET("/", func(c echo.Context) error {
@@ -85,10 +90,10 @@ func (lc *LogsController) ShowLogs() {
 		}
 
 		queryParams := models.GetRecentLogsParams{
-			Time:  pgtype.Timestamptz{Time: filterTime, Valid: true},
+			Time:  pgtype.Timestamptz{Time: filterTime, Valid: true, InfinityModifier: pgtype.Finite},
 			Msg:   "%" + searchMsgParam + "%",
 			Level: level,
-			Limit: 1000,
+			Limit: defaultLogs,
 		}
 
 		if filter.K0 != "" {
@@ -127,7 +132,8 @@ func (lc *LogsController) ShowLogs() {
 			"Logs":      logs,
 			"Filter":    filter,
 			"Settings": map[string]any{
-				"Enabled": alog.Unwrap(lc.logger).UsesSettings(), // !!! assumes all loggers in all replicas are configured the same -.-
+				// !!! assumes all loggers in all replicas are configured the same
+				"Enabled": alog.Unwrap(lc.logger).UsesSettings(),
 				"Level":   getLevelName(slog.Level(settingLevel.MustInt())),
 			},
 		}

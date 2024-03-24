@@ -27,13 +27,14 @@ type (
 
 // todo how different to Queues and make that clear in the naming of the methods
 // ListAllQueues returns all Queues.
-func (h *listAllQueuesQueryHandler) H(ctx context.Context, query ListAllQueuesQuery) (ListAllQueuesResponse, error) {
+func (h *listAllQueuesQueryHandler) H(ctx context.Context, _ ListAllQueuesQuery) (ListAllQueuesResponse, error) {
 	queues, err := h.repo.Queues(ctx)
 	if err != nil {
 		return ListAllQueuesResponse{}, fmt.Errorf("could not get queues: %w", err)
 	}
 
 	qWithStats := make(map[jobs.QueueName]jobs.QueueStats)
+
 	for _, q := range queues {
 		s, err := h.repo.QueueKPIs(ctx, q)
 		if err != nil {
