@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-arrower/skeleton/shared/application"
+
 	"github.com/go-arrower/arrower/app"
 
 	"github.com/go-arrower/arrower/secret"
@@ -103,6 +105,11 @@ func main() {
 		//	"userID":  userID,
 		//})
 	})
+
+	helloController := web.NewHelloController(application.App{
+		SayHello: application.NewSayHelloRequestHandler(arrower.Logger),
+	})
+	arrower.WebRouter.GET("/hello/:name", helloController.SayHello())
 
 	//
 	// start app
