@@ -102,7 +102,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 
 			traceExporter, err := otlptracegrpc.New(ctx, opts...)
 			if err != nil {
-				return nil, nil, fmt.Errorf("%w", err)
+				return nil, nil, fmt.Errorf("could not connect to trace exporter: %w", err)
 			}
 
 			traceProvider := trace.NewTracerProvider(
@@ -126,7 +126,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		{
 			exporter, err := prometheus.New()
 			if err != nil {
-				return nil, nil, fmt.Errorf("%w", err)
+				return nil, nil, fmt.Errorf("could not create to prometheus exporter: %w", err)
 			}
 
 			meterProvider := metric.NewMeterProvider(
@@ -151,7 +151,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			Migrations: postgres.ArrowerDefaultMigrations,
 		}, container.TraceProvider)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w", err)
+			return nil, nil, fmt.Errorf("could not connect to postgres: %w", err)
 		}
 
 		container.PGx = pg.PGx
@@ -214,7 +214,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			jobs.WithPoolName(conf.InstanceName),
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w", err)
+			return nil, nil, fmt.Errorf("could not start default job queue: %w", err)
 		}
 
 		arrowerQueue, err := jobs.NewPostgresJobs(
@@ -226,7 +226,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			jobs.WithPoolName(conf.InstanceName),
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w", err)
+			return nil, nil, fmt.Errorf("could not start arrower job queue: %w", err)
 		}
 
 		container.DefaultQueue = queue
