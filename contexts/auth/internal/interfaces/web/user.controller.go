@@ -233,9 +233,11 @@ func (uc UserController) List() func(echo.Context) error {
 		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{
 			"users":         u,
 			"currentUserID": auth.CurrentUserID(c.Request().Context()),
+			"filtered":      len(u),
+			"total":         len(u),
 		})
 
-		return c.Render(http.StatusOK, "=>auth.users", page)
+		return c.Render(http.StatusOK, "users", page)
 	}
 }
 
@@ -423,7 +425,7 @@ func (uc UserController) BlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "auth.users#user.blocked", models.AuthUser{
+		return c.Render(http.StatusOK, "users#user.blocked", models.AuthUser{
 			ID:           uuid.MustParse(string(res.UserID)),
 			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: true},
 		})
@@ -439,7 +441,7 @@ func (uc UserController) UnBlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "auth.users#user.blocked", models.AuthUser{
+		return c.Render(http.StatusOK, "users#user.blocked", models.AuthUser{
 			ID:           uuid.MustParse(string(res.UserID)),
 			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: false},
 		})
