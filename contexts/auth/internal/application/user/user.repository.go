@@ -12,7 +12,6 @@ var (
 	ErrPersistenceFailed = errors.New("persistence operation failed")
 )
 
-// todo name all parameters, to make it better documented ???
 type Repository interface {
 	All(context.Context) ([]User, error)
 	AllByIDs(context.Context, []ID) ([]User, error)

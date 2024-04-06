@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-arrower/arrower/setting"
@@ -11,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 
@@ -33,7 +33,7 @@ Proposal for naming conventions:
 	- delete
 */
 
-func NewUserController(routes *echo.Group, presenter *web.DefaultPresenter, secret []byte, settings setting.Settings) UserController {
+func NewUserController(app application.UserApplication, routes *echo.Group, presenter *web.DefaultPresenter, secret []byte, settings setting.Settings) UserController {
 	if presenter == nil {
 		presenter = web.NewDefaultPresenter(settings)
 	}
@@ -42,6 +42,7 @@ func NewUserController(routes *echo.Group, presenter *web.DefaultPresenter, secr
 		r:                   routes,
 		p:                   presenter,
 		knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret),
+		app:                 app,
 	} //nolint:exhaustruct
 }
 
@@ -58,6 +59,8 @@ type UserController struct {
 	CmdVerifyUser   func(context.Context, application.VerifyUserRequest) error
 	CmdBlockUser    func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
 	CmdUnBlockUser  func(context.Context, application.BlockUserRequest) (application.BlockUserResponse, error)
+
+	app application.UserApplication
 
 	knownDeviceKeyPairs []securecookie.Codec
 }
@@ -228,14 +231,20 @@ func (uc UserController) Logout() func(echo.Context) error {
 
 func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
-		u, _ := uc.Queries.AllUsers(c.Request().Context())
+		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{})
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
 
-		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{
-			"users":         u,
+		page, err := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{
+			"users":         res.Users,
 			"currentUserID": auth.CurrentUserID(c.Request().Context()),
-			"filtered":      len(u),
-			"total":         len(u),
+			"filtered":      res.Filtered,
+			"total":         res.Total,
 		})
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
 
 		return c.Render(http.StatusOK, "users", page)
 	}
@@ -425,9 +434,9 @@ func (uc UserController) BlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "users#user.blocked", models.AuthUser{
-			ID:           uuid.MustParse(string(res.UserID)),
-			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: true},
+		return c.Render(http.StatusOK, "users#user.blocked", echo.Map{
+			"ID":      uuid.MustParse(string(res.UserID)),
+			"Blocked": user.BoolFlag(res.Blocked.At()),
 		})
 	})
 }
@@ -441,9 +450,9 @@ func (uc UserController) UnBlockUser() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		return c.Render(http.StatusOK, "users#user.blocked", models.AuthUser{
-			ID:           uuid.MustParse(string(res.UserID)),
-			BlockedAtUtc: pgtype.Timestamptz{Time: res.Blocked.At(), Valid: false},
+		return c.Render(http.StatusOK, "users#user.blocked", echo.Map{
+			"ID":      uuid.MustParse(string(res.UserID)),
+			"Blocked": user.BoolFlag(res.Blocked.At()),
 		})
 	})
 }

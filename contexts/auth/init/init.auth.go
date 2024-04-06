@@ -77,7 +77,12 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
 	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
 
-	userController := web.NewUserController(webRoutes, web2.NewDefaultPresenter(di.Settings), []byte("secret"), di.Settings)
+	app := application.UserApplication{
+		//ListUsers: app2.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListUsersQueryHandler(repo)),
+		ListUsers: application.NewListUsersQueryHandler(repo),
+	}
+
+	userController := web.NewUserController(app, webRoutes, web2.NewDefaultPresenter(di.Settings), []byte("secret"), di.Settings)
 	userController.Queries = queries
 	userController.CmdLoginUser = mw.Traced(di.TraceProvider,
 		mw.Metric(di.MeterProvider,

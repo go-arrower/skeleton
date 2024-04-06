@@ -82,7 +82,7 @@
     <tbody>
       {{ range .users }}
         <tr
-          {{ if eq $.currentUserID .ID.Value }}
+          {{ if eq $.currentUserID .ID }}
             class="bg-primary text-primary-content"
           {{ else }}
             class="even:bg-base-200 odd:bg-white"
@@ -90,11 +90,11 @@
         >
           <td>
             <a
-              href="/admin/auth/users/{{ .ID.Value }}"
+              href="/admin/auth/users/{{ .ID }}"
               class="flex flex-row items-center"
             >
-              {{ if .PictureUrl }}
-                {{ .PictureUrl }}
+              {{ if .ProfilePictureURL }}
+                {{ .ProfilePictureURL }}
               {{ else }}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -111,12 +111,12 @@
                   />
                 </svg>
               {{ end }}
-              {{ .NameDisplayname }}
+              {{ .Name.DisplayName }}
             </a>
           </td>
           <td>{{ .Login }}</td>
           <td>
-            {{ if .VerifiedAtUtc.Valid }}
+            {{ if .Verified.IsTrue }}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -150,9 +150,9 @@
           </td>
           <td>
             {{ block "user.blocked" . }}
-              {{ if not .BlockedAtUtc.Valid }}
+              {{ if not .Blocked.IsTrue }}
                 <svg
-                  hx-post="/auth/{{ .ID.Value }}/block"
+                  hx-post="/auth/{{ .ID }}/block"
                   hx-swap="outerHTML"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -169,7 +169,7 @@
                 </svg>
               {{ else }}
                 <svg
-                  hx-post="/auth/{{ .ID.Value }}/unblock"
+                  hx-post="/auth/{{ .ID }}/unblock"
                   hx-swap="outerHTML"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -189,7 +189,7 @@
 
           </td>
           <td>
-            {{ if .SuperuserAtUtc.Valid }}
+            {{ if .SuperUser.IsTrue }}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -222,10 +222,10 @@
             {{ end }}
           </td>
           <td>
-            {{ if ne $.currentUserID .ID.Value }}
+            {{ if ne $.currentUserID .ID }}
               <a
-                href="/admin/auth/as_user/{{ .ID.Value }}"
-                title="Login as user {{ .NameDisplayname }}"
+                href="/admin/auth/as_user/{{ .ID }}"
+                title="Login as user {{ .Name.DisplayName }}"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

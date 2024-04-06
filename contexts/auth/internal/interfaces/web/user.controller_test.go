@@ -61,7 +61,7 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdLoginUser = func(
 			ctx context.Context,
 			in application.LoginUserRequest,
@@ -98,7 +98,7 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdLoginUser = func(
 			ctx context.Context,
 			in application.LoginUserRequest,
@@ -128,7 +128,7 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdLoginUser = func(
 			ctx context.Context,
 			in application.LoginUserRequest,
@@ -157,7 +157,7 @@ func TestUserController_Login(t *testing.T) {
 			req.AddCookie(result.Cookies()[1])
 			rec := httptest.NewRecorder()
 
-			controller := web.NewUserController(nil, nil, []byte(secret))
+			controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 			controller.CmdLoginUser = func(
 				ctx context.Context,
 				in application.LoginUserRequest,
@@ -189,7 +189,7 @@ func TestUserController_Login(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdLoginUser = func(
 			ctx context.Context,
 			in application.LoginUserRequest,
@@ -240,7 +240,7 @@ func TestUserController_Logout(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdLoginUser = func(
 			ctx context.Context,
 			in application.LoginUserRequest,
@@ -316,7 +316,7 @@ func TestUserController_Register(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdRegisterUser = func(
 			ctx context.Context,
 			in application.RegisterUserRequest,
@@ -348,7 +348,7 @@ func TestUserController_Register(t *testing.T) {
 		req.Header.Set("User-Agent", "arrower/0")
 		rec := httptest.NewRecorder()
 
-		controller := web.NewUserController(nil, nil, []byte(secret))
+		controller := web.NewUserController(application.UserApplication{}, nil, nil, []byte(secret), nil)
 		controller.CmdRegisterUser = func(
 			ctx context.Context,
 			in application.RegisterUserRequest,
