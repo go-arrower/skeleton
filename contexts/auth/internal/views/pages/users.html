@@ -16,10 +16,21 @@
   </svg>
   <input
     type="text"
+    name="q"
+    value="{{ .query }}"
+    hx-get="/admin/auth/users"
+    hx-trigger="keyup delay:100ms changed"
+    hx-select=".table"
+    hx-target=".table"
+    hx-select-oob="#user-count"
+    hx-push-url="true"
     class="grow border-none focus:ring-0"
     placeholder="Search"
+    autocomplete="off"
   />
-  <span class="text-base-300">{{ .filtered }}/{{ .total }}</span>
+  <span id="user-count" class="text-base-300">
+    {{ .filtered }}/{{ .total }}
+  </span>
 </label>
 
 <div class="overflow-x-auto">

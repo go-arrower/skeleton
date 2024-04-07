@@ -231,7 +231,9 @@ func (uc UserController) Logout() func(echo.Context) error {
 
 func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
-		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{})
+		query := c.QueryParam("q")
+
+		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{Query: query})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -241,9 +243,14 @@ func (uc UserController) List() func(echo.Context) error {
 			"currentUserID": auth.CurrentUserID(c.Request().Context()),
 			"filtered":      res.Filtered,
 			"total":         res.Total,
+			"query":         query,
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
+		}
+
+		if query == "" { // prevent the empty query param `?q=` to show in the URL
+			c.Response().Header().Set("HX-Push-Url", "/admin/auth/users")
 		}
 
 		return c.Render(http.StatusOK, "users", page)
