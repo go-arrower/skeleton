@@ -54,14 +54,22 @@ const allUsers = `-- name: AllUsers :many
 
 SELECT id, created_at, updated_at, login, password_hash, name_firstname, name_lastname, name_displayname, birthday, locale, time_zone, picture_url, profile, verified_at_utc, blocked_at_utc, superuser_at_utc
 FROM auth.user
+WHERE TRUE
+     AND (CASE WHEN $2::TEXT <> '' THEN $2 < login ELSE TRUE END)
 ORDER BY login
+LIMIT $1
 `
+
+type AllUsersParams struct {
+	Limit int32
+	Login string
+}
 
 // ----------------
 // ---- User ------
 // ----------------
-func (q *Queries) AllUsers(ctx context.Context) ([]AuthUser, error) {
-	rows, err := q.db.Query(ctx, allUsers)
+func (q *Queries) AllUsers(ctx context.Context, arg AllUsersParams) ([]AuthUser, error) {
+	rows, err := q.db.Query(ctx, allUsers, arg.Limit, arg.Login)
 	if err != nil {
 		return nil, err
 	}

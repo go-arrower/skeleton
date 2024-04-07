@@ -232,8 +232,12 @@ func (uc UserController) Logout() func(echo.Context) error {
 func (uc UserController) List() func(echo.Context) error {
 	return func(c echo.Context) error {
 		query := c.QueryParam("q")
+		offset := c.QueryParam("offset")
 
-		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{Query: query})
+		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{
+			Query:  query,
+			Filter: user.Filter{Offset: user.Login(offset), Limit: 50},
+		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -244,6 +248,7 @@ func (uc UserController) List() func(echo.Context) error {
 			"filtered":      res.Filtered,
 			"total":         res.Total,
 			"query":         query,
+			"couldBeEmpty":  offset == "", // if no offset is given and the users are zero => empty list
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)

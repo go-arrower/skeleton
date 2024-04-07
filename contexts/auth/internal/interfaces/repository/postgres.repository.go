@@ -30,8 +30,16 @@ type PostgresRepository struct {
 	db postgres.BaseRepository[*models.Queries]
 }
 
-func (repo *PostgresRepository) All(ctx context.Context) ([]user.User, error) {
-	dbUser, err := repo.db.Conn().AllUsers(ctx)
+func (repo *PostgresRepository) All(ctx context.Context, filter user.Filter) ([]user.User, error) {
+	limit := int32(filter.Limit)
+	if filter.Limit == 0 {
+		limit = 100
+	}
+
+	dbUser, err := repo.db.Conn().AllUsers(ctx, models.AllUsersParams{
+		Limit: limit,
+		Login: string(filter.Offset),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", user.ErrNotFound, err)
 	}

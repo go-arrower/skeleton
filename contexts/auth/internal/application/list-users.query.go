@@ -20,7 +20,8 @@ type listUsersQueryHandler struct {
 
 type (
 	ListUsersQuery struct {
-		Query string
+		Query  string
+		Filter user.Filter
 	}
 	ListUsersResponse struct {
 		Users    []user.User
@@ -30,24 +31,33 @@ type (
 )
 
 func (h *listUsersQueryHandler) H(ctx context.Context, query ListUsersQuery) (ListUsersResponse, error) {
-	users, err := h.repo.All(ctx)
+	users, err := h.repo.All(ctx, query.Filter)
 	if err != nil {
 		return ListUsersResponse{}, fmt.Errorf("could not get users: %w", err)
 	}
 
-	total := uint(len(users))
+	total, err := h.repo.Count(ctx)
+	if err != nil {
+		return ListUsersResponse{}, fmt.Errorf("could not count users: %w", err)
+	}
 
 	users = searchUsersEXPENSIVE(users, query.Query)
 
+	filtered := uint(total)
+	if query.Query != "" {
+		filtered = uint(len(users))
+	}
+
 	return ListUsersResponse{
 		Users:    users,
-		Filtered: uint(len(users)),
-		Total:    total,
+		Filtered: filtered,
+		Total:    uint(total),
 	}, nil
 }
 
 // searchUsersEXPENSIVE should be done by the database instead of here
 // if the list of users grows beyond the current testing size.
+// / !!! this approach combined with pagination can lead to not all results showing !!!
 func searchUsersEXPENSIVE(usrs []user.User, query string) []user.User {
 	users := []user.User{}
 

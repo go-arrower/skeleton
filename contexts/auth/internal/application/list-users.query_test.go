@@ -34,7 +34,7 @@ func TestListUsersQueryHandler_H(t *testing.T) {
 		assert.Equal(t, uint(0), res.Total)
 	})
 
-	t.Run("success case", func(t *testing.T) {
+	t.Run("load all", func(t *testing.T) {
 		t.Parallel()
 
 		repo := repository.NewMemoryRepository()
@@ -42,6 +42,20 @@ func TestListUsersQueryHandler_H(t *testing.T) {
 		handler := application.NewListUsersQueryHandler(repo)
 
 		res, err := handler.H(ctx, application.ListUsersQuery{})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, res.Users)
+		assert.Equal(t, uint(2), res.Filtered)
+		assert.Equal(t, uint(2), res.Total)
+	})
+
+	t.Run("paginate", func(t *testing.T) {
+		t.Parallel()
+
+		repo := repository.NewMemoryRepository()
+		repo.SaveAll(ctx, users)
+		handler := application.NewListUsersQueryHandler(repo)
+
+		res, err := handler.H(ctx, application.ListUsersQuery{Filter: user.Filter{Limit: 1}})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, res.Users)
 		assert.Equal(t, uint(2), res.Filtered)

@@ -42,7 +42,10 @@ ON CONFLICT (key) DO UPDATE SET (user_id, user_agent) = ($2, $3);
 -- name: AllUsers :many
 SELECT *
 FROM auth.user
-ORDER BY login;
+WHERE TRUE
+     AND (CASE WHEN @login::TEXT <> '' THEN @login < login ELSE TRUE END)
+ORDER BY login
+LIMIT $1;
 
 -- name: AllUsersByIDs :many
 SELECT *

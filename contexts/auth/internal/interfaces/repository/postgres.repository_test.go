@@ -43,13 +43,43 @@ func TestNewPostgresRepository(t *testing.T) {
 func TestPostgresRepository_All(t *testing.T) {
 	t.Parallel()
 
-	pg := pgHandler.NewTestDatabase()
-	repo, _ := repository.NewPostgresRepository(pg)
+	t.Run("all", func(t *testing.T) {
+		t.Parallel()
 
-	all, err := repo.All(ctx)
-	assert.NoError(t, err)
-	assert.Len(t, all, 3)
-	assert.Len(t, all[0].Sessions, 1, "user should have its value objects returned")
+		pg := pgHandler.NewTestDatabase()
+		repo, _ := repository.NewPostgresRepository(pg)
+
+		all, err := repo.All(ctx, user.Filter{})
+		assert.NoError(t, err)
+		assert.Len(t, all, 3)
+		assert.Len(t, all[0].Sessions, 1, "user should have its value objects returned")
+	})
+
+	t.Run("paginate", func(t *testing.T) {
+		t.Parallel()
+
+		pg := pgHandler.NewTestDatabase()
+		repo, _ := repository.NewPostgresRepository(pg)
+
+		// first page
+		all, err := repo.All(ctx, user.Filter{
+			Limit:  2,
+			Offset: "",
+		})
+		assert.NoError(t, err)
+		assert.Len(t, all, 2)
+		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000000"), all[0].ID)
+		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000001"), all[1].ID)
+
+		// next page
+		all, err = repo.All(ctx, user.Filter{
+			Limit:  2,
+			Offset: all[1].Login,
+		})
+		assert.NoError(t, err)
+		assert.Len(t, all, 1)
+		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000002"), all[0].ID)
+	})
 }
 
 func TestPostgresRepository_AllByIDs(t *testing.T) {

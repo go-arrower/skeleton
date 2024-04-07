@@ -91,12 +91,18 @@
       </tr>
     </thead>
     <tbody>
-      {{ range .users }}
+      {{ $len := sub (len .users) 1 }}
+      {{ range $i, $u := .users }}
         <tr
           {{ if eq $.currentUserID .ID }}
             class="bg-primary text-primary-content"
           {{ else }}
             class="even:bg-base-200 odd:bg-white"
+          {{ end }}
+          {{ if eq $len $i }}
+            hx-get="/admin/auth/users?q={{ $.query }}&offset={{ .Login }}"
+            hx-trigger="revealed" hx-swap="beforeend" hx-select=".table tbody
+            tr" hx-target=".table tbody"
           {{ end }}
         >
           <td>
@@ -257,9 +263,11 @@
           </td>
         </tr>
       {{ else }}
-        <tr>
-          <td colspan="6" class="text-center">No Users</td>
-        </tr>
+        {{ if .couldBeEmpty }}
+          <tr>
+            <td colspan="6" class="text-center">No Users</td>
+          </tr>
+        {{ end }}
       {{ end }}
     </tbody>
   </table>
