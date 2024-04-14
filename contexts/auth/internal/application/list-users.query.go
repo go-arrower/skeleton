@@ -5,26 +5,26 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-arrower/arrower/app"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/arrower/app"
 )
 
-func NewListUsersQueryHandler(repo user.Repository) app.Query[ListUsersQuery, ListUsersResponse] {
+func NewListUsersQueryHandler(repo domain.Repository) app.Query[ListUsersQuery, ListUsersResponse] {
 	return &listUsersQueryHandler{repo: repo}
 }
 
 type listUsersQueryHandler struct {
-	repo user.Repository
+	repo domain.Repository
 }
 
 type (
 	ListUsersQuery struct {
 		Query  string
-		Filter user.Filter
+		Filter domain.Filter
 	}
 	ListUsersResponse struct {
-		Users    []user.User
+		Users    []domain.User
 		Filtered uint
 		Total    uint
 	}
@@ -58,8 +58,8 @@ func (h *listUsersQueryHandler) H(ctx context.Context, query ListUsersQuery) (Li
 // searchUsersEXPENSIVE should be done by the database instead of here
 // if the list of users grows beyond the current testing size.
 // / !!! this approach combined with pagination can lead to not all results showing !!!
-func searchUsersEXPENSIVE(usrs []user.User, query string) []user.User {
-	users := []user.User{}
+func searchUsersEXPENSIVE(usrs []domain.User, query string) []domain.User {
+	users := []domain.User{}
 
 	query = strings.TrimSpace(strings.ToLower(query))
 

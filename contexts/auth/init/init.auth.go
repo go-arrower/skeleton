@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/skeleton/contexts/auth"
 
 	"github.com/go-arrower/arrower/setting"
@@ -16,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
@@ -72,7 +73,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 
 	queries := models.New(di.PGx)
 	repo, _ := repository.NewPostgresRepository(di.PGx)
-	registrator := user.NewRegistrationService(di.Settings, repo)
+	registrator := domain.NewRegistrationService(di.Settings, repo)
 
 	webRoutes := di.WebRouter.Group(fmt.Sprintf("/%s", contextName))
 	adminRouter := di.AdminRouter.Group(fmt.Sprintf("/%s", contextName))
@@ -88,7 +89,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		mw.Metric(di.MeterProvider,
 			mw.Logged(logger,
 				mw.Validate(nil,
-					application.LoginUser(di.Logger, repo, di.ArrowerQueue, user.NewAuthenticationService(di.Settings)),
+					application.LoginUser(di.Logger, repo, di.ArrowerQueue, domain.NewAuthenticationService(di.Settings)),
 				),
 			),
 		),
@@ -175,7 +176,7 @@ type AuthContext struct {
 	traceProvider trace.TracerProvider
 	meterProvider metric.MeterProvider
 	queries       *models.Queries
-	repo          user.Repository
+	repo          domain.Repository
 }
 
 func (c *AuthContext) Shutdown(ctx context.Context) error {

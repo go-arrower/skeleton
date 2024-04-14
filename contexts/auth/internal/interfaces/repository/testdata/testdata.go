@@ -3,33 +3,33 @@ package testdata
 import (
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/google/uuid"
 )
 
 const (
-	UserIDZero = user.ID("00000000-0000-0000-0000-000000000000")
-	UserIDOne  = user.ID("00000000-0000-0000-0000-000000000001")
+	UserIDZero = domain.ID("00000000-0000-0000-0000-000000000000")
+	UserIDOne  = domain.ID("00000000-0000-0000-0000-000000000001")
 
-	UserIDNew       = user.ID("00000000-0000-0000-0000-000000000010")
-	UserIDNotExists = user.ID("00000000-0000-0000-0000-999999999999")
-	UserIDNotValid  = user.ID("invalid-id")
+	UserIDNew       = domain.ID("00000000-0000-0000-0000-000000000010")
+	UserIDNotExists = domain.ID("00000000-0000-0000-0000-999999999999")
+	UserIDNotValid  = domain.ID("invalid-id")
 
-	ValidLogin = user.Login("0@test.com")
-	NotExLogin = user.Login("invalid-login")
+	ValidLogin = domain.Login("0@test.com")
+	NotExLogin = domain.Login("invalid-login")
 
 	SessionKey = "session-key"
 	UserAgent  = "arrower/1"
 )
 
 var (
-	UserZero = user.User{
+	UserZero = domain.User{
 		ID:    UserIDZero,
 		Login: "0@test.com",
 	}
 
-	ValidToken = user.NewVerificationToken(
+	ValidToken = domain.NewVerificationToken(
 		uuid.New(),
 		UserIDZero,
 		time.Now().UTC().Add(time.Hour),

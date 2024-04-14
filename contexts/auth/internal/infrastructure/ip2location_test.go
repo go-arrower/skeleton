@@ -4,9 +4,10 @@ import (
 	"net"
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/infrastructure"
 )
 
@@ -36,25 +37,25 @@ func TestIP2Location_ResolveIP(t *testing.T) {
 	tests := []struct {
 		testName string
 		ip       string
-		expIP    user.ResolvedIP
+		expIP    domain.ResolvedIP
 		err      error
 	}{
 		{
 			"empty ip",
 			"",
-			user.ResolvedIP{},
+			domain.ResolvedIP{},
 			infrastructure.ErrInvalidIP,
 		},
 		{
 			"invalid ip",
 			"this-is-not-an-ip-address",
-			user.ResolvedIP{},
+			domain.ResolvedIP{},
 			infrastructure.ErrInvalidIP,
 		},
 		{
 			"valid ip",
 			"87.118.100.175",
-			user.ResolvedIP{
+			domain.ResolvedIP{
 				IP:          net.ParseIP("87.118.100.175"),
 				Country:     "Germany",
 				CountryCode: "DE",

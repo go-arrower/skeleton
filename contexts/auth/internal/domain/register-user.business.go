@@ -1,13 +1,13 @@
-package user
+package domain
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	"github.com/go-arrower/skeleton/contexts/auth"
-
 	"github.com/go-arrower/arrower/setting"
+
+	"github.com/go-arrower/skeleton/contexts/auth"
 )
 
 var (

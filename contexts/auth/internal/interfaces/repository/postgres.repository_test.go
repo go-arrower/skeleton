@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/arrower/tests"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/testdata"
@@ -49,7 +50,7 @@ func TestPostgresRepository_All(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		all, err := repo.All(ctx, user.Filter{})
+		all, err := repo.All(ctx, domain.Filter{})
 		assert.NoError(t, err)
 		assert.Len(t, all, 3)
 		assert.Len(t, all[0].Sessions, 1, "user should have its value objects returned")
@@ -62,23 +63,23 @@ func TestPostgresRepository_All(t *testing.T) {
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		// first page
-		all, err := repo.All(ctx, user.Filter{
+		all, err := repo.All(ctx, domain.Filter{
 			Limit:  2,
 			Offset: "",
 		})
 		assert.NoError(t, err)
 		assert.Len(t, all, 2)
-		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000000"), all[0].ID)
-		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000001"), all[1].ID)
+		assert.Equal(t, domain.ID("00000000-0000-0000-0000-000000000000"), all[0].ID)
+		assert.Equal(t, domain.ID("00000000-0000-0000-0000-000000000001"), all[1].ID)
 
 		// next page
-		all, err = repo.All(ctx, user.Filter{
+		all, err = repo.All(ctx, domain.Filter{
 			Limit:  2,
 			Offset: all[1].Login,
 		})
 		assert.NoError(t, err)
 		assert.Len(t, all, 1)
-		assert.Equal(t, user.ID("00000000-0000-0000-0000-000000000002"), all[0].ID)
+		assert.Equal(t, domain.ID("00000000-0000-0000-0000-000000000002"), all[0].ID)
 	})
 }
 
@@ -95,7 +96,7 @@ func TestPostgresRepository_AllByIDs(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, all)
 
-		all, err = repo.AllByIDs(ctx, []user.ID{testdata.UserIDZero, testdata.UserIDOne})
+		all, err = repo.AllByIDs(ctx, []domain.ID{testdata.UserIDZero, testdata.UserIDOne})
 		assert.NoError(t, err)
 		assert.Len(t, all, 2)
 		assert.Len(t, all[0].Sessions, 1, "user should have its value objects returned")
@@ -107,8 +108,8 @@ func TestPostgresRepository_AllByIDs(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		_, err := repo.AllByIDs(ctx, []user.ID{"invalid-id"})
-		assert.ErrorIs(t, err, user.ErrNotFound)
+		_, err := repo.AllByIDs(ctx, []domain.ID{"invalid-id"})
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 }
 
@@ -133,7 +134,7 @@ func TestPostgresRepository_FindByID(t *testing.T) {
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.FindByID(ctx, testdata.UserIDNotValid)
-		assert.ErrorIs(t, err, user.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 }
 
@@ -158,7 +159,7 @@ func TestPostgresRepository_FindByLogin(t *testing.T) {
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.FindByLogin(ctx, testdata.NotExLogin)
-		assert.ErrorIs(t, err, user.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 }
 
@@ -194,7 +195,7 @@ func TestPostgresRepository_ExistsByID(t *testing.T) {
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		_, err := repo.ExistsByID(ctx, testdata.UserIDNotValid)
-		assert.ErrorIs(t, err, user.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 }
 
@@ -244,12 +245,12 @@ func TestPostgresRepository_Save(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		err := repo.Save(ctx, user.User{
+		err := repo.Save(ctx, domain.User{
 			ID: testdata.UserIDNew,
-			Sessions: []user.Session{
+			Sessions: []domain.Session{
 				{
 					ID:        "some-new-session-key",
-					Device:    user.NewDevice(testdata.UserAgent),
+					Device:    domain.NewDevice(testdata.UserAgent),
 					CreatedAt: time.Now().UTC(),
 				},
 			},
@@ -273,7 +274,7 @@ func TestPostgresRepository_Save(t *testing.T) {
 		usr, _ := repo.FindByID(ctx, testdata.UserIDZero)
 		assert.Empty(t, usr.Name)
 
-		usr.Name = user.NewName("firstName", "", "")
+		usr.Name = domain.NewName("firstName", "", "")
 		err := repo.Save(ctx, usr)
 		assert.NoError(t, err)
 
@@ -287,8 +288,8 @@ func TestPostgresRepository_Save(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		err := repo.Save(ctx, user.User{})
-		assert.ErrorIs(t, err, user.ErrPersistenceFailed)
+		err := repo.Save(ctx, domain.User{})
+		assert.ErrorIs(t, err, domain.ErrPersistenceFailed)
 	})
 }
 
@@ -301,11 +302,11 @@ func TestPostgresRepository_SaveAll(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		newUser := user.User{ID: testdata.UserIDNew}
+		newUser := domain.User{ID: testdata.UserIDNew}
 		updatedUser := testdata.UserZero
-		updatedUser.Name = user.NewName("firstName", "", "")
+		updatedUser.Name = domain.NewName("firstName", "", "")
 
-		err := repo.SaveAll(ctx, []user.User{
+		err := repo.SaveAll(ctx, []domain.User{
 			newUser,
 			updatedUser,
 		})
@@ -358,7 +359,7 @@ func TestPostgresRepository_DeleteByID(t *testing.T) {
 		repo, _ := repository.NewPostgresRepository(pg)
 
 		err := repo.DeleteByID(ctx, testdata.UserIDNotValid)
-		assert.ErrorIs(t, err, user.ErrPersistenceFailed)
+		assert.ErrorIs(t, err, domain.ErrPersistenceFailed)
 	})
 }
 
@@ -371,7 +372,7 @@ func TestPostgresRepository_DeleteByIDs(t *testing.T) {
 		pg := pgHandler.NewTestDatabase()
 		repo, _ := repository.NewPostgresRepository(pg)
 
-		err := repo.DeleteByIDs(ctx, []user.ID{
+		err := repo.DeleteByIDs(ctx, []domain.ID{
 			testdata.UserIDZero,
 			testdata.UserIDOne,
 		})

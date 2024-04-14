@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 )
 
@@ -17,9 +18,9 @@ func TestListUsersQueryHandler_H(t *testing.T) {
 
 	ctx := context.Background()
 
-	u0, _ := user.NewUser(gofakeit.Email(), "abcdefA0$")
-	u1, _ := user.NewUser(gofakeit.Email(), "abcdefA0$")
-	users := []user.User{u0, u1}
+	u0, _ := domain.NewUser(gofakeit.Email(), "abcdefA0$")
+	u1, _ := domain.NewUser(gofakeit.Email(), "abcdefA0$")
+	users := []domain.User{u0, u1}
 
 	t.Run("no users", func(t *testing.T) {
 		t.Parallel()
@@ -55,7 +56,7 @@ func TestListUsersQueryHandler_H(t *testing.T) {
 		repo.SaveAll(ctx, users)
 		handler := application.NewListUsersQueryHandler(repo)
 
-		res, err := handler.H(ctx, application.ListUsersQuery{Filter: user.Filter{Limit: 1}})
+		res, err := handler.H(ctx, application.ListUsersQuery{Filter: domain.Filter{Limit: 1}})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, res.Users)
 		assert.Equal(t, uint(2), res.Filtered)
@@ -65,8 +66,8 @@ func TestListUsersQueryHandler_H(t *testing.T) {
 	t.Run("search users", func(t *testing.T) {
 		t.Parallel()
 
-		fUser, _ := user.NewUser("search@email.com", "abcdefA0$")
-		fUser.Name = user.NewName("first", "last", "display")
+		fUser, _ := domain.NewUser("search@email.com", "abcdefA0$")
+		fUser.Name = domain.NewName("first", "last", "display")
 		repo := repository.NewMemoryRepository()
 		repo.SaveAll(ctx, append(users, fUser))
 		handler := application.NewListUsersQueryHandler(repo)

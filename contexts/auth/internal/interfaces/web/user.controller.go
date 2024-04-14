@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/arrower/setting"
 
 	"github.com/go-playground/validator/v10"
@@ -17,7 +19,6 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
@@ -236,7 +237,7 @@ func (uc UserController) List() func(echo.Context) error {
 
 		res, err := uc.app.ListUsers.H(c.Request().Context(), application.ListUsersQuery{
 			Query:  query,
-			Filter: user.Filter{Offset: user.Login(offset), Limit: 50},
+			Filter: domain.Filter{Offset: domain.Login(offset), Limit: 50},
 		})
 		if err != nil {
 			return fmt.Errorf("%w", err)
@@ -355,7 +356,7 @@ func (uc UserController) Verify() func(echo.Context) error {
 
 		err = uc.CmdVerifyUser(c.Request().Context(), application.VerifyUserRequest{
 			Token:  token,
-			UserID: user.ID(userID),
+			UserID: domain.ID(userID),
 		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -369,7 +370,7 @@ func (uc UserController) Show() func(echo.Context) error {
 	return func(c echo.Context) error {
 		userID := c.Param("userID")
 
-		res, err := uc.CmdShowUserUser(c.Request().Context(), application.ShowUserRequest{UserID: user.ID(userID)})
+		res, err := uc.CmdShowUserUser(c.Request().Context(), application.ShowUserRequest{UserID: domain.ID(userID)})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
@@ -414,7 +415,7 @@ func (uc UserController) Store() func(echo.Context) error {
 		if err != nil {
 			valErrs := make(map[string]string)
 
-			if errors.Is(err, user.ErrUserAlreadyExists) {
+			if errors.Is(err, domain.ErrUserAlreadyExists) {
 				valErrs["Email"] = "User already exists"
 			}
 
@@ -440,7 +441,7 @@ func (uc UserController) Store() func(echo.Context) error {
 func (uc UserController) BlockUser() {
 	uc.r.POST("/:userID/block", func(c echo.Context) error {
 		res, err := uc.CmdBlockUser(c.Request().Context(), application.BlockUserRequest{
-			UserID: user.ID(c.Param("userID")),
+			UserID: domain.ID(c.Param("userID")),
 		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -448,7 +449,7 @@ func (uc UserController) BlockUser() {
 
 		return c.Render(http.StatusOK, "users#user.blocked", echo.Map{
 			"ID":      uuid.MustParse(string(res.UserID)),
-			"Blocked": user.BoolFlag(res.Blocked.At()),
+			"Blocked": domain.BoolFlag(res.Blocked.At()),
 		})
 	})
 }
@@ -456,7 +457,7 @@ func (uc UserController) BlockUser() {
 func (uc UserController) UnBlockUser() {
 	uc.r.POST("/:userID/unblock", func(c echo.Context) error {
 		res, err := uc.CmdUnBlockUser(c.Request().Context(), application.BlockUserRequest{
-			UserID: user.ID(c.Param("userID")),
+			UserID: domain.ID(c.Param("userID")),
 		})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -464,7 +465,7 @@ func (uc UserController) UnBlockUser() {
 
 		return c.Render(http.StatusOK, "users#user.blocked", echo.Map{
 			"ID":      uuid.MustParse(string(res.UserID)),
-			"Blocked": user.BoolFlag(res.Blocked.At()),
+			"Blocked": domain.BoolFlag(res.Blocked.At()),
 		})
 	})
 }

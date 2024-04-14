@@ -7,11 +7,12 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/google/uuid"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/infrastructure"
 )
 
@@ -31,28 +32,28 @@ type (
 		SessionKey  string
 	}
 	LoginUserResponse struct {
-		User user.User
+		User domain.User
 	}
 
 	SendConfirmationNewDeviceLoggedIn struct {
-		UserID     user.ID
+		UserID     domain.ID
 		OccurredAt time.Time
-		IP         user.ResolvedIP
-		Device     user.Device
+		IP         domain.ResolvedIP
+		Device     domain.Device
 		// Ip Location
 	}
 )
 
 func LoginUser(
 	logger alog.Logger,
-	repo user.Repository,
+	repo domain.Repository,
 	queue jobs.Enqueuer,
-	authenticator *user.AuthenticationService,
+	authenticator *domain.AuthenticationService,
 ) func(context.Context, LoginUserRequest) (LoginUserResponse, error) {
-	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
+	var ip domain.IPResolver = infrastructure.NewIP2LocationService("")
 
 	return func(ctx context.Context, in LoginUserRequest) (LoginUserResponse, error) {
-		usr, err := repo.FindByLogin(ctx, user.Login(in.LoginEmail))
+		usr, err := repo.FindByLogin(ctx, domain.Login(in.LoginEmail))
 		if err != nil {
 			logger.Log(ctx, slog.LevelInfo, "login failed",
 				slog.String("email", in.LoginEmail),
@@ -73,9 +74,9 @@ func LoginUser(
 
 		// The session is not valid until the end of the controller.
 		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		usr.Sessions = append(usr.Sessions, user.Session{
+		usr.Sessions = append(usr.Sessions, domain.Session{
 			ID:        in.SessionKey,
-			Device:    user.NewDevice(in.UserAgent),
+			Device:    domain.NewDevice(in.UserAgent),
 			CreatedAt: time.Now().UTC(),
 			// ExpiresAt: // will be set & updated via the session store
 		})
@@ -96,7 +97,7 @@ func LoginUser(
 				UserID:     usr.ID,
 				OccurredAt: time.Now().UTC(),
 				IP:         resolved,
-				Device:     user.NewDevice(in.UserAgent),
+				Device:     domain.NewDevice(in.UserAgent),
 			})
 			if err != nil {
 				return LoginUserResponse{}, fmt.Errorf("could not queue confirmation about new device: %w", err)
@@ -119,29 +120,29 @@ type (
 		SessionKey string
 	}
 	RegisterUserResponse struct {
-		User user.Descriptor
+		User domain.Descriptor
 	}
 
 	NewUserVerificationEmail struct {
-		UserID     user.ID
+		UserID     domain.ID
 		OccurredAt time.Time
-		IP         user.ResolvedIP
-		Device     user.Device
+		IP         domain.ResolvedIP
+		Device     domain.Device
 	}
 )
 
 func RegisterUser(
 	logger alog.Logger,
-	repo user.Repository,
-	registrator *user.RegistrationService,
+	repo domain.Repository,
+	registrator *domain.RegistrationService,
 	queue jobs.Enqueuer,
 ) func(context.Context, RegisterUserRequest) (RegisterUserResponse, error) {
-	var ip user.IPResolver = infrastructure.NewIP2LocationService("")
+	var ip domain.IPResolver = infrastructure.NewIP2LocationService("")
 
 	return func(ctx context.Context, in RegisterUserRequest) (RegisterUserResponse, error) {
 		usr, err := registrator.RegisterNewUser(ctx, in.RegisterEmail, in.Password)
 		if err != nil {
-			if errors.Is(err, user.ErrUserAlreadyExists) {
+			if errors.Is(err, domain.ErrUserAlreadyExists) {
 				logger.Log(ctx, slog.LevelInfo, "register new user failed",
 					slog.String("email", in.RegisterEmail),
 					slog.String("ip", in.IP),
@@ -153,9 +154,9 @@ func RegisterUser(
 
 		// The session is not valid until the end of the controller.
 		// Thus, the session is created here and very short-lived, as the controller will update it with the right values.
-		usr.Sessions = append(usr.Sessions, user.Session{
+		usr.Sessions = append(usr.Sessions, domain.Session{
 			ID:        in.SessionKey,
-			Device:    user.NewDevice(in.UserAgent),
+			Device:    domain.NewDevice(in.UserAgent),
 			CreatedAt: time.Now().UTC(),
 			// ExpiresAt: // will be set & updated via the session store
 		})
@@ -175,7 +176,7 @@ func RegisterUser(
 			UserID:     usr.ID,
 			OccurredAt: time.Now().UTC(),
 			IP:         resolved,
-			Device:     user.NewDevice(in.UserAgent),
+			Device:     domain.NewDevice(in.UserAgent),
 		})
 		if err != nil {
 			return RegisterUserResponse{}, fmt.Errorf("could not queue job to send verification email: %w", err)
@@ -188,7 +189,7 @@ func RegisterUser(
 
 func SendNewUserVerificationEmail(
 	logger alog.Logger,
-	repo user.Repository,
+	repo domain.Repository,
 ) func(context.Context, NewUserVerificationEmail) error {
 	return func(ctx context.Context, in NewUserVerificationEmail) error {
 		usr, err := repo.FindByID(ctx, in.UserID)
@@ -196,7 +197,7 @@ func SendNewUserVerificationEmail(
 			return fmt.Errorf("could not get user: %w", err)
 		}
 
-		verify := user.NewVerificationService(repo)
+		verify := domain.NewVerificationService(repo)
 
 		token, err := verify.NewVerificationToken(ctx, usr)
 		if err != nil {
@@ -218,19 +219,19 @@ func SendNewUserVerificationEmail(
 
 type (
 	VerifyUserRequest struct {
-		UserID user.ID   `validate:"required"`
+		UserID domain.ID `validate:"required"`
 		Token  uuid.UUID `validate:"required"`
 	}
 )
 
-func VerifyUser(repo user.Repository) func(context.Context, VerifyUserRequest) error {
+func VerifyUser(repo domain.Repository) func(context.Context, VerifyUserRequest) error {
 	return func(ctx context.Context, in VerifyUserRequest) error {
 		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
 			return fmt.Errorf("could not get user: %w", err)
 		}
 
-		verify := user.NewVerificationService(repo)
+		verify := domain.NewVerificationService(repo)
 
 		err = verify.Verify(ctx, &usr, in.Token)
 		if err != nil {
@@ -243,14 +244,14 @@ func VerifyUser(repo user.Repository) func(context.Context, VerifyUserRequest) e
 
 type (
 	ShowUserRequest struct {
-		UserID user.ID
+		UserID domain.ID
 	}
 	ShowUserResponse struct {
-		User user.User
+		User domain.User
 	}
 )
 
-func ShowUser(repo user.Repository) func(context.Context, ShowUserRequest) (ShowUserResponse, error) {
+func ShowUser(repo domain.Repository) func(context.Context, ShowUserRequest) (ShowUserResponse, error) {
 	return func(ctx context.Context, in ShowUserRequest) (ShowUserResponse, error) {
 		if in.UserID == "" {
 			return ShowUserResponse{}, ErrInvalidInput
@@ -275,17 +276,17 @@ type (
 	}
 )
 
-func NewUser(repo user.Repository, registrator *user.RegistrationService) func(context.Context, NewUserRequest) error {
+func NewUser(repo domain.Repository, registrator *domain.RegistrationService) func(context.Context, NewUserRequest) error {
 	return func(ctx context.Context, in NewUserRequest) error {
 		usr, err := registrator.RegisterNewUser(ctx, in.Email, "RanDomS1cuP!") // todo set random pw
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		usr.Name = user.NewName(in.FirstName, in.LastName, in.DisplayName)
+		usr.Name = domain.NewName(in.FirstName, in.LastName, in.DisplayName)
 
 		if in.Superuser {
-			usr.SuperUser = user.BoolFlag{}.SetTrue()
+			usr.SuperUser = domain.BoolFlag{}.SetTrue()
 		}
 
 		err = repo.Save(ctx, usr)
@@ -299,15 +300,15 @@ func NewUser(repo user.Repository, registrator *user.RegistrationService) func(c
 
 type (
 	BlockUserRequest struct {
-		UserID user.ID `validate:"required"`
+		UserID domain.ID `validate:"required"`
 	}
 	BlockUserResponse struct {
-		UserID  user.ID
-		Blocked user.BoolFlag
+		UserID  domain.ID
+		Blocked domain.BoolFlag
 	}
 )
 
-func BlockUser(repo user.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+func BlockUser(repo domain.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
 		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {
@@ -328,7 +329,7 @@ func BlockUser(repo user.Repository) func(context.Context, BlockUserRequest) (Bl
 	}
 }
 
-func UnblockUser(repo user.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
+func UnblockUser(repo domain.Repository) func(context.Context, BlockUserRequest) (BlockUserResponse, error) {
 	return func(ctx context.Context, in BlockUserRequest) (BlockUserResponse, error) {
 		usr, err := repo.FindByID(ctx, in.UserID)
 		if err != nil {

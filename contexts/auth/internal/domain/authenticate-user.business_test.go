@@ -1,11 +1,11 @@
-package user_test
+package domain_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 )
 
 func TestAuthenticationService_Authenticate(t *testing.T) {
@@ -14,7 +14,7 @@ func TestAuthenticationService_Authenticate(t *testing.T) {
 	t.Run("login setting disabled", func(t *testing.T) {
 		t.Parallel()
 
-		authenticator := user.NewAuthenticationService(settingsService(false))
+		authenticator := domain.NewAuthenticationService(settingsService(false))
 
 		auth := authenticator.Authenticate(ctx, newVerifiedUser(), rawPassword)
 		assert.False(t, auth)
@@ -23,7 +23,7 @@ func TestAuthenticationService_Authenticate(t *testing.T) {
 	t.Run("user not verified", func(t *testing.T) {
 		t.Parallel()
 
-		authenticator := user.NewAuthenticationService(settingsService(true))
+		authenticator := domain.NewAuthenticationService(settingsService(true))
 
 		auth := authenticator.Authenticate(ctx, newUser(), "")
 		assert.False(t, auth)
@@ -33,8 +33,8 @@ func TestAuthenticationService_Authenticate(t *testing.T) {
 		t.Parallel()
 
 		usr := newVerifiedUser()
-		usr.Blocked = user.BoolFlag{}.SetTrue()
-		authenticator := user.NewAuthenticationService(settingsService(true))
+		usr.Blocked = domain.BoolFlag{}.SetTrue()
+		authenticator := domain.NewAuthenticationService(settingsService(true))
 
 		auth := authenticator.Authenticate(ctx, usr, "")
 		assert.False(t, auth)
@@ -43,7 +43,7 @@ func TestAuthenticationService_Authenticate(t *testing.T) {
 	t.Run("password doesn't match", func(t *testing.T) {
 		t.Parallel()
 
-		authenticator := user.NewAuthenticationService(settingsService(true))
+		authenticator := domain.NewAuthenticationService(settingsService(true))
 
 		auth := authenticator.Authenticate(ctx, newVerifiedUser(), "wrong-password")
 		assert.False(t, auth)
@@ -52,7 +52,7 @@ func TestAuthenticationService_Authenticate(t *testing.T) {
 	t.Run("password matches", func(t *testing.T) {
 		t.Parallel()
 
-		authenticator := user.NewAuthenticationService(settingsService(true))
+		authenticator := domain.NewAuthenticationService(settingsService(true))
 
 		auth := authenticator.Authenticate(ctx, newVerifiedUser(), rawPassword)
 		assert.True(t, auth)

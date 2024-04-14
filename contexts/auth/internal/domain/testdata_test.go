@@ -1,41 +1,40 @@
-package user_test
+package domain_test
 
 import (
 	"context"
 
-	"github.com/go-arrower/skeleton/contexts/auth"
-
 	"github.com/go-arrower/arrower/setting"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 )
 
 var (
 	ctx                   = context.Background()
 	rawPassword           = "0Secret!"
-	strongPasswordHash, _ = user.NewPasswordHash(rawPassword)
+	strongPasswordHash, _ = domain.NewPasswordHash(rawPassword)
 )
 
 // newUser returns a new User, so you don't have to worry about changing fields when verifying.
-func newUser() user.User {
-	return user.User{
-		ID:       user.NewID(),
-		Verified: user.BoolFlag{}.SetFalse(),
+func newUser() domain.User {
+	return domain.User{
+		ID:       domain.NewID(),
+		Verified: domain.BoolFlag{}.SetFalse(),
 	}
 }
 
 // used by RegistrationService
 const (
-	userID    = user.ID("00000000-0000-0000-0000-000000000000")
+	userID    = domain.ID("00000000-0000-0000-0000-000000000000")
 	userLogin = "0@test.com"
 )
 
 var (
-	userVerified = user.User{
+	userVerified = domain.User{
 		ID:           userID,
 		Login:        userLogin,
 		PasswordHash: strongPasswordHash,
-		Verified:     user.BoolFlag{}.SetTrue(),
+		Verified:     domain.BoolFlag{}.SetTrue(),
 	}
 )
 
@@ -47,9 +46,9 @@ func settingsService(active bool) setting.Settings {
 	return settings
 }
 
-func newVerifiedUser() user.User {
+func newVerifiedUser() domain.User {
 	usr := newUser()
-	usr.Verified = user.BoolFlag{}.SetTrue()
+	usr.Verified = domain.BoolFlag{}.SetTrue()
 	usr.PasswordHash = strongPasswordHash
 
 	return usr

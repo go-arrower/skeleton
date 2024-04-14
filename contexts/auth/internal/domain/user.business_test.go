@@ -1,4 +1,4 @@
-package user_test
+package domain_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 )
 
 func TestNewUser(t *testing.T) {
@@ -38,8 +38,8 @@ func TestNewUser(t *testing.T) {
 			t.Run(tt.testName, func(t *testing.T) {
 				t.Parallel()
 
-				usr, err := user.NewUser(tt.registerEmail, tt.password)
-				assert.ErrorIs(t, err, user.ErrInvalidUserDetails)
+				usr, err := domain.NewUser(tt.registerEmail, tt.password)
+				assert.ErrorIs(t, err, domain.ErrInvalidUserDetails)
 				assert.Empty(t, usr)
 			})
 		}
@@ -48,7 +48,7 @@ func TestNewUser(t *testing.T) {
 	t.Run("new user", func(t *testing.T) {
 		t.Parallel()
 
-		usr, err := user.NewUser(userLogin, rawPassword)
+		usr, err := domain.NewUser(userLogin, rawPassword)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, usr.ID)
 		assert.Equal(t, userLogin, string(usr.Login))
@@ -63,17 +63,17 @@ func TestUser_IsVerified(t *testing.T) {
 
 	tests := []struct {
 		testName string
-		user     user.User
+		user     domain.User
 		expected bool
 	}{
 		{
 			"empty time",
-			user.User{Verified: user.BoolFlag{}},
+			domain.User{Verified: domain.BoolFlag{}},
 			false,
 		},
 		{
 			"user",
-			user.User{Verified: user.BoolFlag(time.Now().UTC())},
+			domain.User{Verified: domain.BoolFlag(time.Now().UTC())},
 			true,
 		},
 	}
@@ -92,17 +92,17 @@ func TestUser_IsBlocked(t *testing.T) {
 
 	tests := []struct {
 		testName string
-		user     user.User
+		user     domain.User
 		expected bool
 	}{
 		{
 			"empty time",
-			user.User{Blocked: user.BoolFlag{}},
+			domain.User{Blocked: domain.BoolFlag{}},
 			false,
 		},
 		{
 			"user",
-			user.User{Blocked: user.BoolFlag(time.Now().UTC())},
+			domain.User{Blocked: domain.BoolFlag(time.Now().UTC())},
 			true,
 		},
 	}
@@ -119,7 +119,7 @@ func TestUser_IsBlocked(t *testing.T) {
 func TestUser_Block(t *testing.T) {
 	t.Parallel()
 
-	user := user.User{}
+	user := domain.User{}
 	assert.False(t, user.IsBlocked())
 
 	user.Block()
@@ -134,7 +134,7 @@ func TestUser_Block(t *testing.T) {
 func TestUser_Unblock(t *testing.T) {
 	t.Parallel()
 
-	user := user.User{}
+	user := domain.User{}
 	assert.False(t, user.IsBlocked())
 
 	user.Unblock()
@@ -150,17 +150,17 @@ func TestUser_IsSuperuser(t *testing.T) {
 
 	tests := []struct {
 		testName string
-		user     user.User
+		user     domain.User
 		expected bool
 	}{
 		{
 			"empty time",
-			user.User{SuperUser: user.BoolFlag{}},
+			domain.User{SuperUser: domain.BoolFlag{}},
 			false,
 		},
 		{
 			"superuser",
-			user.User{SuperUser: user.BoolFlag(time.Now().UTC())},
+			domain.User{SuperUser: domain.BoolFlag(time.Now().UTC())},
 			true,
 		},
 	}
@@ -198,7 +198,7 @@ func TestNewPasswordHash(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := user.NewPasswordHash(tt.pw)
+			_, err := domain.NewPasswordHash(tt.pw)
 			assert.Equal(t, tt.err, err)
 		})
 	}
@@ -237,9 +237,9 @@ func TestNewStrongPasswordHash(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := user.NewStrongPasswordHash(tt.password)
+			_, err := domain.NewStrongPasswordHash(tt.password)
 			assert.Error(t, err)
-			assert.ErrorIs(t, err, user.ErrInvalidUserDetails)
+			assert.ErrorIs(t, err, domain.ErrInvalidUserDetails)
 		})
 	}
 }
@@ -307,7 +307,7 @@ func TestName(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 
-			name := user.NewName(tt.fn, tt.ln, tt.dn)
+			name := domain.NewName(tt.fn, tt.ln, tt.dn)
 			assert.Equal(t, tt.expFN, name.FirstName())
 			assert.Equal(t, tt.expLN, name.LastName())
 			assert.Equal(t, tt.expDN, name.DisplayName())
@@ -320,9 +320,9 @@ func TestNewBirthday(t *testing.T) {
 
 	tests := []struct {
 		testName string
-		day      user.Day
-		month    user.Month
-		year     user.Year
+		day      domain.Day
+		month    domain.Month
+		year     domain.Year
 		expected error
 	}{
 		{
@@ -337,42 +337,42 @@ func TestNewBirthday(t *testing.T) {
 			0,
 			1,
 			2000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"invalid month",
 			1,
 			0,
 			2000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"too old",
 			1,
 			1,
 			1000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"invalid day",
 			32,
 			1,
 			2000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"invalid month",
 			1,
 			13,
 			2000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"in the future",
 			1,
 			1,
 			3000,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 		{
 			"",
@@ -386,7 +386,7 @@ func TestNewBirthday(t *testing.T) {
 			31,
 			4,
 			2020,
-			user.ErrInvalidBirthday,
+			domain.ErrInvalidBirthday,
 		},
 	}
 
@@ -394,7 +394,7 @@ func TestNewBirthday(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 
-			_, got := user.NewBirthday(tt.day, tt.month, tt.year)
+			_, got := domain.NewBirthday(tt.day, tt.month, tt.year)
 			assert.ErrorIs(t, got, tt.expected)
 		})
 	}
@@ -421,9 +421,9 @@ func TestDevice(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expectedName, user.NewDevice(tt.userAgent).Name())
-			assert.Equal(t, tt.expectedOS, user.NewDevice(tt.userAgent).OS())
-			assert.Equal(t, tt.userAgent, user.NewDevice(tt.userAgent).UserAgent())
+			assert.Equal(t, tt.expectedName, domain.NewDevice(tt.userAgent).Name())
+			assert.Equal(t, tt.expectedOS, domain.NewDevice(tt.userAgent).OS())
+			assert.Equal(t, tt.userAgent, domain.NewDevice(tt.userAgent).UserAgent())
 		})
 	}
 }
@@ -431,12 +431,12 @@ func TestDevice(t *testing.T) {
 func TestBoolFlag(t *testing.T) {
 	t.Parallel()
 
-	flag := user.BoolFlag{}
+	flag := domain.BoolFlag{}
 	assert.False(t, flag.IsTrue(), "empty flag is not true")
 	assert.True(t, flag.IsFalse(), "empty flag is false")
 	assert.Empty(t, flag.At())
 
-	flag = user.BoolFlag(time.Now().UTC())
+	flag = domain.BoolFlag(time.Now().UTC())
 	assert.True(t, flag.IsTrue())
 	assert.False(t, flag.IsFalse())
 	assert.NotEmpty(t, flag.At())
@@ -448,7 +448,7 @@ func TestBoolFlag_SetTrue(t *testing.T) {
 	t.Run("set true", func(t *testing.T) {
 		t.Parallel()
 
-		flag := user.BoolFlag{}
+		flag := domain.BoolFlag{}
 		assert.False(t, flag.IsTrue())
 
 		flag = flag.SetTrue()
@@ -458,7 +458,7 @@ func TestBoolFlag_SetTrue(t *testing.T) {
 	t.Run("if flag was true, time does not change", func(t *testing.T) {
 		t.Parallel()
 
-		flag := user.BoolFlag{}
+		flag := domain.BoolFlag{}
 		assert.False(t, flag.IsTrue())
 
 		flag = flag.SetTrue()
@@ -477,7 +477,7 @@ func TestBoolFlag_SetFalse(t *testing.T) {
 	t.Run("set false", func(t *testing.T) {
 		t.Parallel()
 
-		flag := user.BoolFlag(time.Now().UTC())
+		flag := domain.BoolFlag(time.Now().UTC())
 		assert.True(t, flag.IsTrue())
 
 		flag = flag.SetFalse()

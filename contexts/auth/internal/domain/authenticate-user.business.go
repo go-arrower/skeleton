@@ -1,11 +1,11 @@
-package user
+package domain
 
 import (
 	"context"
 
-	"github.com/go-arrower/skeleton/contexts/auth"
-
 	"github.com/go-arrower/arrower/setting"
+
+	"github.com/go-arrower/skeleton/contexts/auth"
 )
 
 func NewAuthenticationService(settings setting.Settings) *AuthenticationService {

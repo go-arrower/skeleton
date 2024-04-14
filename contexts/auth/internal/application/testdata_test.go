@@ -5,11 +5,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/skeleton/contexts/auth"
 
 	"github.com/go-arrower/arrower/setting"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
 const (
@@ -28,40 +28,40 @@ const (
 
 const (
 	user0Login            = "0@test.com"
-	userIDZero            = user.ID("00000000-0000-0000-0000-000000000000")
-	userNotVerifiedUserID = user.ID("00000000-0000-0000-0000-000000000001")
-	userBlockedUserID     = user.ID("00000000-0000-0000-0000-000000000002")
+	userIDZero            = domain.ID("00000000-0000-0000-0000-000000000000")
+	userNotVerifiedUserID = domain.ID("00000000-0000-0000-0000-000000000001")
+	userBlockedUserID     = domain.ID("00000000-0000-0000-0000-000000000002")
 )
 
 var (
 	ctx = context.Background()
 
-	userVerified = user.User{
+	userVerified = domain.User{
 		ID:           userIDZero,
 		Login:        user0Login,
-		PasswordHash: user.PasswordHash(strongPasswordHash),
-		Verified:     user.BoolFlag{}.SetTrue(),
-		Sessions: []user.Session{{
+		PasswordHash: domain.PasswordHash(strongPasswordHash),
+		Verified:     domain.BoolFlag{}.SetTrue(),
+		Sessions: []domain.Session{{
 			ID:        sessionKey,
 			CreatedAt: time.Now().UTC(),
 			ExpiresAt: time.Now().UTC().Add(time.Hour),
-			Device:    user.Device{},
+			Device:    domain.Device{},
 		}},
 	}
-	userNotVerified = user.User{
+	userNotVerified = domain.User{
 		ID:           userNotVerifiedUserID,
 		Login:        user0Login,
-		PasswordHash: user.PasswordHash(strongPasswordHash),
-		Verified:     user.BoolFlag{}.SetFalse(),
+		PasswordHash: domain.PasswordHash(strongPasswordHash),
+		Verified:     domain.BoolFlag{}.SetFalse(),
 	}
-	userBlocked = user.User{
+	userBlocked = domain.User{
 		ID:           userBlockedUserID,
 		Login:        user0Login,
-		PasswordHash: user.PasswordHash(strongPasswordHash),
-		Blocked:      user.BoolFlag{}.SetTrue(),
+		PasswordHash: domain.PasswordHash(strongPasswordHash),
+		Blocked:      domain.BoolFlag{}.SetTrue(),
 	}
 
-	resolvedIP = user.ResolvedIP{
+	resolvedIP = domain.ResolvedIP{
 		IP:          net.ParseIP(ip),
 		Country:     "-",
 		CountryCode: "-",
@@ -70,16 +70,16 @@ var (
 	}
 )
 
-func registrator(repo user.Repository) *user.RegistrationService {
+func registrator(repo domain.Repository) *domain.RegistrationService {
 	settings := setting.NewInMemorySettings()
 	settings.Save(ctx, auth.SettingAllowRegistration, setting.NewValue(true))
 
-	return user.NewRegistrationService(settings, repo)
+	return domain.NewRegistrationService(settings, repo)
 }
 
-func authentificator() *user.AuthenticationService {
+func authentificator() *domain.AuthenticationService {
 	settings := setting.NewInMemorySettings()
 	settings.Save(ctx, auth.SettingAllowLogin, setting.NewValue(true))
 
-	return user.NewAuthenticationService(settings)
+	return domain.NewAuthenticationService(settings)
 }

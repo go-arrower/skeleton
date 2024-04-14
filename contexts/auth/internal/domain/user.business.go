@@ -1,4 +1,4 @@
-package user
+package domain
 
 import (
 	"errors"
@@ -46,6 +46,7 @@ type (
 		Login        Login // UserName / email, or phone, or nickname, or whatever the developer wants to have as a login
 		PasswordHash PasswordHash
 		RegisteredAt time.Time
+		T            Tenant
 
 		Name              Name
 		Birthday          Birthday

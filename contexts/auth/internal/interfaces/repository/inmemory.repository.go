@@ -5,26 +5,26 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/arrower/tests"
 	"github.com/google/uuid"
-
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 )
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		MemoryRepository: tests.NewMemoryRepository[user.User, user.ID](),
-		tokens:           make(map[uuid.UUID]user.VerificationToken),
+		MemoryRepository: tests.NewMemoryRepository[domain.User, domain.ID](),
+		tokens:           make(map[uuid.UUID]domain.VerificationToken),
 	}
 }
 
 type MemoryRepository struct {
-	*tests.MemoryRepository[user.User, user.ID]
+	*tests.MemoryRepository[domain.User, domain.ID]
 
-	tokens map[uuid.UUID]user.VerificationToken
+	tokens map[uuid.UUID]domain.VerificationToken
 }
 
-func (repo *MemoryRepository) All(ctx context.Context, filter user.Filter) ([]user.User, error) {
+func (repo *MemoryRepository) All(ctx context.Context, filter domain.Filter) ([]domain.User, error) {
 	all, err := repo.MemoryRepository.All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -34,7 +34,7 @@ func (repo *MemoryRepository) All(ctx context.Context, filter user.Filter) ([]us
 		return all[i].Login < all[j].Login
 	})
 
-	users := []user.User{}
+	users := []domain.User{}
 	limit := filter.Limit
 	found := false
 
@@ -62,7 +62,7 @@ func (repo *MemoryRepository) All(ctx context.Context, filter user.Filter) ([]us
 	return users, nil
 }
 
-func (repo *MemoryRepository) FindByLogin(ctx context.Context, login user.Login) (user.User, error) {
+func (repo *MemoryRepository) FindByLogin(ctx context.Context, login domain.Login) (domain.User, error) {
 	all, _ := repo.MemoryRepository.All(ctx)
 
 	for _, u := range all {
@@ -71,10 +71,10 @@ func (repo *MemoryRepository) FindByLogin(ctx context.Context, login user.Login)
 		}
 	}
 
-	return user.User{}, user.ErrNotFound
+	return domain.User{}, domain.ErrNotFound
 }
 
-func (repo *MemoryRepository) ExistsByLogin(ctx context.Context, login user.Login) (bool, error) {
+func (repo *MemoryRepository) ExistsByLogin(ctx context.Context, login domain.Login) (bool, error) {
 	all, _ := repo.MemoryRepository.All(ctx)
 
 	for _, u := range all {
@@ -83,15 +83,15 @@ func (repo *MemoryRepository) ExistsByLogin(ctx context.Context, login user.Logi
 		}
 	}
 
-	return false, user.ErrNotFound
+	return false, domain.ErrNotFound
 }
 
 func (repo *MemoryRepository) CreateVerificationToken(
 	ctx context.Context,
-	token user.VerificationToken,
+	token domain.VerificationToken,
 ) error {
 	if token.Token().String() == "" {
-		return fmt.Errorf("missing ID: %w", user.ErrPersistenceFailed)
+		return fmt.Errorf("missing ID: %w", domain.ErrPersistenceFailed)
 	}
 
 	repo.Lock()
@@ -105,14 +105,14 @@ func (repo *MemoryRepository) CreateVerificationToken(
 func (repo *MemoryRepository) VerificationTokenByToken(
 	ctx context.Context,
 	tokenID uuid.UUID,
-) (user.VerificationToken, error) {
+) (domain.VerificationToken, error) {
 	for _, t := range repo.tokens {
 		if t.Token() == tokenID {
 			return t, nil
 		}
 	}
 
-	return user.VerificationToken{}, user.ErrNotFound
+	return domain.VerificationToken{}, domain.ErrNotFound
 }
 
-var _ user.Repository = (*MemoryRepository)(nil)
+var _ domain.Repository = (*MemoryRepository)(nil)

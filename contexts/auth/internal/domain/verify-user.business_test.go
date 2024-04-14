@@ -1,4 +1,4 @@
-package user_test
+package domain_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 )
 
@@ -22,7 +22,7 @@ func TestVerificationService_NewVerificationToken(t *testing.T) {
 		repo.Save(ctx, usr)
 
 		// action
-		verifier := user.NewVerificationService(repo)
+		verifier := domain.NewVerificationService(repo)
 		token, err := verifier.NewVerificationToken(ctx, usr)
 		assert.NoError(t, err)
 		assert.Equal(t, usr.ID, token.UserID())
@@ -46,7 +46,7 @@ func TestVerificationService_Verify(t *testing.T) {
 		usr := newUser()
 		repo := repository.NewMemoryRepository()
 		repo.Save(ctx, usr)
-		verifier := user.NewVerificationService(repo)
+		verifier := domain.NewVerificationService(repo)
 		token, _ := verifier.NewVerificationToken(ctx, usr)
 
 		// action
@@ -66,15 +66,15 @@ func TestVerificationService_Verify(t *testing.T) {
 		usr := newUser()
 		repo := repository.NewMemoryRepository()
 		repo.Save(ctx, usr)
-		verifier := user.NewVerificationService(
+		verifier := domain.NewVerificationService(
 			repo,
-			user.WithValidFor(time.Nanosecond), // expire almost immediately
+			domain.WithValidFor(time.Nanosecond), // expire almost immediately
 		)
 		token, _ := verifier.NewVerificationToken(ctx, usr)
 
 		// action
 		err := verifier.Verify(ctx, &usr, token.Token())
-		assert.ErrorIs(t, err, user.ErrVerificationFailed)
+		assert.ErrorIs(t, err, domain.ErrVerificationFailed)
 
 		// verify against the db
 		u, _ := repo.FindByID(ctx, usr.ID)
@@ -87,10 +87,10 @@ func TestVerificationService_Verify(t *testing.T) {
 		usr := newUser()
 		repo := repository.NewMemoryRepository()
 		repo.Save(ctx, usr)
-		verifier := user.NewVerificationService(repo)
+		verifier := domain.NewVerificationService(repo)
 
 		err := verifier.Verify(ctx, &usr, uuid.New())
-		assert.ErrorIs(t, err, user.ErrVerificationFailed)
+		assert.ErrorIs(t, err, domain.ErrVerificationFailed)
 		assert.False(t, usr.IsVerified())
 	})
 }

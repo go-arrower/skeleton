@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository"
 )
 
@@ -58,13 +59,13 @@ func TestLoginUser(t *testing.T) {
 
 		// assert return values
 		assert.NoError(t, err)
-		assert.Equal(t, user.Login(validUserLogin), res.User.Login)
+		assert.Equal(t, domain.Login(validUserLogin), res.User.Login)
 		assert.NotEmpty(t, validUserLogin, res.User.ID)
 
 		// assert session got updated with device info // todo IF repo gets methods to retrieve sessions directly: use them instead
 		usr, _ := repo.FindByID(ctx, userVerified.ID)
 		assert.Len(t, usr.Sessions, 2)
-		assert.Equal(t, user.NewDevice(userAgent), usr.Sessions[1].Device)
+		assert.Equal(t, domain.NewDevice(userAgent), usr.Sessions[1].Device)
 
 		queue.Assert(t).Queued(application.SendConfirmationNewDeviceLoggedIn{}, 0)
 	})
@@ -94,7 +95,7 @@ func TestLoginUser(t *testing.T) {
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
 		assert.Equal(t, resolvedIP, job.IP)
-		assert.Equal(t, user.NewDevice(userAgent), job.Device)
+		assert.Equal(t, domain.NewDevice(userAgent), job.Device)
 	})
 }
 
@@ -117,7 +118,7 @@ func TestRegisterUser(t *testing.T) {
 
 		_, err := cmd(ctx, application.RegisterUserRequest{RegisterEmail: user0Login})
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, user.ErrUserAlreadyExists)
+		assert.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 
 		// assert failed attempt is logged, e.g. for monitoring or fail2ban etc.
 		assert.Contains(t, buf.String(), "register new user failed")
@@ -149,14 +150,14 @@ func TestRegisterUser(t *testing.T) {
 		// assert session got updated with device info
 		dbUser, _ = repo.FindByID(ctx, usr.User.ID)
 		assert.Len(t, dbUser.Sessions, 1)
-		assert.Equal(t, user.NewDevice(userAgent), dbUser.Sessions[0].Device)
+		assert.Equal(t, domain.NewDevice(userAgent), dbUser.Sessions[0].Device)
 
 		queue.Assert(t).Queued(application.NewUserVerificationEmail{}, 1)
 		job := queue.GetFirstOf(application.NewUserVerificationEmail{}).(application.NewUserVerificationEmail)
 		assert.NotEmpty(t, job.UserID)
 		assert.NotEmpty(t, job.OccurredAt)
 		assert.Equal(t, resolvedIP, job.IP)
-		assert.Equal(t, user.NewDevice(userAgent), job.Device)
+		assert.Equal(t, domain.NewDevice(userAgent), job.Device)
 	})
 }
 
@@ -174,7 +175,7 @@ func TestSendNewUserVerificationEmail(t *testing.T) {
 			UserID:     userNotVerifiedUserID,
 			OccurredAt: time.Now().UTC(),
 			IP:         resolvedIP,
-			Device:     user.NewDevice(userAgent),
+			Device:     domain.NewDevice(userAgent),
 		})
 		assert.NoError(t, err)
 
@@ -193,7 +194,7 @@ func TestVerifyUser(t *testing.T) {
 		repo.Save(ctx, userNotVerified)
 
 		usr, _ := repo.FindByID(ctx, userNotVerifiedUserID)
-		verify := user.NewVerificationService(repo)
+		verify := domain.NewVerificationService(repo)
 		token, _ := verify.NewVerificationToken(ctx, usr)
 
 		// action

@@ -7,9 +7,9 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/ip2location/ip2location-go/v9"
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
+	"github.com/ip2location/ip2location-go/v9"
 )
 
 var (
@@ -37,7 +37,7 @@ type IP2Location struct {
 	dbPath string
 }
 
-func (s *IP2Location) ResolveIP(ip string) (user.ResolvedIP, error) {
+func (s *IP2Location) ResolveIP(ip string) (domain.ResolvedIP, error) {
 	db, err := ip2location.OpenDB(s.dbPath)
 	if err != nil {
 		// if not found, it might have been called from test coed from another package:
@@ -47,23 +47,23 @@ func (s *IP2Location) ResolveIP(ip string) (user.ResolvedIP, error) {
 
 		db, err = ip2location.OpenDB(searchDir + "/" + s.dbPath)
 		if err != nil {
-			return user.ResolvedIP{}, fmt.Errorf("%w: %v", ErrResolveFailed, err)
+			return domain.ResolvedIP{}, fmt.Errorf("%w: %v", ErrResolveFailed, err)
 		}
 	}
 
 	ipAddr := net.ParseIP(ip)
 	if ipAddr == nil {
-		return user.ResolvedIP{}, ErrInvalidIP
+		return domain.ResolvedIP{}, ErrInvalidIP
 	}
 
 	results, err := db.Get_all(ipAddr.String())
 	if err != nil {
-		return user.ResolvedIP{}, fmt.Errorf("%w: %v", ErrResolveFailed, err)
+		return domain.ResolvedIP{}, fmt.Errorf("%w: %v", ErrResolveFailed, err)
 	}
 
 	db.Close()
 
-	return user.ResolvedIP{
+	return domain.ResolvedIP{
 		IP:          ipAddr,
 		Country:     results.Country_long,
 		CountryCode: results.Country_short,

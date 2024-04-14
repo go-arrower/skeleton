@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -16,7 +18,6 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
-	"github.com/go-arrower/skeleton/contexts/auth/internal/application/user"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/web"
 )
 
@@ -420,7 +421,7 @@ var errUCFailed = errors.New("use case error")
 
 const (
 	secret = "secret"
-	userID = user.ID("00000000-0000-0000-0000-000000000000")
+	userID = domain.ID("00000000-0000-0000-0000-000000000000")
 )
 
 var validToken = uuid.MustParse("00000000-0000-0000-0000-000000000000")
