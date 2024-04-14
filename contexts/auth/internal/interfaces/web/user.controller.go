@@ -77,7 +77,7 @@ func (uc UserController) Login() func(echo.Context) error {
 		}
 
 		if c.Request().Method == http.MethodGet {
-			return c.Render(http.StatusOK, "auth=>auth.login", nil)
+			return c.Render(http.StatusOK, "auth=>=>auth.login", nil)
 		}
 
 		// POST: Login
@@ -118,7 +118,7 @@ func (uc UserController) Login() func(echo.Context) error {
 				"LoginEmail": loginUser.LoginEmail,
 			})
 
-			return c.Render(http.StatusOK, "auth=>auth.login", page)
+			return c.Render(http.StatusOK, "auth=>=>auth.login", page)
 		}
 
 		sess.AddFlash("Login successful")
@@ -268,7 +268,7 @@ func (uc UserController) Create() func(echo.Context) error {
 			return c.Redirect(http.StatusSeeOther, "/")
 		}
 
-		return c.Render(http.StatusOK, "auth=>auth.user.create", nil)
+		return c.Render(http.StatusOK, "auth=>=>auth.user.create", nil)
 	}
 }
 
@@ -312,7 +312,7 @@ func (uc UserController) Register() func(echo.Context) error {
 				"RegisterEmail": newUser.RegisterEmail,
 			})
 
-			return c.Render(http.StatusOK, "auth=>auth.user.create", page)
+			return c.Render(http.StatusOK, "auth=>=>auth.user.create", page)
 		}
 
 		sess.Options = &sessions.Options{
@@ -378,7 +378,7 @@ func (uc UserController) Show() func(echo.Context) error {
 			"User": res.User,
 		})
 
-		return c.Render(http.StatusOK, "=>auth.user.show", page)
+		return c.Render(http.StatusOK, "auth.user.show", page)
 	}
 }
 
@@ -398,7 +398,7 @@ func (uc UserController) DestroySession(queries *models.Queries) func(echo.Conte
 
 func (uc UserController) New() func(echo.Context) error {
 	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "=>auth.user.new", nil)
+		return c.Render(http.StatusOK, "auth.user.new", nil)
 	}
 }
 
@@ -430,7 +430,7 @@ func (uc UserController) Store() func(echo.Context) error {
 				"Email":  newUser.Email,
 			})
 
-			return c.Render(http.StatusOK, "=>auth.user.new", page)
+			return c.Render(http.StatusOK, "auth.user.new", page)
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")
