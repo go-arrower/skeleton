@@ -1,10 +1,12 @@
-package pages
+package pages_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/views/pages"
 )
 
 func TestTimeAgo(t *testing.T) {
@@ -27,10 +29,11 @@ func TestTimeAgo(t *testing.T) {
 	}
 
 	for name, tt := range tests {
+		tt := tt
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expected, timeAgo(tt.time))
+			assert.Equal(t, tt.expected, pages.TimeAgo(tt.time))
 		})
 	}
 }

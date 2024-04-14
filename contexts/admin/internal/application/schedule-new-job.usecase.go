@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
+
+var ErrScheduleJobsFailed = errors.New("schedule jobs failed")
 
 func NewScheduleJobsCommandHandler(queries *models.Queries) app.Command[ScheduleJobsCommand] {
 	return &scheduleJobsCommandHandler{queries: queries}
@@ -41,12 +44,12 @@ func (h *scheduleJobsCommandHandler) H(ctx context.Context, cmd ScheduleJobsComm
 
 	jobs, err := buildJobs(cmd, carrier)
 	if err != nil {
-		return fmt.Errorf("could not build jobs: %w", err)
+		return fmt.Errorf("%w: could not build jobs: %w", ErrScheduleJobsFailed, err)
 	}
 
 	_, err = h.queries.ScheduleJobs(ctx, jobs)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("%w: %w", ErrScheduleJobsFailed, err)
 	}
 
 	return nil
@@ -63,12 +66,12 @@ func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) ([]models
 
 	err := json.Unmarshal([]byte(strings.TrimSpace(in.Payload)), &buf)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal job: %v", err)
+		return nil, fmt.Errorf("could not unmarshal job: %v", err) //nolint:errorlint // prevent err in api
 	}
 
 	args, err := json.Marshal(JobPayload{JobData: buf, Carrier: carrier})
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal job: %v", err)
+		return nil, fmt.Errorf("could not marshal job: %v", err) //nolint:errorlint // prevent err in api
 	}
 
 	for i := 0; i < in.Count; i++ {
@@ -84,7 +87,6 @@ func buildJobs(in ScheduleJobsCommand, carrier propagation.MapCarrier) ([]models
 			RunAt:     pgtype.Timestamptz{Time: in.RunAt, Valid: true},
 			Args:      args,
 		}
-
 	}
 
 	return jobs, nil

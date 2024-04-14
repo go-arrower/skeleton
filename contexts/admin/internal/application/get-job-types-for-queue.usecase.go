@@ -2,12 +2,16 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
+
+var ErrJobTypesForQueueFailed = errors.New("job types for queue failed")
 
 func NewJobTypesForQueueQueryHandler(queries *models.Queries) app.Query[JobTypesForQueueQuery, []jobs.JobType] {
 	return &jobTypesForQueueQueryHandler{queries: queries}
@@ -21,8 +25,6 @@ type (
 	JobTypesForQueueQuery struct {
 		Queue jobs.QueueName
 	}
-
-	//JobTypesForQueueResponse struct{}
 )
 
 func (h jobTypesForQueueQueryHandler) H(ctx context.Context, query JobTypesForQueueQuery) ([]jobs.JobType, error) {
@@ -33,7 +35,7 @@ func (h jobTypesForQueueQueryHandler) H(ctx context.Context, query JobTypesForQu
 
 	types, err := h.queries.JobTypes(ctx, string(queue))
 	if err != nil {
-		return nil, fmt.Errorf("could not get job types for queue: %s: %v", queue, err)
+		return nil, fmt.Errorf("%w: %s: %v", ErrJobTypesForQueueFailed, queue, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	jobTypes := make([]jobs.JobType, len(types))

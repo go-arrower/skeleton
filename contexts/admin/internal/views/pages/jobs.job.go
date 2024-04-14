@@ -4,7 +4,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
-type historicJob struct {
+type HistoricJob struct {
 	models.ArrowerGueJobsHistory
 	PrettyPayload string
 	CreatedAt     string
@@ -12,16 +12,16 @@ type historicJob struct {
 	FinishedAgo   string
 }
 
-func ConvertFinishedJobsForShow(jobs []models.ArrowerGueJobsHistory) []historicJob {
-	fjobs := make([]historicJob, len(jobs))
+func ConvertFinishedJobsForShow(jobs []models.ArrowerGueJobsHistory) []HistoricJob {
+	fjobs := make([]HistoricJob, len(jobs))
 
 	for i, j := range jobs {
-		fjobs[i] = historicJob{
+		fjobs[i] = HistoricJob{
 			ArrowerGueJobsHistory: j,
 			PrettyPayload:         prettyJobPayloadAsFormattedJSON(j.Args),
 			CreatedAt:             formatAsDateOrTimeToday(j.CreatedAt.Time),
-			EnqueuedAgo:           timeAgo(j.CreatedAt.Time),
-			FinishedAgo:           timeAgo(j.FinishedAt.Time),
+			EnqueuedAgo:           TimeAgo(j.CreatedAt.Time),
+			FinishedAgo:           TimeAgo(j.FinishedAt.Time),
 		}
 	}
 

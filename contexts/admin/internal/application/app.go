@@ -2,6 +2,7 @@ package application
 
 import (
 	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 )
 

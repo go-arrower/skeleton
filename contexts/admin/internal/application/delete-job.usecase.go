@@ -2,11 +2,15 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 )
+
+var ErrDeleteJobFailed = errors.New("delete job failed")
 
 func NewDeleteJobCommandHandler(repo jobs.Repository) app.Command[DeleteJobCommand] {
 	return &deleteJobCommandHandler{repo: repo}
@@ -23,5 +27,5 @@ type DeleteJobCommand struct {
 func (h *deleteJobCommandHandler) H(ctx context.Context, cmd DeleteJobCommand) error {
 	err := h.repo.Delete(ctx, cmd.JobID)
 
-	return fmt.Errorf("%w", err)
+	return fmt.Errorf("%w: %w", ErrDeleteJobFailed, err)
 }

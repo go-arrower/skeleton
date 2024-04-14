@@ -20,15 +20,14 @@ func NewFinishedJobs(jobs []jobs.PendingJob, queues jobs.QueueNames) echo.Map {
 	}
 
 	fjobs := make([]finishedJob, len(jobs))
+
 	for i := 0; i < len(jobs); i++ {
 		var m application.JobPayload
 		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
 
-		//fjobs[i].Payload = m.JobData.(string)
 		fjobs[i].Payload = prettyJobPayloadDataAsFormattedJSON(m)
-
-		fjobs[i].EnqueuedAtFmt = timeAgo(jobs[i].CreatedAt)
-		fjobs[i].FinishedAtFmt = timeAgo(jobs[i].UpdatedAt) // todo use finished at
+		fjobs[i].EnqueuedAtFmt = TimeAgo(jobs[i].CreatedAt)
+		fjobs[i].FinishedAtFmt = TimeAgo(jobs[i].UpdatedAt) // todo use finished at
 		fjobs[i].ID = jobs[i].ID
 		fjobs[i].Type = jobs[i].Type
 		fjobs[i].Queue = jobs[i].Queue

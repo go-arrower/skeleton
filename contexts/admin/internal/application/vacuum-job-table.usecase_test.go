@@ -6,8 +6,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 )
 
 func TestVacuumJobTableRequestHandler_H(t *testing.T) {
@@ -33,11 +34,11 @@ func TestVacuumJobTableRequestHandler_H(t *testing.T) {
 	}{
 		"empty table": {
 			table: "",
-			err:   application.ErrVacuumFailed,
+			err:   application.ErrVacuumJobTableFailed,
 		},
 		"non existing table": {
 			table: "non-existing-table",
-			err:   application.ErrVacuumFailed,
+			err:   application.ErrVacuumJobTableFailed,
 		},
 	}
 
@@ -57,6 +58,7 @@ func TestVacuumJobTableRequestHandler_H(t *testing.T) {
 	}
 
 	for name, tc := range failingTests {
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

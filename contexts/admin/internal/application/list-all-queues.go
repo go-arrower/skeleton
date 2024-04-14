@@ -2,12 +2,16 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 )
+
+var ErrListAllQueuesFailed = errors.New("list all queues failed")
 
 func NewListAllQueuesQueryHandler(repo jobs.Repository) app.Query[ListAllQueuesQuery, ListAllQueuesResponse] {
 	return &listAllQueuesQueryHandler{repo: repo}
@@ -30,18 +34,19 @@ type (
 func (h *listAllQueuesQueryHandler) H(ctx context.Context, _ ListAllQueuesQuery) (ListAllQueuesResponse, error) {
 	queues, err := h.repo.Queues(ctx)
 	if err != nil {
-		return ListAllQueuesResponse{}, fmt.Errorf("could not get queues: %w", err)
+		return ListAllQueuesResponse{}, fmt.Errorf("%w: could not get queues: %w", ErrListAllQueuesFailed, err)
 	}
 
 	qWithStats := make(map[jobs.QueueName]jobs.QueueStats)
 
-	for _, q := range queues {
-		s, err := h.repo.QueueKPIs(ctx, q)
+	for _, queue := range queues {
+		s, err := h.repo.QueueKPIs(ctx, queue)
 		if err != nil {
-			return ListAllQueuesResponse{}, fmt.Errorf("could not get kpis for queue: %s: %w", q, err)
+			return ListAllQueuesResponse{},
+				fmt.Errorf("%w: could not get kpis for queue: %s: %w", ErrListAllQueuesFailed, queue, err)
 		}
 
-		qWithStats[q] = queueKpiToStats(string(q), s)
+		qWithStats[queue] = queueKpiToStats(string(queue), s)
 	}
 
 	return ListAllQueuesResponse{QueueStats: qWithStats}, nil

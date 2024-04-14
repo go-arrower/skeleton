@@ -9,8 +9,15 @@ import (
 )
 
 func NewJob(jobs []models.ArrowerGueJobsHistory) Job {
+	if len(jobs) == 0 {
+		return Job{
+			Jobs:        nil,
+			ShowActions: false,
+		}
+	}
+
 	showAction := false
-	if !jobs[0].Success { // todo check if jobs is empty
+	if !jobs[0].Success {
 		showAction = true
 	}
 
@@ -30,7 +37,7 @@ type (
 	}
 )
 
-// TimelineTime could reuse a shared timeFMT function, so it is coherent across pages
+// TimelineTime could reuse a shared timeFMT function, so it is coherent across pages.
 func (j Job) TimelineTime(t pgtype.Timestamptz) string {
 	isToday := t.Time.Format("2006.01.02") == time.Now().Format("2006.01.02")
 	if isToday {

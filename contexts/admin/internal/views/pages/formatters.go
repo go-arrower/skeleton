@@ -22,39 +22,42 @@ func formatAsDateOrTimeToday(t time.Time) string {
 	return createdAt
 }
 
-func timeAgo(t time.Time) string {
+const (
+	timeDay  = time.Hour * 24
+	timeYear = timeDay * 365
+)
+
+func TimeAgo(t time.Time) string {
 	if t.IsZero() {
 		return "unclear"
 	}
 
-	seconds := time.Since(t).Nanoseconds()
-
-	switch seconds := time.Duration(seconds); {
-	case seconds < time.Minute:
+	switch timeSince := time.Duration(time.Since(t).Nanoseconds()); {
+	case timeSince < time.Minute:
 		return "now"
-	case seconds < 90*time.Minute:
-		minutes := int(math.Round(float64(seconds / time.Minute)))
+	case timeSince < 90*time.Minute:
+		minutes := int(math.Round(float64(timeSince / time.Minute)))
 		if minutes == 1 {
 			return fmt.Sprintf("%d minute ago", minutes)
 		}
 
 		return fmt.Sprintf("%d minutes ago", minutes)
-	case seconds < 24*time.Hour:
-		hours := int(math.Round(float64(seconds / time.Hour)))
+	case timeSince < timeDay:
+		hours := int(math.Round(float64(timeSince / time.Hour)))
 		if hours == 1 {
 			return fmt.Sprintf("%d hour ago", hours)
 		}
 
 		return fmt.Sprintf("%d hours ago", hours)
-	case seconds < time.Hour*24*365:
-		days := int(math.Round(float64(seconds / (time.Hour * 24))))
+	case timeSince < timeYear:
+		days := int(math.Round(float64(timeSince / timeDay)))
 		if days == 1 {
 			return fmt.Sprintf("%d day ago", days)
 		}
 
 		return fmt.Sprintf("%d days ago", days)
 	default:
-		years := int(math.Round(float64(seconds / (time.Hour * 24 * 365))))
+		years := int(math.Round(float64(timeSince / timeYear)))
 		if years == 1 {
 			return fmt.Sprintf("%d year ago", years)
 		}
@@ -69,6 +72,7 @@ func prettyJobPayloadAsFormattedJSON(p []byte) string {
 
 func prettyJobPayloadDataAsFormattedJSON(payload application.JobPayload) string {
 	b, _ := json.Marshal(payload.JobData)
+
 	return prettyJSON(b)
 }
 

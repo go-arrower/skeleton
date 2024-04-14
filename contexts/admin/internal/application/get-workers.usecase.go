@@ -2,11 +2,15 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-arrower/arrower/app"
+
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 )
+
+var ErrGetWorkersFailed = errors.New("get workers failed")
 
 func NewGetWorkersQueryHandler(repo jobs.Repository) app.Query[GetWorkersQuery, GetWorkersResponse] {
 	return &getWorkersQueryHandler{repo: repo}
@@ -26,7 +30,7 @@ type (
 func (h *getWorkersQueryHandler) H(ctx context.Context, _ GetWorkersQuery) (GetWorkersResponse, error) {
 	wp, err := h.repo.WorkerPools(ctx)
 	if err != nil {
-		return GetWorkersResponse{}, fmt.Errorf("could not get workers: %w", err)
+		return GetWorkersResponse{}, fmt.Errorf("%w: %w", ErrGetWorkersFailed, err)
 	}
 
 	return GetWorkersResponse{Pool: wp}, nil

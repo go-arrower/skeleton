@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/go-arrower/arrower/alog"
 	alogmodels "github.com/go-arrower/arrower/alog/models"
 	"github.com/go-arrower/arrower/app"
 
@@ -39,15 +38,13 @@ func NewAdminContext(ctx context.Context, di *infrastructure.Container) (*AdminC
 		return nil, fmt.Errorf("could not initialise context admin: %w", err)
 	}
 
-	admin.logger.DebugContext(ctx, "context admin initialised")
+	di.Logger.DebugContext(ctx, "context admin initialised")
 
 	return admin, nil
 }
 
 type AdminContext struct {
 	globalContainer *infrastructure.Container
-
-	logger alog.Logger
 
 	jobRepository jobs.Repository
 
@@ -93,21 +90,10 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 
 	jobRepository := repository.NewTracedJobsRepository(repository.NewPostgresJobsRepository(di.PGx))
 
-	appDI := application.App{
-		PruneJobHistory:  app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewPruneJobHistoryRequestHandler(models.New(di.PGx))),
-		VacuumJobTable:   app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger, application.NewVacuumJobTableRequestHandler(di.PGx)),
-		DeleteJob:        app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewDeleteJobCommandHandler(jobRepository)),
-		GetQueue:         app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetQueueQueryHandler(jobRepository)),
-		GetWorkers:       app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewGetWorkersQueryHandler(jobRepository)),
-		JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewJobTypesForQueueQueryHandler(models.New(di.PGx))),
-		ListAllQueues:    app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger, application.NewListAllQueuesQueryHandler(jobRepository)),
-		ScheduleJobs:     app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger, application.NewScheduleJobsCommandHandler(models.New(di.PGx))),
-	}
+	appDI := setupApplication(di, jobRepository)
 
 	admin := &AdminContext{
 		globalContainer: di,
-
-		logger: logger,
 
 		jobRepository: jobRepository,
 
@@ -147,4 +133,33 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 	registerAdminRoutes(admin)
 
 	return admin, nil
+}
+
+func setupApplication(di *infrastructure.Container, jobRepository *repository.TracedJobsRepository) application.App {
+	return application.App{
+		PruneJobHistory: app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewPruneJobHistoryRequestHandler(models.New(di.PGx)),
+		),
+		VacuumJobTable: app.NewInstrumentedRequest(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewVacuumJobTableRequestHandler(di.PGx),
+		),
+		DeleteJob: app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewDeleteJobCommandHandler(jobRepository),
+		),
+		GetQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewGetQueueQueryHandler(jobRepository),
+		),
+		GetWorkers: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewGetWorkersQueryHandler(jobRepository),
+		),
+		JobTypesForQueue: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewJobTypesForQueueQueryHandler(models.New(di.PGx)),
+		),
+		ListAllQueues: app.NewInstrumentedQuery(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewListAllQueuesQueryHandler(jobRepository),
+		),
+		ScheduleJobs: app.NewInstrumentedCommand(di.TraceProvider, di.MeterProvider, di.Logger,
+			application.NewScheduleJobsCommandHandler(models.New(di.PGx)),
+		),
+	}
 }

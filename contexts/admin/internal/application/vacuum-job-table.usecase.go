@@ -11,7 +11,7 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
 
-var ErrVacuumFailed = errors.New("VACUUM failed")
+var ErrVacuumJobTableFailed = errors.New("vacuum job table failed")
 
 func NewVacuumJobTableRequestHandler(db *pgxpool.Pool) app.Request[VacuumJobTableRequest, VacuumJobTableResponse] {
 	return &vacuumJobTableRequestHandler{
@@ -41,17 +41,17 @@ func (h *vacuumJobTableRequestHandler) H(
 	req VacuumJobTableRequest,
 ) (VacuumJobTableResponse, error) {
 	if !isValidTable(req.Table) {
-		return VacuumJobTableResponse{}, fmt.Errorf("%w: invalid table: %s", ErrVacuumFailed, req.Table)
+		return VacuumJobTableResponse{}, fmt.Errorf("%w: invalid table: %s", ErrVacuumJobTableFailed, req.Table)
 	}
 
 	_, err := h.db.Exec(ctx, fmt.Sprintf(`VACUUM FULL arrower.%s`, validTables()[req.Table]))
 	if err != nil {
-		return VacuumJobTableResponse{}, fmt.Errorf("%w for table: %s: %v", ErrVacuumFailed, req.Table, err)
+		return VacuumJobTableResponse{}, fmt.Errorf("%w for table: %s: %v", ErrVacuumJobTableFailed, req.Table, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	size, err := h.queries.JobTableSize(ctx)
 	if err != nil {
-		return VacuumJobTableResponse{}, fmt.Errorf("could not get new job table size: %v", err)
+		return VacuumJobTableResponse{}, fmt.Errorf("%w: could not get new job table size: %v", ErrVacuumJobTableFailed, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	return VacuumJobTableResponse{

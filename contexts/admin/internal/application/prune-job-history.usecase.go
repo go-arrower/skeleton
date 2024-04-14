@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 )
+
+var ErrPruneJobHistoryFailed = errors.New("prune job history failed")
 
 type PruneJobHistoryRequestHandler app.Request[PruneJobHistoryRequest, PruneJobHistoryResponse]
 
@@ -38,19 +41,20 @@ func (h *pruneJobHistoryRequestHandler) H(
 	ctx context.Context,
 	req PruneJobHistoryRequest,
 ) (PruneJobHistoryResponse, error) {
-	deleteBefore := time.Now().Add(-1 * time.Duration(req.Days) * time.Hour * 24)
+	const timeDay = time.Hour * 24
+	deleteBefore := time.Now().Add(-1 * time.Duration(req.Days) * timeDay)
 
 	err := h.queries.PruneHistory(
 		ctx,
 		pgtype.Timestamptz{Time: deleteBefore, Valid: true, InfinityModifier: pgtype.Finite},
 	)
 	if err != nil {
-		return PruneJobHistoryResponse{}, fmt.Errorf("could not delete old history: %v", err)
+		return PruneJobHistoryResponse{}, fmt.Errorf("%w: could not delete old history: %v", ErrPruneJobHistoryFailed, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	size, err := h.queries.JobTableSize(ctx)
 	if err != nil {
-		return PruneJobHistoryResponse{}, fmt.Errorf("could not get new jobs table size: %v", err)
+		return PruneJobHistoryResponse{}, fmt.Errorf("%w: could not get new jobs table size: %v", ErrPruneJobHistoryFailed, err) //nolint:errorlint,lll // prevent err in api
 	}
 
 	return PruneJobHistoryResponse{
