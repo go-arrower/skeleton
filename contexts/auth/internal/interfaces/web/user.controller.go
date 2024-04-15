@@ -469,3 +469,9 @@ func (uc UserController) UnBlockUser() {
 		})
 	})
 }
+
+func (uc UserController) Profile() func(echo.Context) error {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, "profile", nil)
+	}
+}

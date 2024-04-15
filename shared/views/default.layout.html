@@ -151,21 +151,37 @@
                 >
               {{ end }}
             </div>
-            <div class="shrink">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="h-6 w-6 text-gray-300"
+            <div class="dropdown dropdown-end">
+              <div
+                tabindex="0"
+                role="button"
+                class="avatar btn btn-circle btn-ghost"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-                />
-              </svg>
+                <div class="w-10 rounded-full">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <ul
+                tabindex="0"
+                class="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
+              >
+                <li>
+                  <a href="/auth/profile">Profile</a>
+                </li>
+                <li><a href="/auth/logout">Logout</a></li>
+              </ul>
             </div>
           </div>
         </div>
@@ -180,9 +196,9 @@
       {{/* TODO rename Context-Layout in some way to make the language clearer */}}
       {{ block "layout" . }}
         <div class="w-full">
-          <header class="w-full grow  py-4">
+          <header class="w-full grow py-4">
             <h1 class="text-2xl font-bold tracking-tight text-gray-900">
-              {{ block "admin.title" . }}Admin Dashboard{{ end }}
+              {{ block "title" . }}Arrower Title{{ end }}
             </h1>
           </header>
           <div class="w-full grow rounded-l-lg rounded-t-lg bg-white p-6">

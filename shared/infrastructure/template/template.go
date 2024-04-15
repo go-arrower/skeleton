@@ -366,6 +366,10 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 			return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
 
+		newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout]) // TODO FIXME
+		// this is the proper behaviour to render a context page
+		// there is no test case for this yet. And existing tests keep passing -.-
+
 		if parsedTempl.renderAsAdminPage {
 			if r.views["admin"].rawLayouts[parsedTempl.layout] == "" {
 				return nil, ErrNotExistsLayout
@@ -578,10 +582,18 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	}
 
 	// todo clean
-	view, _ := prepareViewTemplates(context.Background(), r.logger, viewFS)
+	view, err := prepareViewTemplates(context.Background(), r.logger, viewFS)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	r.views[name] = view
 	tmp := r.views[name]
-	cc, _ := r.views[sharedViews].components.Clone()
+
+	cc, err := r.views[sharedViews].components.Clone()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
 
 	for _, t := range tmp.components.Templates() {
 		c, _ := cc.AddParseTree(t.Name(), t.Tree)
