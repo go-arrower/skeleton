@@ -295,7 +295,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	if found {
 		templ = t.(*template.Template)
 	} else {
-		newTemplate, err := r.buildPageTemplate(parsedTempl)
+		newTemplate, err := r.buildPageTemplate(c, parsedTempl)
 		if err != nil {
 			return err
 		}
@@ -334,7 +334,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return nil
 }
 
-func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Template, error) {
+func (r *Renderer) buildPageTemplate(c echo.Context, parsedTempl parsedTemplate) (*template.Template, error) {
 	// defer r.mu.Unlock()
 
 	if parsedTempl.isComponent {
@@ -366,9 +366,12 @@ func (r *Renderer) buildPageTemplate(parsedTempl parsedTemplate) (*template.Temp
 			return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 		}
 
-		newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout]) // TODO FIXME
-		// this is the proper behaviour to render a context page
-		// there is no test case for this yet. And existing tests keep passing -.-
+		if isContext, _, _ := r.isRegisteredContext(c); isContext {
+			newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
+			if err != nil {
+				return nil, fmt.Errorf("%w: could not parse default layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
+			}
+		}
 
 		if parsedTempl.renderAsAdminPage {
 			if r.views["admin"].rawLayouts[parsedTempl.layout] == "" {

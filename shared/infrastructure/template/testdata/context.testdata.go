@@ -21,7 +21,7 @@ var SharedViews = fstest.MapFS{
 <body>
 	defaultLayout
     {{block "layout" .}}
-		defaultContextLayout
+		defaultContextLayoutOfBase
         {{block "content" .}}
 			contentPlaceholder
         {{end}}

@@ -78,7 +78,7 @@ var MultipleLayoutsWithDefaultLayout = fstest.MapFS{
 	"other.layout.html":   {Data: []byte(LOtherContent + ` {{template "content" .}}`)},
 }
 
-func NewEchoContext(t *testing.T) echo.Context {
+func NewEchoContext(t *testing.T) echo.Context { // TODO rename to Test instead of new
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -87,7 +87,7 @@ func NewEchoContext(t *testing.T) echo.Context {
 	return echo.New().NewContext(req, rec)
 }
 
-func NewExampleContextEchoContext(t *testing.T) echo.Context {
+func NewExampleContextEchoContext(t *testing.T) echo.Context { // TODO rename to Test instead of new
 	t.Helper()
 
 	c := NewEchoContext(t)

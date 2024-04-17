@@ -587,6 +587,7 @@ func TestRenderer_RenderContext(t *testing.T) {
 			assert.Contains(t, buf.String(), testdata.P0ContextContent)
 			assert.Contains(t, buf.String(), testdata.C0ContextContent)
 			assert.NotContains(t, buf.String(), testdata.C0Content)
+			assert.NotContains(t, buf.String(), "defaultContextLayoutOfBase")
 			assert.Contains(t, buf.String(), testdata.LDefaultContent)
 			assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
 			assert.NotContains(t, buf.String(), testdata.LContentPlaceholder)
@@ -673,3 +674,4 @@ func TestRenderer_RenderContext(t *testing.T) {
 }
 
 // TODO test case for hot reload
+// TODO test case for a context that does not have a layout (use base layout block as fallback)
