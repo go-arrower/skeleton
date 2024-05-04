@@ -4,20 +4,24 @@ go 1.22.1
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/aarondl/opt v0.0.0-20240108180805-338d04d857dc
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/go-arrower/arrower v0.0.0
 	github.com/go-playground/validator/v10 v10.19.0
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/ip2location/ip2location-go/v9 v9.6.0
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/jackc/pgx/v5 v5.5.5
+	github.com/jaswdr/faker/v2 v2.1.0
 	github.com/labstack/echo-contrib v0.15.0
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/mileusna/useragent v1.3.3
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/prometheus/client_golang v1.19.0
+	github.com/stephenafamo/bob v0.25.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.42.0
 	go.opentelemetry.io/otel v1.24.0
@@ -42,6 +46,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf // indirect
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c // indirect
 	github.com/alexflint/go-filemutex v1.3.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
@@ -105,10 +110,12 @@ require (
 	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/common v0.49.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/stephenafamo/scan v0.4.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

@@ -36,7 +36,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/go-arrower/skeleton/contexts/auth"
-	"github.com/go-arrower/skeleton/shared/infrastructure/template"
+	"github.com/go-arrower/skeleton/shared/infrastructure/web"
 )
 
 var ErrMissingDependency = errors.New("missing dependency")
@@ -53,7 +53,7 @@ type Container struct {
 	PGx    *pgxpool.Pool
 	db     *postgres.Handler
 
-	WebRenderer *template.Renderer
+	WebRenderer *web.EchoRenderer
 	WebRouter   *echo.Echo
 	APIRouter   *echo.Group
 	AdminRouter *echo.Group
@@ -192,7 +192,7 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 			hotReload = true
 		}
 
-		r, _ := template.NewRenderer(container.Logger, container.TraceProvider, os.DirFS("shared/views"), hotReload) // todo: if prod load from embed
+		r, _ := web.NewEchoRenderer(container.Logger, container.TraceProvider, router, os.DirFS("shared/views"), hotReload) // todo: if prod load from embed
 		router.Renderer = r
 		container.WebRenderer = r
 

@@ -1,11 +1,11 @@
-.PHONE:help
+.PHONY: help
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 
 
 
-.PHONY:static-check
+.PHONY: static-check
 static-check: ## Run static code checks
 	golangci-lint run
 	go-cleanarch -ignore-tests
@@ -16,6 +16,7 @@ generate: ## Generate all code to run the service
 	go generate ./...
 	@# the experimental flag is required for pgx compatible code, see: https://docs.sqlc.dev/en/stable/guides/using-go-and-pgx.html?highlight=experimental#getting-started
 	sqlc generate --experimental
+	bobgen-psql -c contexts/auth/internal/bobgen.yaml
 	npx prettier . --write
 	npx tailwindcss -i ./public/css/input.css  -o ./public/css/main.css --minify
 
@@ -36,9 +37,10 @@ test-integration:
 
 
 
-.PHONY:dev-tools
+.PHONY: dev-tools
 dev-tools: ## Initialise this machine with development dependencies
 	go install github.com/kyleconroy/sqlc/cmd/sqlc@latest
+	go install github.com/stephenafamo/bob/gen/bobgen-psql@latest
 	npm i -D
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b $(go env GOPATH)/bin v1.55.0
 	go install github.com/roblaszczak/go-cleanarch@latest
