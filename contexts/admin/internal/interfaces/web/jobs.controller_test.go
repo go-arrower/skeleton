@@ -8,13 +8,11 @@ import (
 	"testing"
 
 	"github.com/go-arrower/arrower/app"
-	"github.com/go-arrower/arrower/setting"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-arrower/skeleton/contexts/admin/internal/application"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 func TestJobsController_JobsHome(t *testing.T) { //nolint:dupl
@@ -170,7 +168,7 @@ func TestJobsController_DeleteHistory(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(validRequest, rec)
 
-		handler := web.NewJobsController(nil, nil, nil, web2.NewDefaultPresenter(setting.NewInMemorySettings()), application.NewJobsSuccessApplication(),
+		handler := web.NewJobsController(nil, nil, nil, application.NewJobsSuccessApplication(),
 			application.App{
 				PruneJobHistory: app.TestSuccessRequestHandler[application.PruneJobHistoryRequest, application.PruneJobHistoryResponse](),
 			},
@@ -187,7 +185,7 @@ func TestJobsController_DeleteHistory(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := echoRouter.NewContext(validRequest, rec)
 
-		handler := web.NewJobsController(nil, nil, nil, web2.NewDefaultPresenter(setting.NewInMemorySettings()), application.NewJobsSuccessApplication(),
+		handler := web.NewJobsController(nil, nil, nil, application.NewJobsSuccessApplication(),
 			application.App{
 				PruneJobHistory: app.TestFailureRequestHandler[application.PruneJobHistoryRequest, application.PruneJobHistoryResponse](),
 			},

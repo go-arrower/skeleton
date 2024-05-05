@@ -89,12 +89,12 @@ func main() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		presenter := web.NewDefaultPresenter(arrower.Settings)
-		p, _ := presenter.MapDefaultBasePage(c.Request().Context(), "", map[string]interface{}{
-			"userID": userID,
-		})
-		p["Flashes"] = flashes
-		p["UserID"] = userID
+		p := map[string]interface{}{
+			"Title":   "Welcome to Arrower!",
+			"userID":  userID,
+			"Flashes": flashes,
+			"UserID":  userID,
+		}
 
 		return c.Render(http.StatusOK, "=>home", p)
 		//return c.Render(http.StatusOK, "=>home", echo.Map{

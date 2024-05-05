@@ -22,7 +22,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/web"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/views"
 	"github.com/go-arrower/skeleton/shared/infrastructure"
-	sweb "github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 const contextName = "admin"
@@ -102,7 +101,6 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 			logger,
 			models.New(di.PGx),
 			jobRepository,
-			sweb.NewDefaultPresenter(di.Settings),
 			application.NewLoggedJobsApplication(
 				application.NewJobsApplication(repository.NewPostgresJobsRepository(di.PGx)),
 				logger,
@@ -114,7 +112,6 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 			di.Settings,
 			alogmodels.New(di.PGx),
 			di.AdminRouter.Group("/logs"),
-			sweb.NewDefaultPresenter(di.Settings),
 		),
 	}
 
@@ -127,6 +124,15 @@ func setupAdminContext(di *infrastructure.Container) (*AdminContext, error) {
 		err := di.WebRenderer.AddContext(contextName, views)
 		if err != nil {
 			return nil, fmt.Errorf("could not add context views: %w", err)
+		}
+
+		err = di.WebRenderer.AddLayoutData(contextName, "default", func(ctx context.Context) (map[string]any, error) {
+			return map[string]any{
+				"Title": "arrower admin",
+			}, nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not add layout data: %w", err)
 		}
 	}
 

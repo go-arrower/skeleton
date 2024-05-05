@@ -19,7 +19,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/admin/internal/domain/jobs"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/interfaces/repository/models"
 	"github.com/go-arrower/skeleton/contexts/admin/internal/views/pages"
-	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 const (
@@ -33,7 +32,6 @@ func NewJobsController(
 	logger alog.Logger,
 	queries *models.Queries,
 	repo jobs.Repository,
-	presenter *web.DefaultPresenter,
 	app application.JobsApplication,
 	appDI application.App,
 ) *JobsController {
@@ -42,7 +40,6 @@ func NewJobsController(
 		queries: queries,
 		repo:    repo,
 		app:     app,
-		p:       presenter,
 		appDI:   appDI,
 	}
 }
@@ -54,8 +51,6 @@ type JobsController struct {
 	repo    jobs.Repository
 	app     application.JobsApplication
 	appDI   application.App
-
-	p *web.DefaultPresenter
 }
 
 func (jc *JobsController) ListQueues() func(c echo.Context) error {
@@ -65,9 +60,10 @@ func (jc *JobsController) ListQueues() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "jobs.home", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queues", echo.Map{
+		return c.Render(http.StatusOK, "jobs.home", echo.Map{
+			"Title":  "Queues",
 			"Queues": res.QueueStats,
-		}))
+		})
 	}
 }
 
@@ -163,11 +159,12 @@ func (jc *JobsController) ShowQueue() func(c echo.Context) error {
 		page := buildQueuePage(queue, res.Jobs, res.Kpis)
 
 		return c.Render(http.StatusOK, "jobs.queue",
-			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Queue "+page.QueueName, echo.Map{
+			echo.Map{
+				"Title":     page.QueueName + " queue",
 				"QueueName": page.QueueName,
 				"Jobs":      page.Jobs,
 				"Stats":     page.Stats,
-			}))
+			})
 	}
 }
 
@@ -178,9 +175,10 @@ func (jc *JobsController) ListWorkers() func(c echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		return c.Render(http.StatusOK, "jobs.workers", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Worker", echo.Map{
+		return c.Render(http.StatusOK, "jobs.workers", echo.Map{
+			"Title":   "Workers",
 			"workers": presentWorkers(res.Pool),
-		}))
+		})
 	}
 }
 
@@ -228,11 +226,12 @@ func (jc *JobsController) ShowMaintenance() func(c echo.Context) error {
 		}
 
 		return c.Render(http.StatusOK, "jobs.maintenance",
-			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Maintenance", echo.Map{
+			echo.Map{
+				"Title":   "Maintenance",
 				"Jobs":    size.Jobs,
 				"History": size.History,
 				"Queues":  queues,
-			}),
+			},
 		)
 	}
 }
@@ -248,10 +247,10 @@ func (jc *JobsController) VacuumJobTables() func(echo.Context) error {
 
 		// reload the dashboard badges with the size, by using htmx's oob technique
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size",
-			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+			echo.Map{
 				"Jobs":    size.Jobs,
 				"History": size.History,
-			}),
+			},
 		)
 	}
 }
@@ -277,10 +276,10 @@ func (jc *JobsController) DeleteHistory() func(echo.Context) error {
 
 		// reload the dashboard badges with the new size, by using htmx's oob technique.
 		return c.Render(http.StatusOK, "jobs.maintenance#table-size",
-			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Settings", echo.Map{
+			echo.Map{
 				"Jobs":    size.Jobs,
 				"History": size.History,
-			}),
+			},
 		)
 	}
 }
@@ -366,12 +365,13 @@ func (jc *JobsController) CreateJobs() func(c echo.Context) error {
 		year, month, day := time.Now().Date()
 
 		return c.Render(http.StatusOK, "jobs.schedule",
-			jc.p.MustMapDefaultBasePage(c.Request().Context(), "Schedule a Job", echo.Map{
+			echo.Map{
+				"Title":    "Schedule a Job",
 				"Queues":   queues,
 				"JobTypes": jobType,
 				"RunAt":    time.Now().Format(htmlDatetimeLayout),
 				"RunAtMin": fmt.Sprintf("%d-%02d-%02dT00:00", year, month, day),
-			}),
+			},
 		)
 	}
 }
@@ -661,8 +661,9 @@ func (jc *JobsController) ShowJob() func(ctx echo.Context) error {
 			return fmt.Errorf("%v", err)
 		}
 
-		return c.Render(http.StatusOK, "jobs.job", jc.p.MustMapDefaultBasePage(c.Request().Context(), "Job", echo.Map{
-			"Jobs": pages.ConvertFinishedJobsForShow(jobs),
-		}))
+		return c.Render(http.StatusOK, "jobs.job", echo.Map{
+			"Title": "Job",
+			"Jobs":  pages.ConvertFinishedJobsForShow(jobs),
+		})
 	}
 }

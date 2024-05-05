@@ -20,7 +20,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/application"
 	"github.com/go-arrower/skeleton/contexts/auth/internal/interfaces/repository/models"
-	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 /*
@@ -34,14 +33,9 @@ Proposal for naming conventions:
 	- delete
 */
 
-func NewUserController(app application.UserApplication, routes *echo.Group, presenter *web.DefaultPresenter, secret []byte, settings setting.Settings) UserController {
-	if presenter == nil {
-		presenter = web.NewDefaultPresenter(settings)
-	}
-
+func NewUserController(app application.UserApplication, routes *echo.Group, secret []byte, settings setting.Settings) UserController {
 	return UserController{
 		r:                   routes,
-		p:                   presenter,
 		knownDeviceKeyPairs: securecookie.CodecsFromPairs(secret),
 		app:                 app,
 	} //nolint:exhaustruct
@@ -49,7 +43,6 @@ func NewUserController(app application.UserApplication, routes *echo.Group, pres
 
 type UserController struct {
 	r *echo.Group
-	p *web.DefaultPresenter
 
 	Queries *models.Queries
 
@@ -114,12 +107,10 @@ func (uc UserController) Login() func(echo.Context) error {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Login", map[string]any{
+			return c.Render(http.StatusOK, "auth=>=>auth.login", map[string]any{
 				"Errors":     valErrs,
 				"LoginEmail": loginUser.LoginEmail,
 			})
-
-			return c.Render(http.StatusOK, "auth=>=>auth.login", page)
 		}
 
 		sess.AddFlash("Login successful")
@@ -243,7 +234,12 @@ func (uc UserController) List() func(echo.Context) error {
 			return fmt.Errorf("%w", err)
 		}
 
-		page, err := uc.p.MapDefaultBasePage(c.Request().Context(), "Alle Nutzer", echo.Map{
+		if query == "" { // prevent the empty query param `?q=` to show in the URL
+			c.Response().Header().Set("HX-Push-Url", "/admin/auth/users")
+		}
+
+		return c.Render(http.StatusOK, "users", echo.Map{
+			"Title":         "Alle Nutzer",
 			"users":         res.Users,
 			"currentUserID": auth.CurrentUserID(c.Request().Context()),
 			"filtered":      res.Filtered,
@@ -251,15 +247,6 @@ func (uc UserController) List() func(echo.Context) error {
 			"query":         query,
 			"couldBeEmpty":  offset == "", // if no offset is given and the users are zero => empty list
 		})
-		if err != nil {
-			return fmt.Errorf("%w", err)
-		}
-
-		if query == "" { // prevent the empty query param `?q=` to show in the URL
-			c.Response().Header().Set("HX-Push-Url", "/admin/auth/users")
-		}
-
-		return c.Render(http.StatusOK, "users", page)
 	}
 }
 
@@ -308,12 +295,11 @@ func (uc UserController) Register() func(echo.Context) error {
 				valErrs[e.StructField()] = e.Translate(nil)
 			}
 
-			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Registrieren", map[string]any{
+			return c.Render(http.StatusOK, "auth=>=>auth.user.create", map[string]any{
+				"Title":         "Registrieren",
 				"Errors":        valErrs,
 				"RegisterEmail": newUser.RegisterEmail,
 			})
-
-			return c.Render(http.StatusOK, "auth=>=>auth.user.create", page)
 		}
 
 		sess.Options = &sessions.Options{
@@ -375,11 +361,10 @@ func (uc UserController) Show() func(echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Nutzer Profil", echo.Map{
-			"User": res.User,
+		return c.Render(http.StatusOK, "auth.user.show", echo.Map{
+			"Title": "Nutzer Profil",
+			"User":  res.User,
 		})
-
-		return c.Render(http.StatusOK, "auth.user.show", page)
 	}
 }
 
@@ -426,12 +411,10 @@ func (uc UserController) Store() func(echo.Context) error {
 				}
 			}
 
-			page, _ := uc.p.MapDefaultBasePage(c.Request().Context(), "Neuer Benutzer", map[string]any{
+			return c.Render(http.StatusOK, "auth.user.new", map[string]any{
 				"Errors": valErrs,
 				"Email":  newUser.Email,
 			})
-
-			return c.Render(http.StatusOK, "auth.user.new", page)
 		}
 
 		return c.Redirect(http.StatusSeeOther, "/admin/auth/users")

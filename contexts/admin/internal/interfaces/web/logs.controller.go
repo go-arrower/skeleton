@@ -14,8 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
-
-	"github.com/go-arrower/skeleton/shared/interfaces/web"
 )
 
 func NewLogsController(
@@ -23,14 +21,12 @@ func NewLogsController(
 	settings setting.Settings,
 	queries *models.Queries,
 	routes *echo.Group,
-	presenter *web.DefaultPresenter,
 ) *LogsController {
 	return &LogsController{
 		logger:   logger,
 		settings: settings,
 		queries:  queries,
 		r:        routes,
-		p:        presenter,
 	}
 }
 
@@ -39,7 +35,6 @@ type LogsController struct {
 	settings setting.Settings
 	queries  *models.Queries
 	r        *echo.Group
-	p        *web.DefaultPresenter
 }
 
 func (lc *LogsController) ShowLogs() {
@@ -128,6 +123,7 @@ func (lc *LogsController) ShowLogs() {
 		}
 
 		vals := echo.Map{
+			"Title":     "Logs",
 			"SearchMsg": searchMsgParam,
 			"Logs":      logs,
 			"Filter":    filter,
@@ -142,7 +138,7 @@ func (lc *LogsController) ShowLogs() {
 			vals["LastLogTime"] = time.Now()
 		}
 
-		return c.Render(http.StatusOK, "logs.show", lc.p.MustMapDefaultBasePage(c.Request().Context(), "Logs", vals))
+		return c.Render(http.StatusOK, "logs.show", vals)
 	}).Name = "admin.logs"
 }
 

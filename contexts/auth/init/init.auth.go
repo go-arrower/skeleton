@@ -11,7 +11,6 @@ import (
 	"github.com/go-arrower/skeleton/contexts/auth"
 
 	"github.com/go-arrower/arrower/setting"
-	web2 "github.com/go-arrower/skeleton/shared/interfaces/web"
 
 	"github.com/go-arrower/arrower/mw"
 	"go.opentelemetry.io/otel/metric"
@@ -40,6 +39,15 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	_ = tracer
 
 	_ = di.WebRenderer.AddContext("auth", os.DirFS("contexts/auth/internal/views")) // todo build path automatically, as it is a convention (?)
+
+	err := di.WebRenderer.AddLayoutData(contextName, "default", func(ctx context.Context) (map[string]any, error) {
+		return map[string]any{
+			"Title": "arrower auth",
+		}, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not add layout data: %w", err)
+	}
 
 	{ // register default auth settings
 		_ = di.Settings.Save(context.Background(), auth.SettingAllowRegistration, setting.NewValue(true))
@@ -83,7 +91,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 		ListUsers: application.NewListUsersQueryHandler(repo),
 	}
 
-	userController := web.NewUserController(app, webRoutes, web2.NewDefaultPresenter(di.Settings), []byte("secret"), di.Settings)
+	userController := web.NewUserController(app, webRoutes, []byte("secret"), di.Settings)
 	userController.Queries = queries
 	userController.CmdLoginUser = mw.Traced(di.TraceProvider,
 		mw.Metric(di.MeterProvider,
@@ -150,7 +158,7 @@ func NewAuthContext(di *infrastructure.Container) (*AuthContext, error) {
 	)
 
 	authContext := AuthContext{
-		settingsController: web.NewSettingsController(web2.NewDefaultPresenter(di.Settings), queries),
+		settingsController: web.NewSettingsController(queries),
 		userController:     userController,
 		logger:             logger,
 		traceProvider:      di.TraceProvider,

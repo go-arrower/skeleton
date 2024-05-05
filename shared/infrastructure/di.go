@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-arrower/skeleton/shared/views"
+
 	"github.com/go-arrower/arrower/alog"
 	"github.com/go-arrower/arrower/jobs"
 	"github.com/go-arrower/arrower/postgres"
@@ -193,6 +195,11 @@ func InitialiseDefaultArrowerDependencies(ctx context.Context, conf *Config) (*C
 		}
 
 		r, _ := web.NewEchoRenderer(container.Logger, container.TraceProvider, router, os.DirFS("shared/views"), hotReload) // todo: if prod load from embed
+		err := r.AddBaseData("default", views.NewDefaultBaseDataFunc(container.Settings))
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not add default base data: %w", err) // todo return shutdown, as some services like postgres are already started
+		}
+
 		router.Renderer = r
 		container.WebRenderer = r
 
