@@ -539,11 +539,11 @@ func buildQueuePage(queue string, jobs []jobs.PendingJob, kpis jobs.QueueKPIs) Q
 	}
 }
 
-func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
-	for i := 0; i < len(jobs); i++ { //nolint:varnamelen
+func prettyFormatPayload(pJobs []jobs.PendingJob) []jobs.PendingJob {
+	for i := 0; i < len(pJobs); i++ { //nolint:varnamelen
 		var m application.JobPayload
 
-		_ = json.Unmarshal([]byte(jobs[i].Payload), &m)
+		_ = json.Unmarshal([]byte(pJobs[i].Payload), &m)
 		data, _ := json.Marshal(m.JobData)
 
 		var prettyJSON bytes.Buffer
@@ -551,11 +551,14 @@ func prettyFormatPayload(jobs []jobs.PendingJob) []jobs.PendingJob {
 		if err := json.Indent(&prettyJSON, data, "", "  "); err != nil {
 		}
 
-		jobs[i].Payload = prettyJSON.String()
-		jobs[i].RunAtFmt = fmtRunAtTime(jobs[i].RunAt)
+		if pJobs[i].Queue == "" {
+			pJobs[i].Queue = string(jobs.DefaultQueueName)
+		}
+		pJobs[i].Payload = prettyJSON.String()
+		pJobs[i].RunAtFmt = fmtRunAtTime(pJobs[i].RunAt)
 	}
 
-	return jobs
+	return pJobs
 }
 
 func fmtRunAtTime(tme time.Time) string {
