@@ -3,6 +3,7 @@ package web_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"math/rand"
 	"os"
@@ -560,3 +561,276 @@ func TestRenderer_AddContext(t *testing.T) {
 // render page with other base
 // render with other layout
 // check all the non existing cases for base, layout, page, component, fragment (shared & context)
+
+func TestRenderer_AddBaseData(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	/*
+		todo concurrency & race
+	*/
+
+	t.Run("add base data", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+		assert.NoError(t, err)
+
+		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+			return map[string]any{
+				"baseTitle": "baseTitle",
+			}, nil
+		})
+		assert.NoError(t, err)
+
+		err = r.AddBaseData("", func(ctx context.Context) (map[string]any, error) {
+			return web.Map{
+				"BaseHeader": "baseHeader",
+			}, nil
+		})
+		assert.NoError(t, err)
+
+		buf := &bytes.Buffer{}
+		err = r.Render(ctx, buf, web.SharedViews, "p0", nil)
+		assert.NoError(t, err)
+
+		assert.Contains(t, buf.String(), "baseTitle")
+		assert.Contains(t, buf.String(), "baseHeader")
+		assert.Contains(t, buf.String(), testdata.P0Content)
+	})
+
+	t.Run("overwrite base data", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+		assert.NoError(t, err)
+
+		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+			return map[string]any{
+				"baseTitle": "baseTitle 0",
+			}, nil
+		})
+		assert.NoError(t, err)
+		err = r.AddBaseData("", func(ctx context.Context) (map[string]any, error) {
+			return web.Map{
+				"baseTitle": "baseTitle 1",
+			}, nil
+		})
+		assert.NoError(t, err)
+
+		t.Run("last base data wins", func(t *testing.T) {
+			t.Parallel()
+
+			buf := &bytes.Buffer{}
+			err = r.Render(ctx, buf, web.SharedViews, "p0", nil)
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), "baseTitle 1")
+			assert.NotContains(t, buf.String(), "baseTitle 0")
+		})
+
+		t.Run("any map", func(t *testing.T) {
+			t.Parallel()
+
+			buf := &bytes.Buffer{}
+			err = r.Render(ctx, buf, web.SharedViews, "p0", map[string]any{
+				"baseTitle": "baseTitle 2",
+			})
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), "baseTitle 2")
+			assert.NotContains(t, buf.String(), "baseTitle 1")
+			assert.NotContains(t, buf.String(), "baseTitle 0")
+		})
+
+		t.Run("string map", func(t *testing.T) {
+			t.Parallel()
+
+			buf := &bytes.Buffer{}
+			err = r.Render(ctx, buf, web.SharedViews, "p0", map[string]string{
+				"baseTitle": "baseTitle 2",
+			})
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), "baseTitle 2")
+			assert.NotContains(t, buf.String(), "baseTitle 1")
+			assert.NotContains(t, buf.String(), "baseTitle 0")
+		})
+
+		type someType struct {
+			Name string
+		}
+
+		t.Run("struct type", func(t *testing.T) {
+			t.Parallel()
+
+			buf := &bytes.Buffer{}
+			err = r.Render(ctx, buf, web.SharedViews, "p0", someType{Name: "someName"})
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), "someName")
+			assert.Contains(t, buf.String(), "baseTitle 1")
+			assert.NotContains(t, buf.String(), "baseTitle 0")
+		})
+
+		t.Run("slice type", func(t *testing.T) {
+			t.Parallel()
+
+			buf := &bytes.Buffer{}
+			err = r.Render(ctx, buf, web.SharedViews, "p0", []someType{{Name: "someName"}})
+			assert.NoError(t, err)
+
+			assert.Contains(t, buf.String(), "<li>someName</li>")
+			assert.Contains(t, buf.String(), "baseTitle 1")
+			assert.NotContains(t, buf.String(), "baseTitle 0")
+		})
+	})
+
+	t.Run("data func fails", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+		assert.NoError(t, err)
+
+		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+			return nil, fmt.Errorf("some-error")
+		})
+		assert.NoError(t, err)
+
+		buf := &bytes.Buffer{}
+		err = r.Render(ctx, buf, web.SharedViews, "p0", nil)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, web.ErrRenderFailed)
+		assert.Empty(t, buf.String())
+	})
+
+	t.Run("base not exists", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+		assert.NoError(t, err)
+
+		err = r.AddBaseData("non-existing", func(ctx context.Context) (map[string]any, error) {
+			return nil, nil
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
+	})
+}
+
+func TestRenderer_AddLayoutData(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	/*
+		todo
+		concurrency & race
+		different base
+	*/
+
+	t.Run("layout data", func(t *testing.T) {
+		t.Parallel()
+
+		r := testRendererReadyForLayoutData(t)
+
+		err := r.AddLayoutData(testdata.ExampleContext, "default", func(ctx context.Context) (map[string]any, error) {
+			return map[string]any{
+				"layoutTitle": "layoutTitle",
+			}, nil
+		})
+		assert.NoError(t, err)
+		err = r.AddLayoutData(testdata.ExampleContext, "", func(ctx context.Context) (map[string]any, error) {
+			return map[string]any{
+				"LayoutHeader": "layoutHeader",
+			}, nil
+		})
+		assert.NoError(t, err)
+
+		// ensure the base and layout data is available in all context template and page combinations.
+		tests := map[string]struct {
+			templateName string
+		}{
+			"page":                {"p0"},
+			"default layout page": {"default=>p0"},
+			"other layout page":   {"other=>p0"},
+		}
+
+		for testName, tt := range tests {
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+				buf := &bytes.Buffer{}
+
+				err = r.Render(ctx, buf, testdata.ExampleContext, tt.templateName, map[string]any{
+					"baseTitle": "baseTitle 2",
+				})
+				assert.NoError(t, err)
+
+				assert.Contains(t, buf.String(), "baseTitle 2")
+				assert.Contains(t, buf.String(), "layoutTitle")
+				assert.Contains(t, buf.String(), "layoutHeader")
+			})
+		}
+	})
+
+	t.Run("context does not exist", func(t *testing.T) {
+		t.Parallel()
+
+		r := testRendererReadyForLayoutData(t)
+
+		err := r.AddLayoutData("not-exists", "default", func(ctx context.Context) (map[string]any, error) {
+			return nil, nil
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
+	})
+
+	t.Run("layout does not exist", func(t *testing.T) {
+		t.Parallel()
+
+		r := testRendererReadyForLayoutData(t)
+
+		err := r.AddLayoutData(testdata.ExampleContext, "non-exists", func(ctx context.Context) (map[string]any, error) {
+			return nil, nil
+		})
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
+	})
+
+	t.Run("data func fails", func(t *testing.T) {
+		t.Parallel()
+
+		r := testRendererReadyForLayoutData(t)
+
+		err := r.AddLayoutData(testdata.ExampleContext, "default", func(ctx context.Context) (map[string]any, error) {
+			return nil, fmt.Errorf("some-error")
+		})
+		assert.NoError(t, err)
+
+		buf := &bytes.Buffer{}
+		err = r.Render(ctx, buf, testdata.ExampleContext, "p0", nil)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, web.ErrRenderFailed)
+		assert.Empty(t, buf.String())
+	})
+}
+
+func testRendererReadyForLayoutData(t *testing.T) *web.Renderer {
+	t.Helper()
+
+	r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+	assert.NoError(t, err)
+
+	err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+		return map[string]any{
+			"baseTitle": "baseTitle 0",
+		}, nil
+	})
+	assert.NoError(t, err)
+
+	err = r.AddContext(testdata.ExampleContext, testdata.FilesAddLayoutData())
+	assert.NoError(t, err)
+
+	return r
+}

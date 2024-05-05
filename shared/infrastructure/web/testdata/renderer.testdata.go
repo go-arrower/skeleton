@@ -111,6 +111,46 @@ func FilesSharedViewsWithCustomFuncs() fstest.MapFS {
 	return fs
 }
 
+func FilesAddBaseData() fstest.MapFS {
+	return fstest.MapFS{
+		"components/c0.html": {Data: []byte(C0Content)},
+		"pages/p0.html":      {Data: []byte(P0Content)},
+		"default.base.html": {Data: []byte(BaseLayoutContent + `
+	{{ .baseTitle }}
+	{{ .BaseHeader }}
+	{{ .someType.Name }}
+
+	{{ range .someTypes }}
+		<li>{{ .Name }}</li>
+	{{ end }}
+
+    {{block "layout" .}}
+        {{block "content" .}}
+            ` + BaseLayoutContentPlaceholder + `
+        {{end}}
+    {{end}}`)},
+	}
+}
+
+func FilesAddLayoutData() fstest.MapFS {
+	return fstest.MapFS{
+		"components/c0.html": {Data: []byte(C0Content)},
+		"pages/p0.html":      {Data: []byte(P0Content)},
+		"default.layout.html": {Data: []byte(`
+		{{ .layoutTitle }}
+		{{ .LayoutHeader }}
+        {{block "content" .}}
+            ` + ContextLayoutContentPlaceholder + `
+        {{end}}`)},
+		"other.layout.html": {Data: []byte(`
+		{{ .layoutTitle }}
+		{{ .LayoutHeader }}
+        {{block "content" .}}
+            ` + ContextLayoutContentPlaceholder + `
+        {{end}}`)},
+	}
+}
+
 var SingleNonDefaultLayout = fstest.MapFS{ // TODO remove?
 	"pages/p0.page.html": {Data: []byte(P0Content)},
 	"global.base.html":   {Data: []byte(BaseLayoutContent)},

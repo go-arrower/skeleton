@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -33,6 +34,11 @@ const (
 
 	templateSeparator = "=>"
 	fragmentSeparator = "#"
+)
+
+type (
+	Map      map[string]any
+	DataFunc func(ctx context.Context) (map[string]any, error)
 )
 
 // NewRenderer prepares a renderer for HTML web views.
@@ -62,13 +68,15 @@ func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS 
 	)
 
 	return &Renderer{
-		logger:    logger,
-		tracer:    tracer,
-		cache:     sync.Map{},
-		mu:        sync.Mutex{},
-		views:     views,
-		funcMap:   funcMap,
-		hotReload: hotReload,
+		logger:      logger,
+		tracer:      tracer,
+		cache:       sync.Map{},
+		mu:          sync.Mutex{},
+		views:       views,
+		baseData:    map[string][]DataFunc{},
+		contextData: map[string]map[string][]DataFunc{},
+		funcMap:     funcMap,
+		hotReload:   hotReload,
 	}, nil
 }
 
@@ -78,8 +86,10 @@ type Renderer struct {
 
 	cache sync.Map
 
-	mu    sync.Mutex
-	views map[string]viewTemplates
+	mu          sync.Mutex
+	views       map[string]viewTemplates
+	baseData    map[string][]DataFunc
+	contextData map[string]map[string][]DataFunc
 
 	funcMap   template.FuncMap
 	hotReload bool
@@ -158,6 +168,11 @@ func (r *Renderer) Render(ctx context.Context, w io.Writer, contextName string, 
 
 	if nil == templ.Lookup(parsedTempl.templateName()) {
 		return ErrNotExistsFragment
+	}
+
+	data, err = r.getMergedData(ctx, parsedTempl, data)
+	if err != nil {
+		return fmt.Errorf("%w: could not build data: %w", ErrRenderFailed, err)
 	}
 
 	err = templ.ExecuteTemplate(w, parsedTempl.templateName(), data)
@@ -564,4 +579,114 @@ func (r *Renderer) AddContext(name string, viewFS fs.FS) error {
 	r.views[name] = tmp
 
 	return nil
+}
+
+func (r *Renderer) AddBaseData(baseName string, dataFunc DataFunc) error {
+	if baseName == "" {
+		baseName = "default"
+	}
+
+	if _, exists := r.views[SharedViews].rawLayouts[baseName]; !exists {
+		return fmt.Errorf("%w: could not add base data", ErrCreateRendererFailed)
+	}
+
+	r.baseData[baseName] = append(r.baseData[baseName], dataFunc)
+
+	return nil
+}
+
+func (r *Renderer) AddLayoutData(context string, layoutName string, dataFunc DataFunc) error {
+	// todo if context == Shared => return error (or add as base instead)
+
+	if layoutName == "" {
+		layoutName = "default"
+	}
+
+	if _, exists := r.views[context].rawLayouts[layoutName]; !exists {
+		return fmt.Errorf("%w: could not add layout data", ErrCreateRendererFailed)
+	}
+
+	fmt.Println(context)
+	fmt.Println(r.views[context].rawLayouts[layoutName])
+	fmt.Println(r.contextData[context])
+	fmt.Println(r.contextData[context] == nil)
+	fmt.Println(r.contextData[context][layoutName])
+
+	funcs := r.contextData[context][layoutName]
+	funcs = append(funcs, dataFunc)
+
+	if r.contextData[context] == nil {
+		r.contextData[context] = map[string][]DataFunc{}
+		r.contextData[context][layoutName] = funcs
+	} else {
+		r.contextData[context][layoutName] = funcs
+	}
+
+	return nil
+}
+
+func (r *Renderer) getMergedData(ctx context.Context, parsedTemplate parsedTemplate, pageData any) (Map, error) {
+	data := Map{}
+
+	for _, df := range r.baseData[parsedTemplate.baseLayout] {
+		res, err := df(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get base data: %w", err)
+		}
+
+		for k, v := range res {
+			data[k] = v
+		}
+	}
+
+	for _, df := range r.contextData[parsedTemplate.context][parsedTemplate.contextLayout] {
+		res, err := df(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get context layout data: %w", err)
+		}
+
+		for k, v := range res {
+			data[k] = v
+		}
+	}
+
+	if pageData == nil {
+		return data, nil
+	}
+
+	pageDataType := reflect.TypeOf(pageData)
+
+	canConvertAny := pageDataType.ConvertibleTo(reflect.TypeOf(map[string]any{}))
+	if canConvertAny {
+		mp := reflect.ValueOf(pageData).Convert(reflect.TypeOf(map[string]any{}))
+		iter := mp.MapRange()
+		for iter.Next() {
+			k := iter.Key()
+			v := iter.Value()
+			data[k.Interface().(string)] = v.Interface()
+		}
+	}
+
+	canConvertString := pageDataType.ConvertibleTo(reflect.TypeOf(map[string]string{}))
+	if canConvertString {
+		mp := reflect.ValueOf(pageData).Convert(reflect.TypeOf(map[string]string{}))
+		iter := mp.MapRange()
+		for iter.Next() {
+			k := iter.Key()
+			v := iter.Value()
+			data[k.Interface().(string)] = v.Interface()
+		}
+	}
+
+	isStruct := pageDataType.Kind() == reflect.Struct
+	if isStruct {
+		data[pageDataType.Name()] = pageData
+	}
+
+	isSlice := pageDataType.Kind() == reflect.Slice
+	if isSlice {
+		data[pageDataType.Elem().Name()+"s"] = pageData
+	}
+
+	return data, nil
 }
