@@ -42,7 +42,13 @@ type (
 )
 
 // NewRenderer prepares a renderer for HTML web views.
-func NewRenderer(logger alog.Logger, traceProvider trace.TracerProvider, viewFS fs.FS, funcMap template.FuncMap, hotReload bool) (*Renderer, error) {
+func NewRenderer(
+	logger alog.Logger,
+	traceProvider trace.TracerProvider,
+	viewFS fs.FS,
+	funcMap template.FuncMap,
+	hotReload bool,
+) (*Renderer, error) {
 	if viewFS == nil {
 		return nil, fmt.Errorf("%w: missing views", ErrCreateRendererFailed)
 	}
@@ -115,7 +121,7 @@ func (r *Renderer) Render(ctx context.Context, w io.Writer, contextName string, 
 		r.mu.Lock() // todo is this lock still reqired, as the cache is delted via range now. Instead of = sync.Map{} of previous implementation => for the r.views
 
 		// delete all keys
-		r.cache.Range(func(key interface{}, value interface{}) bool {
+		r.cache.Range(func(key interface{}, _ interface{}) bool {
 			r.cache.Delete(key)
 			return true
 		})
@@ -146,6 +152,7 @@ func (r *Renderer) Render(ctx context.Context, w io.Writer, contextName string, 
 		templ = t.(*template.Template)
 	} else {
 		isContext := parsedTempl.context != ""
+
 		newTemplate, err := r.buildPageTemplate(isContext, parsedTempl)
 		if err != nil {
 			return err
@@ -238,15 +245,20 @@ func (r *Renderer) buildPageTemplate(isContext bool, parsedTempl parsedTemplate)
 
 		newTemplate, err := newTemplate.AddParseTree(parsedTempl.key(), newTemplate.Tree)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrRenderFailed, err)
+			return nil, fmt.Errorf("%w: %v", ErrRenderFailed, err) //nolint:errorlint // prevent err in api
 		}
 
-		return newTemplate.Clone()
+		newTemplate, err = newTemplate.Clone()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrRenderFailed, err) //nolint:errorlint // prevent err in api
+		}
+
+		return newTemplate, nil
 	}
 
 	newTemplate, err := r.views[parsedTempl.context].components.Clone()
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrRenderFailed, err)
+		return nil, fmt.Errorf("%w: %v", ErrRenderFailed, err) //nolint:errorlint // prevent err in api
 	}
 
 	isPageWithoutLayout := parsedTempl.baseLayout == "" && parsedTempl.contextLayout == ""
@@ -263,7 +275,8 @@ func (r *Renderer) buildPageTemplate(isContext bool, parsedTempl parsedTemplate)
 		}
 
 		if isContext {
-			newTemplate, err = newTemplate.New("layout").Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
+			newTemplate, err = newTemplate.New("layout").
+				Parse(r.views[parsedTempl.context].rawLayouts[parsedTempl.contextLayout])
 			if err != nil {
 				return nil, fmt.Errorf("%w: could not parse layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 			}
@@ -274,7 +287,8 @@ func (r *Renderer) buildPageTemplate(isContext bool, parsedTempl parsedTemplate)
 				return nil, ErrNotExistsLayout
 			}
 
-			newTemplate, err = newTemplate.New("layout").Parse(r.views["admin"].rawLayouts[parsedTempl.contextLayout])
+			newTemplate, err = newTemplate.New("layout").
+				Parse(r.views["admin"].rawLayouts[parsedTempl.contextLayout])
 			if err != nil {
 				return nil, fmt.Errorf("%w: could not parse admin layout: %v", ErrRenderFailed, err) //nolint:errorlint,lll // prevent err in api
 			}
@@ -303,7 +317,7 @@ func (r *Renderer) buildPageTemplate(isContext bool, parsedTempl parsedTemplate)
 func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS, funcMap template.FuncMap, isContext bool) (viewTemplates, error) {
 	components, err := fs.Glob(viewFS, "components/*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("could not get components from fs: %v", err) //nolint:errorlint,lll // prevent err in api
+		return viewTemplates{}, fmt.Errorf("could not get components from fs: %v", err) //nolint:errorlint,goerr113,lll // prevent err in api
 	}
 
 	componentTemplates := template.New("<empty>").Funcs(sprig.FuncMap()).Funcs(funcMap)
@@ -311,14 +325,14 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS,
 	for _, c := range components {
 		file, err := readFile(viewFS, c) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("could not read component file: %s: %v", file, err) //nolint:errorlint,lll // prevent err in api
+			return viewTemplates{}, fmt.Errorf("could not read component file: %s: %w", file, err)
 		}
 
 		name := componentName(c)
 
 		_, err = componentTemplates.New(name).Parse(file)
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("could not parse component: %s: %v", file, err) //nolint:errorlint,lll // prevent err in api
+			return viewTemplates{}, fmt.Errorf("could not parse component: %s: %v", file, err) //nolint:errorlint,goerr113,lll // prevent err in api
 		}
 	}
 
@@ -330,7 +344,7 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS,
 
 	pages, err := fs.Glob(viewFS, "pages/*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("could not get pages from fs: %v", err) //nolint:errorlint,lll // prevent err in api
+		return viewTemplates{}, fmt.Errorf("could not get pages from fs: %v", err) //nolint:errorlint,goerr113,lll // prevent err in api
 	}
 
 	rawPages := make(map[string]string)
@@ -338,7 +352,7 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS,
 	for _, page := range pages {
 		file, err := readFile(viewFS, page) //nolint:govet // govet is too pedantic for shadowing errors
 		if err != nil {
-			return viewTemplates{}, fmt.Errorf("could not read page file: %s: %v", file, err) //nolint:errorlint,lll // prevent err in api
+			return viewTemplates{}, fmt.Errorf("could not read page file: %s: %w", file, err)
 		}
 
 		pn := pageName(page)
@@ -354,29 +368,30 @@ func prepareViewTemplates(ctx context.Context, logger alog.Logger, viewFS fs.FS,
 
 	layouts, err := fs.Glob(viewFS, "*.html")
 	if err != nil {
-		return viewTemplates{}, fmt.Errorf("could not get layouts from fs: %v", err) //nolint:errorlint,lll // prevent err in api
+		return viewTemplates{}, fmt.Errorf("could not get layouts from fs: %v", err) //nolint:errorlint,goerr113,lll // prevent err in api
 	}
 
 	var defaultLayout string
 
 	rawLayouts := make(map[string]string)
 
-	for _, l := range layouts {
-		file, err := readFile(viewFS, l)
+	for _, layout := range layouts {
+		file, err := readFile(viewFS, layout)
 		if err != nil {
 			// todo rename error from layout to base
-			return viewTemplates{}, fmt.Errorf("could not read layout file: %s: %v", file, err) //nolint:errorlint,lll // prevent err in api
+			return viewTemplates{}, fmt.Errorf("could not read layout file: %s: %w", file, err)
 		}
 
-		ln := baseName(l)
+		ln := baseName(layout)
 		if isContext {
-			ln = layoutName(l)
+			ln = layoutName(layout)
 		}
 
 		rawLayouts[ln] = file
 
-		if ln == "default" {
-			defaultLayout = "default"
+		const defaultLayoutName = "default"
+		if ln == defaultLayoutName {
+			defaultLayout = defaultLayoutName
 		}
 	}
 
@@ -606,12 +621,6 @@ func (r *Renderer) AddLayoutData(context string, layoutName string, dataFunc Dat
 		return fmt.Errorf("%w: could not add layout data", ErrCreateRendererFailed)
 	}
 
-	fmt.Println(context)
-	fmt.Println(r.views[context].rawLayouts[layoutName])
-	fmt.Println(r.contextData[context])
-	fmt.Println(r.contextData[context] == nil)
-	fmt.Println(r.contextData[context][layoutName])
-
 	funcs := r.contextData[context][layoutName]
 	funcs = append(funcs, dataFunc)
 
@@ -659,6 +668,7 @@ func (r *Renderer) getMergedData(ctx context.Context, parsedTemplate parsedTempl
 	canConvertAny := pageDataType.ConvertibleTo(reflect.TypeOf(map[string]any{}))
 	if canConvertAny {
 		mp := reflect.ValueOf(pageData).Convert(reflect.TypeOf(map[string]any{}))
+
 		iter := mp.MapRange()
 		for iter.Next() {
 			k := iter.Key()
@@ -670,6 +680,7 @@ func (r *Renderer) getMergedData(ctx context.Context, parsedTemplate parsedTempl
 	canConvertString := pageDataType.ConvertibleTo(reflect.TypeOf(map[string]string{}))
 	if canConvertString {
 		mp := reflect.ValueOf(pageData).Convert(reflect.TypeOf(map[string]string{}))
+
 		iter := mp.MapRange()
 		for iter.Next() {
 			k := iter.Key()

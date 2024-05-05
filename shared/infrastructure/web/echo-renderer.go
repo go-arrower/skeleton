@@ -20,7 +20,6 @@ func NewEchoRenderer(
 	viewFS fs.FS,
 	hotReload bool,
 ) (*EchoRenderer, error) {
-
 	r, _ := NewRenderer(logger, traceProvider, viewFS, template.FuncMap{
 		"route": echo.Reverse, // todo test case for reverse func
 	}, hotReload)
@@ -34,12 +33,7 @@ type EchoRenderer struct {
 
 func (r *EchoRenderer) Render(w io.Writer, templateName string, data interface{}, c echo.Context) error {
 	_, _, context := r.isRegisteredContext(c) // todo test how it is split
-	//_, _, context := isContext()
 
-	split := strings.Split(c.Path(), "/")
-	fmt.Println("CONTEXT ECHO", c.Path(), split, len(split))
-
-	//return r.Renderer.Render(c.Request().Context(), w, split[1], templateName, data)
 	return r.Renderer.Render(c.Request().Context(), w, context, templateName, data)
 }
 
@@ -97,15 +91,15 @@ func (r *Renderer) viewsForContext(name string) viewTemplates {
 }
 
 func (r *Renderer) totalCachedTemplates() int {
-	c := 0
+	count := 0
 
 	r.cache.Range(func(_, _ any) bool {
-		c++
+		count++
 
 		return true
 	})
 
-	return c
+	return count
 }
 
 // rawTemplateNames takes the names of the templates from the keys of the map.

@@ -3,10 +3,9 @@ package web_test
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	"html/template"
 	"math/rand"
-	"os"
 	"sync"
 	"testing"
 
@@ -17,6 +16,8 @@ import (
 	"github.com/go-arrower/skeleton/shared/infrastructure/web"
 	"github.com/go-arrower/skeleton/shared/infrastructure/web/testdata"
 )
+
+var errSomeError = errors.New("some-error")
 
 func TestNewRenderer(t *testing.T) {
 	t.Parallel()
@@ -296,7 +297,7 @@ func TestRenderer_Render(t *testing.T) {
 
 			t.Run("base without context layout", func(t *testing.T) {
 				t.Parallel()
-				t.Skip() //FIXME this test is new and needs checking
+				t.Skip() // FIXME this test is new and needs checking
 
 				renderer, err := web.NewRenderer(alog.NewNoopLogger(), noop.NewTracerProvider(), testdata.FilesSharedViewsWithDefaultBaseWithoutLayout(), template.FuncMap{}, false)
 				assert.NoError(t, err)
@@ -325,7 +326,8 @@ func TestRenderer_Render(t *testing.T) {
 
 			wg := &sync.WaitGroup{}
 
-			const numPageLoads = 1000 // FIXME for 1000
+			const numPageLoads = 1000
+
 			wg.Add(numPageLoads)
 			for i := 0; i < numPageLoads; i++ {
 				go func() {
@@ -380,7 +382,7 @@ func TestRenderer_Render(t *testing.T) {
 		t.Run("context layout and page", func(t *testing.T) {
 			t.Parallel()
 
-			renderer, _ := web.NewRenderer(alog.NewTest(os.Stderr), noop.NewTracerProvider(), testdata.FilesSharedViewsWithDefaultBase(), template.FuncMap{}, false)
+			renderer, _ := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesSharedViewsWithDefaultBase(), template.FuncMap{}, false)
 			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 			assert.NoError(t, err)
 
@@ -398,7 +400,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.NotContains(t, buf.String(), testdata.C0Content, "c0 is overwritten")
 		})
 
-		//todo page with different context layout
+		// todo page with different context layout
 		// TODO test case for hot reload
 		// TODO test case for a context that does not have a layout (use base layout block as fallback)
 		/*
@@ -444,7 +446,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.Contains(t, buf.String(), testdata.P0ContextContent)
 			assert.Contains(t, buf.String(), testdata.BaseDefaultLayoutContent)
 			assert.Contains(t, buf.String(), "adminLayout")
-			//assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
+			// assert.NotContains(t, buf.String(), testdata.LDefaultContextContent)
 			assert.NotContains(t, buf.String(), testdata.BaseLayoutContentPlaceholder)
 			assert.NotContains(t, buf.String(), "adminPlaceholder")
 		})
@@ -464,7 +466,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.Contains(t, buf.String(), testdata.P0Content)
 			assert.Contains(t, buf.String(), testdata.C0ContextContent, "shared component got overwritten")
 			assert.Contains(t, buf.String(), testdata.BaseDefaultLayoutContent)
-			//assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			// assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
 			assert.NotContains(t, buf.String(), testdata.BaseLayoutContentPlaceholder)
 		})
 
@@ -483,7 +485,7 @@ func TestRenderer_Render(t *testing.T) {
 			assert.Contains(t, buf.String(), `context conflict`)
 			assert.NotContains(t, buf.String(), testdata.P0Content)
 			assert.Contains(t, buf.String(), testdata.BaseDefaultLayoutContent)
-			//assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
+			// assert.Contains(t, buf.String(), testdata.LDefaultContextContent)
 			assert.NotContains(t, buf.String(), testdata.BaseLayoutContentPlaceholder)
 		})
 	})
@@ -494,7 +496,7 @@ func TestRenderer_Render(t *testing.T) {
 		t.Run("context layout and page", func(t *testing.T) {
 			t.Parallel()
 
-			renderer, _ := web.NewRenderer(alog.NewTest(os.Stderr), noop.NewTracerProvider(), testdata.FilesSharedViewsWithDefaultBase(), template.FuncMap{}, true)
+			renderer, _ := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesSharedViewsWithDefaultBase(), template.FuncMap{}, true)
 			err := renderer.AddContext(testdata.ExampleContext, testdata.ContextViews)
 			assert.NoError(t, err)
 
@@ -577,14 +579,14 @@ func TestRenderer_AddBaseData(t *testing.T) {
 		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
 		assert.NoError(t, err)
 
-		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+		err = r.AddBaseData("default", func(_ context.Context) (map[string]any, error) {
 			return map[string]any{
 				"baseTitle": "baseTitle",
 			}, nil
 		})
 		assert.NoError(t, err)
 
-		err = r.AddBaseData("", func(ctx context.Context) (map[string]any, error) {
+		err = r.AddBaseData("", func(_ context.Context) (map[string]any, error) {
 			return web.Map{
 				"BaseHeader": "baseHeader",
 			}, nil
@@ -606,13 +608,13 @@ func TestRenderer_AddBaseData(t *testing.T) {
 		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
 		assert.NoError(t, err)
 
-		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+		err = r.AddBaseData("default", func(_ context.Context) (map[string]any, error) {
 			return map[string]any{
 				"baseTitle": "baseTitle 0",
 			}, nil
 		})
 		assert.NoError(t, err)
-		err = r.AddBaseData("", func(ctx context.Context) (map[string]any, error) {
+		err = r.AddBaseData("", func(_ context.Context) (map[string]any, error) {
 			return web.Map{
 				"baseTitle": "baseTitle 1",
 			}, nil
@@ -693,8 +695,8 @@ func TestRenderer_AddBaseData(t *testing.T) {
 		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
 		assert.NoError(t, err)
 
-		err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
-			return nil, fmt.Errorf("some-error")
+		err = r.AddBaseData("default", func(_ context.Context) (map[string]any, error) {
+			return nil, errSomeError
 		})
 		assert.NoError(t, err)
 
@@ -711,8 +713,8 @@ func TestRenderer_AddBaseData(t *testing.T) {
 		r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
 		assert.NoError(t, err)
 
-		err = r.AddBaseData("non-existing", func(ctx context.Context) (map[string]any, error) {
-			return nil, nil
+		err = r.AddBaseData("non-existing", func(_ context.Context) (map[string]any, error) {
+			return map[string]any{}, nil
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
@@ -735,13 +737,13 @@ func TestRenderer_AddLayoutData(t *testing.T) {
 
 		r := testRendererReadyForLayoutData(t)
 
-		err := r.AddLayoutData(testdata.ExampleContext, "default", func(ctx context.Context) (map[string]any, error) {
+		err := r.AddLayoutData(testdata.ExampleContext, "default", func(_ context.Context) (map[string]any, error) {
 			return map[string]any{
 				"layoutTitle": "layoutTitle",
 			}, nil
 		})
 		assert.NoError(t, err)
-		err = r.AddLayoutData(testdata.ExampleContext, "", func(ctx context.Context) (map[string]any, error) {
+		err = r.AddLayoutData(testdata.ExampleContext, "", func(_ context.Context) (map[string]any, error) {
 			return map[string]any{
 				"LayoutHeader": "layoutHeader",
 			}, nil
@@ -779,8 +781,8 @@ func TestRenderer_AddLayoutData(t *testing.T) {
 
 		r := testRendererReadyForLayoutData(t)
 
-		err := r.AddLayoutData("not-exists", "default", func(ctx context.Context) (map[string]any, error) {
-			return nil, nil
+		err := r.AddLayoutData("not-exists", "default", func(_ context.Context) (map[string]any, error) {
+			return map[string]any{}, nil
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
@@ -791,8 +793,8 @@ func TestRenderer_AddLayoutData(t *testing.T) {
 
 		r := testRendererReadyForLayoutData(t)
 
-		err := r.AddLayoutData(testdata.ExampleContext, "non-exists", func(ctx context.Context) (map[string]any, error) {
-			return nil, nil
+		err := r.AddLayoutData(testdata.ExampleContext, "non-exists", func(_ context.Context) (map[string]any, error) {
+			return map[string]any{}, nil
 		})
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, web.ErrCreateRendererFailed)
@@ -804,7 +806,7 @@ func TestRenderer_AddLayoutData(t *testing.T) {
 		r := testRendererReadyForLayoutData(t)
 
 		err := r.AddLayoutData(testdata.ExampleContext, "default", func(ctx context.Context) (map[string]any, error) {
-			return nil, fmt.Errorf("some-error")
+			return nil, errSomeError
 		})
 		assert.NoError(t, err)
 
@@ -819,18 +821,18 @@ func TestRenderer_AddLayoutData(t *testing.T) {
 func testRendererReadyForLayoutData(t *testing.T) *web.Renderer {
 	t.Helper()
 
-	r, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
+	renderer, err := web.NewRenderer(alog.NewTest(nil), noop.NewTracerProvider(), testdata.FilesAddBaseData(), template.FuncMap{}, false)
 	assert.NoError(t, err)
 
-	err = r.AddBaseData("default", func(ctx context.Context) (map[string]any, error) {
+	err = renderer.AddBaseData("default", func(_ context.Context) (map[string]any, error) {
 		return map[string]any{
 			"baseTitle": "baseTitle 0",
 		}, nil
 	})
 	assert.NoError(t, err)
 
-	err = r.AddContext(testdata.ExampleContext, testdata.FilesAddLayoutData())
+	err = renderer.AddContext(testdata.ExampleContext, testdata.FilesAddLayoutData())
 	assert.NoError(t, err)
 
-	return r
+	return renderer
 }

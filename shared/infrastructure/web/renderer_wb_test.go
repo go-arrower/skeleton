@@ -18,6 +18,10 @@ import (
 func TestNewRenderer(t *testing.T) {
 	t.Parallel()
 
+	// todo could be improved by
+	// assert the page has itself and all dependencies loaded as a template
+	// assert template is cached
+
 	// white box test. if it fails, feel free to delete it
 	t.Run("initialise new", func(t *testing.T) {
 		t.Parallel()
@@ -39,17 +43,6 @@ func TestNewRenderer(t *testing.T) {
 		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p1"])
 		assert.NotEmpty(t, renderer.viewsForContext("").rawPages["p2"])
 		assert.Empty(t, renderer.viewsForContext("").rawPages["non-existent"])
-
-		// assert the page has itself and all dependencies loaded as a template
-		// assert.Len(t, renderer.templates["p0"].Templates(), 4, "expect: <empty>, c0, c1, p0")
-		// assert.Len(t, renderer.templates["p1"].Templates(), 4)
-		// assert.Len(t, renderer.templates["p2"].Templates(), 6, "expect: <empty>, components, fragments, and itself as page")
-		//
-		// assert template is cached
-		// if the file is called global.layout.html, the template is called global
-		// assert.Len(t, renderer.rawLayouts, 1)
-		// assert.NotEmpty(t, renderer.rawLayouts["global"])
-		// assert.Empty(t, renderer.rawLayouts["non-existent"])
 	})
 
 	// white box test. if it fails, feel free to delete it
