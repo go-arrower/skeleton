@@ -5,21 +5,22 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/go-arrower/arrower/repository"
+
 	"github.com/go-arrower/skeleton/contexts/auth/internal/domain"
 
-	"github.com/go-arrower/arrower/tests"
 	"github.com/google/uuid"
 )
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		MemoryRepository: tests.NewMemoryRepository[domain.User, domain.ID](),
+		MemoryRepository: repository.NewMemoryRepository[domain.User, domain.ID](),
 		tokens:           make(map[uuid.UUID]domain.VerificationToken),
 	}
 }
 
 type MemoryRepository struct {
-	*tests.MemoryRepository[domain.User, domain.ID]
+	*repository.MemoryRepository[domain.User, domain.ID]
 
 	tokens map[uuid.UUID]domain.VerificationToken
 }
