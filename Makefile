@@ -59,3 +59,5 @@ download-ip2location:
 dev-upgrade:
 	go get -t -u ./...
 	go mod tidy
+	npm update -D
+	npm install
