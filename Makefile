@@ -22,13 +22,14 @@ generate: ## Generate all code to run the service
 
 .PHONY: test
 test: static-check generate test-unit test-integration ## Run all tests
-	go tool cover -html=cover.out -o cover.html; xdg-open cover.html
 	go tool cover -func cover.out | grep total:
+	go tool cover -html=cover.out -o cover.html; xdg-open cover.html
+	go-cover-treemap -coverprofile cover.out > cover.svg; firefox cover.svg #xdg-open cover.svg
 
 
 .PHONY: test-unit
 test-unit:
-	go test -race ./... -count=1 -coverprofile cover.out
+	go test -race ./... -coverprofile cover.out
 
 .PHONY: test-integration
 test-integration:
@@ -57,3 +58,4 @@ download-ip2location:
 .PHONY: dev-upgrade
 dev-upgrade:
 	go get -t -u ./...
+	go mod tidy
